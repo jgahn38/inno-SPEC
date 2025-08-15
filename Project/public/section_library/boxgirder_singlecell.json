@@ -79,7 +79,7 @@
     { "name": "VOID",  "targets": ["geometry.profiles.void_1"], "dxflayer": "G_VOID" }
   ],
 
-  "render": { "stroke": 1.2, "fill": false },
+  "render": { "stroke": 1.2, "fill": true, "fillColor": "#e0e0e0" },
   "io": { "export": ["dxf", "svg"] },
 
   "meta": {

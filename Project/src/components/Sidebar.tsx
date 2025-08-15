@@ -27,7 +27,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: 'input', label: '설계 제원 입력', icon: Database, category: 'PLANNING' },
     { id: 'calculation', label: '내진성능 계산', icon: Calculator, category: 'DEVELOPMENT' },
     { id: 'results', label: '검토 결과', icon: BarChart3, category: 'DEVELOPMENT' },
-    { id: 'illustration', label: '삽도', icon: Image, category: 'DEVELOPMENT' },
+    { id: 'illustration', label: '단면', icon: Image, category: 'DEVELOPMENT' },
     { id: 'report', label: '보고서 생성', icon: Download, category: 'DEVELOPMENT' },
     { id: 'settings', label: '프로젝트 설정', icon: Settings, category: 'SETTINGS' },
   ];

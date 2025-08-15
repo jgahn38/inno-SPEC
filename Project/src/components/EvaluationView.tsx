@@ -140,7 +140,7 @@ const EvaluationView: React.FC<EvaluationViewProps> = ({
       />
       <div className="flex-1 bg-gray-50 overflow-auto">
         {/* 교량 선택 콤보박스 */}
-        {project.bridges.length > 0 && (
+        {project.bridges && project.bridges.length > 0 && (
           <div className="bg-white border-b border-gray-200 px-6 py-4">
             <div className="flex items-center space-x-4">
               <div className="relative w-64">

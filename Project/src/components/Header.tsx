@@ -1,12 +1,17 @@
-import React from 'react';
-import { Building2, FolderOpen, Settings, Search, Bell, HelpCircle, User } from 'lucide-react';
+import React, { useState } from 'react';
+import { Building2, FolderOpen, Settings, Search, Bell, HelpCircle, User, LogOut, ChevronDown } from 'lucide-react';
+import { Tenant, User as UserType } from '../types';
 
 interface HeaderProps {
   currentView: 'projects' | 'evaluation';
   onNavigate: (view: 'projects' | 'evaluation') => void;
+  currentTenant: Tenant;
+  currentUser: UserType;
+  onLogout: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
+const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentTenant, currentUser, onLogout }) => {
+  const [showUserMenu, setShowUserMenu] = useState(false);
   return (
     <header className="bg-white border-b border-gray-200 shadow-sm">
       <div className="px-4">
@@ -33,6 +38,12 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
           </div>
           
           <div className="flex items-center space-x-4">
+            {/* 테넌트 정보 */}
+            <div className="flex items-center space-x-2 px-3 py-1.5 bg-blue-50 rounded-md">
+              <Building2 className="h-4 w-4 text-blue-600" />
+              <span className="text-sm font-medium text-blue-700">{currentTenant.name}</span>
+            </div>
+            
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -53,10 +64,38 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
             <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors">
               <Settings className="h-4 w-4" />
             </button>
-            <div>
-              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                <User className="h-4 w-4 text-gray-600" />
-              </div>
+            
+            {/* 사용자 메뉴 */}
+            <div className="relative">
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center space-x-2 p-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+              >
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <User className="h-4 w-4 text-blue-600" />
+                </div>
+                <span className="text-sm font-medium">{currentUser.firstName} {currentUser.lastName}</span>
+                <ChevronDown className="h-4 w-4 text-gray-400" />
+              </button>
+              
+              {showUserMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                  <div className="py-2">
+                    <div className="px-4 py-2 text-sm text-gray-700 border-b border-gray-100">
+                      <div className="font-medium">{currentUser.firstName} {currentUser.lastName}</div>
+                      <div className="text-gray-500">{currentUser.email}</div>
+                      <div className="text-xs text-gray-400 mt-1">{currentUser.role}</div>
+                    </div>
+                    <button
+                      onClick={onLogout}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x2"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>로그아웃</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
