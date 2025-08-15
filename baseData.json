@@ -1,0 +1,14 @@
+{
+    "items": {
+      "bridge_information":
+      [
+        {"name":"교각수", "value":7, "unit":"EA", "description":""},
+
+      ],
+      "material_db":
+      [
+        {"name":"교각수", "value":7, "unit":"EA", "description":""},
+
+      ]
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "id": "bridge.boxgirder.singlecell.v1",
+  "name": "PSC 단실 박스거더",
+  "version": "1.0.0",
+  "category": "girder",
+  "tags": ["box", "PSC", "single-cell"],
+  "units": { "length": "mm", "angle": "deg" },
+
+  "parameters": [
+    { "key": "B",  "label": "총 폭(B)",       "type": "number", "unit": "mm", "default": 2500, "min": 1000, "max": 6000, "ui": { "control": "number", "order": 1 } },
+    { "key": "H",  "label": "총 높이(H)",     "type": "number", "unit": "mm", "default": 1800, "min": 600,  "max": 4000, "ui": { "control": "number", "order": 2 } },
+    { "key": "tw", "label": "복부판 두께(tw)", "type": "number", "unit": "mm", "default": 180,  "min": 80,   "max": 400,  "ui": { "control": "number", "order": 3 } },
+    { "key": "tt", "label": "상부플랜지 두께(tt)","type": "number","unit": "mm","default": 220,"min": 100,  "max": 500,  "ui": { "control": "number", "order": 4 } },
+    { "key": "tb", "label": "하부플랜지 두께(tb)","type": "number","unit": "mm","default": 260,"min": 120,  "max": 600,  "ui": { "control": "number", "order": 5 } },
+    { "key": "cw", "label": "상자 내부 폭(cw)",  "type": "number","unit": "mm","default": 1400,"min": 400,  "max": 5000, "ui": { "control": "number", "order": 6 } },
+    { "key": "rc", "label": "내부 모서리 필렛반경(rc)","type":"number","unit":"mm","default":60,"min":0,"max":150,"ui":{"control":"number","order":7} }
+  ],
+
+  "derived": [
+    { "key": "halfB", "label": "반폭", "unit": "mm", "expr": "B/2" },
+    { "key": "cw_half", "label": "내부 반폭", "unit": "mm", "expr": "cw/2" },
+    { "key": "web_x", "label": "복부판 x 위치", "unit": "mm", "expr": "cw_half + tw/2" }
+  ],
+
+  "constraints": [
+    { "expr": "B > 2*tw + cw", "message": "총 폭(B)은 2*tw + cw 보다 커야 합니다.", "severity": "error" },
+    { "expr": "H > tt + tb + 2*rc", "message": "총 높이(H)는 상하 플랜지와 내부 필렛을 수용해야 합니다.", "severity": "error" },
+    { "expr": "rc <= min(tw, tt, tb)/2", "message": "필렛 반경(rc)이 두께 대비 과대입니다.", "severity": "warning" }
+  ],
+
+  "geometry": {
+    "local_cs": { "origin": [0, 0], "axes": "right-handed", "symmetry": "y" },
+
+    "draw_ops": [
+      { "op": "moveTo", "args": { "x": "halfB", "y": "H/2" } },
+      { "op": "lineTo", "args": { "x": "-halfB", "y": "H/2" } },
+      { "op": "lineTo", "args": { "x": "-halfB", "y": "-H/2" } },
+      { "op": "lineTo", "args": { "x": "halfB", "y": "-H/2" } },
+      { "op": "closePath", "save_as": "outer_rect" },
+
+      { "op": "moveTo", "args": { "x": "cw_half", "y": "H/2 - tt" } },
+      { "op": "lineTo", "args": { "x": "-cw_half", "y": "H/2 - tt" } },
+      { "op": "lineTo", "args": { "x": "-cw_half", "y": "-H/2 + tb" } },
+      { "op": "lineTo", "args": { "x": "cw_half", "y": "-H/2 + tb" } },
+      { "op": "closePath", "save_as": "inner_rect_raw" },
+
+      { "op": "offset", "args": { "path": "inner_rect_raw", "delta": "0" }, "save_as": "inner_rect" },
+
+      { "op": "fillet", "args": { "path": "inner_rect", "r": "rc" }, "save_as": "inner_fillet" }
+    ],
+
+    "profiles": [
+      { "name": "outer", "path_ref": "outer_rect", "solid": true },
+      { "name": "void_1", "path_ref": "inner_fillet", "solid": false }
+    ]
+  },
+
+  "features": [
+    {
+      "type": "hole",
+      "params": { "cx": "web_x", "cy": "0", "d": 120 },
+      "pattern": { "type": "linear", "count": 3, "dx": 0, "dy": 400 }
+    }
+  ],
+
+  "keypoints": [
+    { "name": "centroid", "x": 0, "y": 0, "usage": ["snap", "annotation"] },
+    { "name": "top_center", "x": 0, "y": "H/2", "usage": ["dimension"] },
+    { "name": "bot_center", "x": 0, "y": "-H/2", "usage": ["dimension"] }
+  ],
+
+  "annotations": [
+    { "type": "dimension", "style": "V", "from": "top_center", "to": "bot_center", "text": "H = {H} mm" },
+    { "type": "dimension", "style": "H", "from": [ "-halfB", "-H/2" ], "to": [ "halfB", "-H/2" ], "text": "B = {B} mm" }
+  ],
+
+  "layers": [
+    { "name": "OUTER", "targets": ["geometry.profiles.outer"], "dxflayer": "G_OUTER" },
+    { "name": "VOID",  "targets": ["geometry.profiles.void_1"], "dxflayer": "G_VOID" }
+  ],
+
+  "render": { "stroke": 1.2, "fill": false },
+  "io": { "export": ["dxf", "svg"] },
+
+  "meta": {
+    "author": "YourTeam",
+    "source": "internal",
+    "revision": "2025-08-12",
+    "notes": "단실 박스거더 기본형. 내부 필렛/웹 구멍 예시 포함."
+  }
+}
