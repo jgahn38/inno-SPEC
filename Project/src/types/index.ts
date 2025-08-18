@@ -58,3 +58,92 @@ export interface CheckItem {
   value?: string;
   criteria?: string;
 }
+
+// 공통 테이블 스키마 관련 타입
+export interface TableSchema {
+  id: string;
+  name: string;
+  displayName: string;
+  fields: TableField[];
+  description?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TableField {
+  id: string;
+  name: string;
+  displayName: string;
+  type: FieldType;
+  required: boolean;
+  description?: string;
+  validationRules?: ValidationRule[];
+}
+
+export type FieldType = 
+  | 'text' 
+  | 'number' 
+  | 'date' 
+  | 'boolean' 
+  | 'decimal' 
+  | 'integer';
+
+export interface ValidationRule {
+  type: 'min' | 'max' | 'pattern' | 'custom';
+  value: any;
+  message?: string;
+}
+
+// M 언어 관련 타입
+export interface MCode {
+  id: string;
+  name: string;
+  description?: string;
+  code: string;
+  tableId: string;
+  version: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface MTransformation {
+  id: string;
+  name: string;
+  description?: string;
+  mCodeId: string;
+  tableId: string;
+  order: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface MExecutionResult {
+  success: boolean;
+  data?: any[];
+  error?: string;
+  executionTime: number;
+  recordsProcessed: number;
+  recordsTransformed: number;
+}
+
+// 테이블 데이터 관련 타입
+export interface TableData {
+  id: string;
+  tableId: string;
+  projectId: string;
+  tenantId: string;
+  data: Record<string, any>[];
+  rowCount: number;
+  lastUpdated: Date;
+}
+
+// 공통 엔진 설정
+export interface CommonEngineConfig {
+  version: string;
+  supportedTableTypes: string[];
+  maxExecutionTime: number;
+  maxRecordsPerExecution: number;
+  defaultValidationRules: ValidationRule[];
+}

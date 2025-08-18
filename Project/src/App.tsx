@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import Header from './components/Header';
 import ProjectList from './components/ProjectList';
 import EvaluationView from './components/EvaluationView';
+import TableManager from './components/TableManager';
 import LoginView from './components/LoginView';
 import { Project } from './types';
 import { TenantProvider, useTenant } from './contexts/TenantContext';
 
 function AppContent() {
   const { currentTenant, currentUser, isAuthenticated, isLoading, logout } = useTenant();
-  const [currentView, setCurrentView] = useState<'projects' | 'evaluation'>('projects');
+  const [currentView, setCurrentView] = useState<'projects' | 'evaluation' | 'tables'>('projects');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   const handleProjectSelect = (project: Project) => {
@@ -16,7 +17,7 @@ function AppContent() {
     setCurrentView('evaluation');
   };
 
-  const handleNavigate = (view: 'projects' | 'evaluation') => {
+  const handleNavigate = (view: 'projects' | 'evaluation' | 'tables') => {
     setCurrentView(view);
   };
 
@@ -60,9 +61,14 @@ function AppContent() {
             onProjectSelect={handleProjectSelect}
             tenantId={currentTenant.id}
           />
-        ) : selectedProject ? (
+        ) : currentView === 'evaluation' && selectedProject ? (
           <EvaluationView 
             project={selectedProject} 
+          />
+        ) : currentView === 'tables' ? (
+          <TableManager 
+            tenantId={currentTenant.id}
+            projectId={selectedProject?.id || 'default'}
           />
         ) : (
           <div className="flex items-center justify-center h-full">

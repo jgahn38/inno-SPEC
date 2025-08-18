@@ -10,3 +10,6 @@ export const projectService = new ProjectService(projectDataProvider);
 // 모든 서비스 export
 export { ProjectService } from './ProjectService';
 export { LocalStorageProjectProvider } from './dataProviders/LocalStorageProjectProvider';
+export { MEngineService } from './MEngineService';
+export { TableSchemaService } from './TableSchemaService';
+export { MParser } from './MParser';
