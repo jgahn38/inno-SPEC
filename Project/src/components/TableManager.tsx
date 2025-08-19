@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { TableSchema, TableField, FieldType, TableData, MCode } from '../types';
 import { TableSchemaService } from '../services/TableSchemaService';
 import MCodeEditor from './MCodeEditor';
+import { Plus, Building2, Calendar, MoreVertical, Edit, Trash2, Filter, Search, X } from 'lucide-react';
 
 interface TableManagerProps {
   tenantId: string;
@@ -16,6 +17,17 @@ const TableManager: React.FC<TableManagerProps> = ({ tenantId, projectId }) => {
   const [selectedMCode, setSelectedMCode] = useState<MCode | null>(null);
   const [isAddingField, setIsAddingField] = useState(false);
   const [newField, setNewField] = useState<Partial<TableField>>({});
+  
+  // 새 스키마 생성 관련 상태
+  const [showCreateSchemaModal, setShowCreateSchemaModal] = useState(false);
+  const [newSchema, setNewSchema] = useState({
+    name: '',
+    displayName: '',
+    description: '',
+    fields: [] as Partial<TableField>[]
+  });
+  const [isAddingSchemaField, setIsAddingSchemaField] = useState(false);
+  const [newSchemaField, setNewSchemaField] = useState<Partial<TableField>>({});
 
   const tableSchemaService = TableSchemaService.getInstance();
 
@@ -151,6 +163,107 @@ in
     // 여기서 변환된 데이터를 처리할 수 있습니다
   };
 
+  // 새 스키마 생성 관련 함수들
+  const handleCreateSchema = async () => {
+    if (!newSchema.name.trim() || !newSchema.displayName.trim()) {
+      alert('테이블명과 표시명을 입력해주세요.');
+      return;
+    }
+
+    if (newSchema.fields.length === 0) {
+      alert('최소 하나의 필드를 추가해주세요.');
+      return;
+    }
+
+    try {
+      const schema: TableSchema = {
+        id: `table-${Date.now()}`,
+        name: newSchema.name.trim(),
+        displayName: newSchema.displayName.trim(),
+        description: newSchema.description.trim(),
+        fields: newSchema.fields.map((field, index) => ({
+          id: `field-${Date.now()}-${index}`,
+          name: field.name!,
+          displayName: field.displayName || field.name!,
+          type: field.type as FieldType,
+          required: field.required || false,
+          description: field.description || '',
+          validationRules: field.validationRules || []
+        })) as TableField[],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      tableSchemaService.addSchema(schema);
+      loadSchemas();
+      
+      // 모달 닫기 및 폼 초기화
+      setNewSchema({ name: '', displayName: '', description: '', fields: [] });
+      setShowCreateSchemaModal(false);
+      setIsAddingSchemaField(false);
+      setNewSchemaField({});
+      
+      alert('테이블 스키마가 성공적으로 생성되었습니다.');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '스키마 생성 중 오류가 발생했습니다.');
+    }
+  };
+
+  const handleAddSchemaField = () => {
+    if (!newSchemaField.name || !newSchemaField.type) {
+      alert('필드명과 타입을 입력해주세요.');
+      return;
+    }
+
+    const field: Partial<TableField> = {
+      name: newSchemaField.name,
+      displayName: newSchemaField.displayName || newSchemaField.name,
+      type: newSchemaField.type as FieldType,
+      required: newSchemaField.required || false,
+      description: newSchemaField.description || '',
+      validationRules: newSchemaField.validationRules || []
+    };
+
+    setNewSchema({
+      ...newSchema,
+      fields: [...newSchema.fields, field]
+    });
+
+    setNewSchemaField({});
+    setIsAddingSchemaField(false);
+  };
+
+  const handleRemoveSchemaField = (index: number) => {
+    const updatedFields = newSchema.fields.filter((_, i) => i !== index);
+    setNewSchema({ ...newSchema, fields: updatedFields });
+  };
+
+  const resetCreateSchemaForm = () => {
+    setNewSchema({ name: '', displayName: '', description: '', fields: [] });
+    setIsAddingSchemaField(false);
+    setNewSchemaField({});
+  };
+
+  // 스키마 삭제 기능
+  const handleDeleteSchema = (schemaId: string) => {
+    if (window.confirm('정말로 이 테이블 스키마를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+      try {
+        tableSchemaService.deleteSchema(schemaId);
+        loadSchemas();
+        
+        // 삭제된 스키마가 현재 선택된 스키마였다면 선택 해제
+        if (selectedSchema?.id === schemaId) {
+          setSelectedSchema(null);
+          setTableData(null);
+        }
+        
+        alert('테이블 스키마가 삭제되었습니다.');
+      } catch (error) {
+        alert(error instanceof Error ? error.message : '스키마 삭제 중 오류가 발생했습니다.');
+      }
+    }
+  };
+
   const getFieldTypeDisplayName = (type: FieldType): string => {
     const typeNames: Record<FieldType, string> = {
       text: '텍스트',
@@ -230,22 +343,59 @@ in
           {/* 왼쪽: 테이블 스키마 목록 */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">테이블 스키마</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-800">테이블 스키마</h2>
+                <button
+                  onClick={() => setShowCreateSchemaModal(true)}
+                  className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="h-3 w-3" />
+                  <span>추가</span>
+                </button>
+              </div>
               <div className="space-y-2">
                 {schemas.map((schema) => (
-                  <button
-                    key={schema.id}
-                    onClick={() => handleSchemaSelect(schema)}
-                    className={`w-full text-left p-3 rounded-md border transition-colors ${
-                      selectedSchema?.id === schema.id
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="font-medium">{schema.displayName}</div>
-                    <div className="text-sm text-gray-500">{schema.fields.length}개 필드</div>
-                  </button>
+                  <div key={schema.id} className="relative group">
+                    <button
+                      onClick={() => handleSchemaSelect(schema)}
+                      className={`w-full text-left p-3 rounded-md border transition-colors ${
+                        selectedSchema?.id === schema.id
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="font-medium">{schema.displayName}</div>
+                      <div className="text-sm text-gray-500">{schema.fields.length}개 필드</div>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteSchema(schema.id);
+                      }}
+                      className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all duration-200"
+                      title="스키마 삭제"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 ))}
+                
+                {schemas.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Building2 className="h-6 w-6 text-gray-400" />
+                    </div>
+                    <p className="text-sm font-medium text-gray-900 mb-1">테이블 스키마가 없습니다</p>
+                    <p className="text-xs text-gray-500 mb-3">새로운 테이블 스키마를 생성해보세요.</p>
+                    <button
+                      onClick={() => setShowCreateSchemaModal(true)}
+                      className="inline-flex items-center space-x-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                      <Plus className="h-3 w-3" />
+                      <span>스키마 생성</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -477,6 +627,258 @@ in
           </div>
         </div>
       </div>
+
+      {/* 새 테이블 스키마 생성 모달 */}
+      {showCreateSchemaModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">새 테이블 스키마 생성</h2>
+              <button
+                onClick={() => {
+                  setShowCreateSchemaModal(false);
+                  resetCreateSchemaForm();
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              {/* 기본 정보 */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    테이블명 *
+                  </label>
+                  <input
+                    type="text"
+                    value={newSchema.name}
+                    onChange={(e) => setNewSchema({ ...newSchema, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    placeholder="예: project_info"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">영문 소문자, 언더스코어 사용 권장</p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    표시명 *
+                  </label>
+                  <input
+                    type="text"
+                    value={newSchema.displayName}
+                    onChange={(e) => setNewSchema({ ...newSchema, displayName: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                    placeholder="예: 프로젝트 정보"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  설명
+                </label>
+                <textarea
+                  value={newSchema.description}
+                  onChange={(e) => setNewSchema({ ...newSchema, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  rows={3}
+                  placeholder="테이블의 용도나 설명을 입력하세요"
+                />
+              </div>
+
+              {/* 필드 관리 */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-700">필드 구조</h3>
+                  <button
+                    onClick={() => setIsAddingSchemaField(!isAddingSchemaField)}
+                    className="flex items-center space-x-2 px-3 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>필드 추가</span>
+                  </button>
+                </div>
+
+                {/* 새 필드 추가 폼 */}
+                {isAddingSchemaField && (
+                  <div className="mb-6 p-4 bg-gray-50 rounded-md">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                      <input
+                        type="text"
+                        placeholder="필드명 *"
+                        value={newSchemaField.name || ''}
+                        onChange={(e) => setNewSchemaField({ ...newSchemaField, name: e.target.value })}
+                        className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      />
+                      <select
+                        value={newSchemaField.type || ''}
+                        onChange={(e) => setNewSchemaField({ ...newSchemaField, type: e.target.value as FieldType })}
+                        className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      >
+                        <option value="">타입 선택 *</option>
+                        {tableSchemaService.getSupportedFieldTypes().map(type => (
+                          <option key={type} value={type}>{getFieldTypeDisplayName(type)}</option>
+                        ))}
+                      </select>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="required-field"
+                          checked={newSchemaField.required || false}
+                          onChange={(e) => setNewSchemaField({ ...newSchemaField, required: e.target.checked })}
+                          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor="required-field" className="text-sm text-gray-700">필수</label>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                      <input
+                        type="text"
+                        placeholder="표시명 (선택사항)"
+                        value={newSchemaField.displayName || ''}
+                        onChange={(e) => setNewSchemaField({ ...newSchemaField, displayName: e.target.value })}
+                        className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      />
+                      <input
+                        type="text"
+                        placeholder="설명 (선택사항)"
+                        value={newSchemaField.description || ''}
+                        onChange={(e) => setNewSchemaField({ ...newSchemaField, description: e.target.value })}
+                        className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                      />
+                    </div>
+                    
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={handleAddSchemaField}
+                        disabled={!newSchemaField.name || !newSchemaField.type}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm transition-colors"
+                      >
+                        필드 추가
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsAddingSchemaField(false);
+                          setNewSchemaField({});
+                        }}
+                        className="px-4 py-2 text-gray-600 hover:text-gray-800 text-sm transition-colors"
+                      >
+                        취소
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 필드 목록 */}
+                {newSchema.fields.length > 0 && (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full border border-gray-300 bg-white">
+                      <thead>
+                        <tr className="bg-gray-50">
+                          <th className="border border-gray-300 px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                            필드명
+                          </th>
+                          <th className="border border-gray-300 px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                            표시명
+                          </th>
+                          <th className="border border-gray-300 px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                            타입
+                          </th>
+                          <th className="border border-gray-300 px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                            필수
+                          </th>
+                          <th className="border border-gray-300 px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                            설명
+                          </th>
+                          <th className="border border-gray-300 px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider w-20">
+                            작업
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {newSchema.fields.map((field, index) => (
+                          <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <td className="border border-gray-300 px-3 py-2 text-sm font-mono text-gray-900">
+                              {field.name}
+                            </td>
+                            <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
+                              {field.displayName}
+                            </td>
+                            <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                field.type === 'text' ? 'bg-blue-100 text-blue-800' :
+                                field.type === 'number' ? 'bg-green-100 text-green-800' :
+                                field.type === 'date' ? 'bg-purple-100 text-purple-800' :
+                                field.type === 'boolean' ? 'bg-yellow-100 text-yellow-800' :
+                                field.type === 'decimal' ? 'bg-indigo-100 text-indigo-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {field.type ? getFieldTypeDisplayName(field.type) : '-'}
+                              </span>
+                            </td>
+                            <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
+                              {field.required ? (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                  필수
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                  선택
+                                </span>
+                              )}
+                            </td>
+                            <td className="border border-gray-300 px-3 py-2 text-sm text-gray-600">
+                              {field.description || '-'}
+                            </td>
+                            <td className="border border-gray-300 px-3 py-2 text-sm text-gray-900">
+                              <button
+                                onClick={() => handleRemoveSchemaField(index)}
+                                className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                              >
+                                삭제
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {newSchema.fields.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>아직 필드가 추가되지 않았습니다.</p>
+                    <p className="text-sm">위의 "필드 추가" 버튼을 클릭하여 필드를 추가해주세요.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3 mt-8 pt-6 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setShowCreateSchemaModal(false);
+                  resetCreateSchemaForm();
+                }}
+                className="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleCreateSchema}
+                disabled={!newSchema.name.trim() || !newSchema.displayName.trim() || newSchema.fields.length === 0}
+                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                스키마 생성
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
