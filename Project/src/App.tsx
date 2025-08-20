@@ -3,13 +3,14 @@ import Header from './components/Header';
 import ProjectList from './components/ProjectList';
 import EvaluationView from './components/EvaluationView';
 import TableManager from './components/TableManager';
+import DatabaseManager from './components/DatabaseManager';
 import LoginView from './components/LoginView';
 import { Project } from './types';
 import { TenantProvider, useTenant } from './contexts/TenantContext';
 
 function AppContent() {
   const { currentTenant, currentUser, isAuthenticated, isLoading, logout } = useTenant();
-  const [currentView, setCurrentView] = useState<'projects' | 'evaluation' | 'tables'>('projects');
+  const [currentView, setCurrentView] = useState<'projects' | 'evaluation' | 'tables' | 'databases'>('projects');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   const handleProjectSelect = (project: Project) => {
@@ -17,7 +18,7 @@ function AppContent() {
     setCurrentView('evaluation');
   };
 
-  const handleNavigate = (view: 'projects' | 'evaluation' | 'tables') => {
+  const handleNavigate = (view: 'projects' | 'evaluation' | 'tables' | 'databases') => {
     setCurrentView(view);
   };
 
@@ -67,6 +68,11 @@ function AppContent() {
           />
         ) : currentView === 'tables' ? (
           <TableManager 
+            tenantId={currentTenant.id}
+            projectId={selectedProject?.id || 'default'}
+          />
+        ) : currentView === 'databases' ? (
+          <DatabaseManager 
             tenantId={currentTenant.id}
             projectId={selectedProject?.id || 'default'}
           />

@@ -13,3 +13,4 @@ export { LocalStorageProjectProvider } from './dataProviders/LocalStorageProject
 export { MEngineService } from './MEngineService';
 export { TableSchemaService } from './TableSchemaService';
 export { MParser } from './MParser';
+export { DatabaseService } from './DatabaseService';

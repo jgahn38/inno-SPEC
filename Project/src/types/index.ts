@@ -147,3 +147,80 @@ export interface CommonEngineConfig {
   maxRecordsPerExecution: number;
   defaultValidationRules: ValidationRule[];
 }
+
+// 교량 내진성능평가 관련 DB 타입들
+export interface BridgeDatabase {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string;
+  category: DatabaseCategory;
+  version: string;
+  lastUpdated: Date;
+  recordCount: number;
+  isActive: boolean;
+  metadata: Record<string, any>;
+  fields: DatabaseField[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export type DatabaseCategory = 
+  | 'bearing'           // 교량받침DB
+  | 'seismic'           // 내진DB
+  | 'material'          // 재료DB
+  | 'geometry'          // 기하학적DB
+  | 'soil'              // 지반DB
+  | 'load'              // 하중DB
+  | 'analysis'          // 해석DB
+  | 'code'              // 설계기준DB
+  | 'other';            // 기타
+
+export interface DatabaseField {
+  id: string;
+  name: string;
+  displayName: string;
+  type: FieldType;
+  unit?: string;
+  description?: string;
+  isRequired?: boolean;
+  defaultValue?: any;
+  validationRules?: ValidationRule[];
+  parentHeader?: string; // 상위 헤더 (예: "A", "B", "C")
+}
+
+export interface DatabaseRecord {
+  id: string;
+  databaseId: string;
+  data: Record<string, any>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface DatabaseImportResult {
+  success: boolean;
+  importedCount: number;
+  failedCount: number;
+  errors: string[];
+  warnings: string[];
+}
+
+// DB 생성/수정 요청 타입
+export interface CreateDatabaseRequest {
+  name: string;
+  displayName: string;
+  description: string;
+  category: DatabaseCategory;
+  fields: DatabaseField[];
+  metadata?: Record<string, any>;
+}
+
+export interface UpdateDatabaseRequest {
+  id: string;
+  displayName?: string;
+  description?: string;
+  category?: DatabaseCategory;
+  fields?: DatabaseField[];
+  metadata?: Record<string, any>;
+  isActive?: boolean;
+}

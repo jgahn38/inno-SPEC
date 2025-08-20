@@ -98,6 +98,20 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect }) => {
     }
   };
 
+  // 프로젝트 삭제 기능
+  const handleDeleteProject = async (projectId: string, projectName: string) => {
+    if (window.confirm(`정말로 프로젝트 "${projectName}"을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
+      try {
+        await projectService.deleteProject(projectId);
+        await loadProjects();
+        alert('프로젝트가 삭제되었습니다.');
+      } catch (error) {
+        console.error('Failed to delete project:', error);
+        alert('프로젝트 삭제 중 오류가 발생했습니다.');
+      }
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-6 py-6">
       {/* Breadcrumb */}
@@ -153,9 +167,21 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect }) => {
           {projects.map((project) => (
           <div
             key={project.id}
-            className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer group"
+            className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer group relative"
             onClick={() => onProjectSelect(project)}
           >
+            {/* 삭제 버튼 */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDeleteProject(project.id, project.name);
+              }}
+              className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-white rounded-full shadow-sm hover:shadow-md z-10"
+              title="프로젝트 삭제"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+            
             <div className="p-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center space-x-2">
@@ -167,11 +193,6 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect }) => {
                       {project.name}
                     </h3>
                   </div>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                    {project.category}
-                  </span>
                 </div>
               </div>
               

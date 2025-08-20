@@ -3,8 +3,8 @@ import { Building2, FolderOpen, Settings, Search, Bell, HelpCircle, User, LogOut
 import { Tenant, User as UserType } from '../types';
 
 interface HeaderProps {
-  currentView: 'projects' | 'evaluation' | 'tables';
-  onNavigate: (view: 'projects' | 'evaluation' | 'tables') => void;
+  currentView: 'projects' | 'evaluation' | 'tables' | 'databases';
+  onNavigate: (view: 'projects' | 'evaluation' | 'tables' | 'databases') => void;
   currentTenant: Tenant;
   currentUser: UserType;
   onLogout: () => void;
@@ -43,6 +43,16 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentTenant,
                 }`}
               >
                 테이블 관리
+              </button>
+              <button
+                onClick={() => onNavigate('databases')}
+                className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  currentView === 'databases' 
+                    ? 'text-blue-600 border-blue-600 font-semibold' 
+                    : 'text-gray-600 hover:text-gray-900 border-transparent hover:border-gray-300 font-semibold'
+                }`}
+              >
+                데이터베이스
               </button>
             </nav>
           </div>
