@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Data backups (동기화용 백업 파일은 git에 포함)
+# data-backups/

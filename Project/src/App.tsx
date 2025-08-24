@@ -1,31 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import ProjectList from './components/ProjectList';
 import EvaluationView from './components/EvaluationView';
 import TableManager from './components/TableManager';
 import DatabaseManager from './components/DatabaseManager';
+import FunctionsManager from './components/FunctionsManager';
+import DataSyncManager from './components/DataSyncManager';
 import LoginView from './components/LoginView';
 import { Project } from './types';
 import { TenantProvider, useTenant } from './contexts/TenantContext';
+import { ProjectService } from './services/ProjectService';
+import { LocalStorageProjectProvider } from './services/dataProviders/LocalStorageProjectProvider';
 
 function AppContent() {
   const { currentTenant, currentUser, isAuthenticated, isLoading, logout } = useTenant();
-  const [currentView, setCurrentView] = useState<'projects' | 'evaluation' | 'tables' | 'databases'>('projects');
+  const [currentView, setCurrentView] = useState<'projects' | 'evaluation' | 'tables' | 'databases' | 'sync' | 'functions'>('projects');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedBridge, setSelectedBridge] = useState<Bridge | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectService] = useState(() => new ProjectService(new LocalStorageProjectProvider()));
 
   const handleProjectSelect = (project: Project) => {
     setSelectedProject(project);
+    // 프로젝트의 첫 번째 교량을 기본 선택
+    if (project.bridges && project.bridges.length > 0) {
+      setSelectedBridge(project.bridges[0]);
+    } else {
+      setSelectedBridge(null);
+    }
     setCurrentView('evaluation');
   };
 
-  const handleNavigate = (view: 'projects' | 'evaluation' | 'tables' | 'databases') => {
+  const handleNavigate = (view: 'projects' | 'evaluation' | 'tables' | 'databases' | 'sync' | 'functions') => {
+    console.log('Navigating to:', view); // 디버깅용 로그
     setCurrentView(view);
   };
+
+  // 프로젝트 목록 로드
+  useEffect(() => {
+    const loadProjects = async () => {
+      try {
+        const allProjects = await projectService.getAllProjects();
+        setProjects(allProjects);
+      } catch (error) {
+        console.error('Failed to load projects:', error);
+      }
+    };
+    
+    if (isAuthenticated && currentTenant) {
+      loadProjects();
+    }
+  }, [isAuthenticated, currentTenant, projectService]);
 
   const handleLogout = () => {
     logout();
     setCurrentView('projects');
     setSelectedProject(null);
+    setSelectedBridge(null);
+    setProjects([]);
   };
 
   // 로딩 중
@@ -57,6 +89,7 @@ function AppContent() {
       />
       
       <main className="flex-1" style={{ height: 'calc(100vh - 64px)' }}>
+        {console.log('Current view:', currentView)} {/* 디버깅용 로그 */}
         {currentView === 'projects' ? (
           <ProjectList 
             onProjectSelect={handleProjectSelect}
@@ -65,6 +98,32 @@ function AppContent() {
         ) : currentView === 'evaluation' && selectedProject ? (
           <EvaluationView 
             project={selectedProject} 
+            selectedBridge={selectedBridge}
+            projects={projects}
+            onProjectChange={setSelectedProject}
+            onBridgeChange={(bridge) => {
+              setSelectedBridge(bridge);
+              console.log('Selected bridge:', bridge);
+            }}
+            onProjectUpdate={async (updatedProject) => {
+              try {
+                await projectService.updateProject(updatedProject);
+                setSelectedProject(updatedProject);
+                // 새로 추가된 교량이 있다면 첫 번째 교량 선택
+                if (updatedProject.bridges && updatedProject.bridges.length > 0) {
+                  if (!selectedBridge || !updatedProject.bridges.find(b => b.id === selectedBridge.id)) {
+                    setSelectedBridge(updatedProject.bridges[0]);
+                  }
+                }
+                // 프로젝트 목록도 업데이트
+                const allProjects = await projectService.getAllProjects();
+                setProjects(allProjects);
+                console.log('Project updated:', updatedProject);
+              } catch (error) {
+                console.error('Failed to update project:', error);
+                alert('프로젝트 업데이트에 실패했습니다.');
+              }
+            }}
           />
         ) : currentView === 'tables' ? (
           <TableManager 
@@ -76,9 +135,13 @@ function AppContent() {
             tenantId={currentTenant.id}
             projectId={selectedProject?.id || 'default'}
           />
+        ) : currentView === 'functions' ? (
+          <FunctionsManager />
+        ) : currentView === 'sync' ? (
+          <DataSyncManager />
         ) : (
           <div className="flex items-center justify-center h-full">
-            <p className="text-gray-500">프로젝트를 선택해주세요.</p>
+            <p className="text-gray-500">프로젝트를 선택해주세요. (현재 뷰: {currentView})</p>
           </div>
         )}
       </main>

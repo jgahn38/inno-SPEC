@@ -29,7 +29,14 @@ export class LocalStorageProjectProvider implements IProjectDataProvider {
               description: '기본 교량',
               type: 'concrete',
               length: 35,
-              width: 8
+              width: 8,
+              spanCount: 3,
+              height: 2.5,
+              constructionYear: 2020,
+              location: '서울시',
+              status: 'active',
+              createdAt: new Date(),
+              updatedAt: new Date()
             }
           ]
         },
@@ -50,7 +57,14 @@ export class LocalStorageProjectProvider implements IProjectDataProvider {
               description: '두 번째 기본 교량',
               type: 'steel',
               length: 40,
-              width: 10
+              width: 10,
+              spanCount: 4,
+              height: 3.0,
+              constructionYear: 2019,
+              location: '부산시',
+              status: 'active',
+              createdAt: new Date(),
+              updatedAt: new Date()
             }
           ]
         },
@@ -71,7 +85,14 @@ export class LocalStorageProjectProvider implements IProjectDataProvider {
               description: '세 번째 기본 교량',
               type: 'composite',
               length: 45,
-              width: 12
+              width: 12,
+              spanCount: 5,
+              height: 3.5,
+              constructionYear: 2021,
+              location: '대구시',
+              status: 'active',
+              createdAt: new Date(),
+              updatedAt: new Date()
             }
           ]
         }
@@ -131,7 +152,23 @@ export class LocalStorageProjectProvider implements IProjectDataProvider {
       category: request.category,
       tags: request.tags || [],
       metadata: request.metadata || {},
-      bridges: []
+      bridges: [
+        {
+          id: `bridge-${Date.now()}`,
+          name: '새 교량',
+          description: '새로 생성된 교량입니다.',
+          type: 'concrete',
+          length: 30,
+          width: 8,
+          spanCount: 2,
+          height: 2.5,
+          constructionYear: new Date().getFullYear(),
+          location: '위치 미정',
+          status: 'active',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      ]
     };
     
     console.log('New project object created:', newProject);

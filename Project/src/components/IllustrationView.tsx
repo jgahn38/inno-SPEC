@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, Settings, Download, RotateCcw, Plus, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
+import { CADParserService, CADData, CADEntity } from '../services/CADParserService';
 
 interface SectionParameter {
   key: string;
@@ -42,6 +43,7 @@ interface SectionLibrary {
 }
 
 const IllustrationView: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'library' | 'cad'>('library');
   const [sectionData, setSectionData] = useState<SectionLibrary | null>(null);
   const [parameters, setParameters] = useState<Record<string, number>>({});
   const [derivedValues, setDerivedValues] = useState<Record<string, number>>({});
@@ -56,6 +58,26 @@ const IllustrationView: React.FC = () => {
   const [parameterSearchTerm, setParameterSearchTerm] = useState<string>('');
   const [parameterSortBy, setParameterSortBy] = useState<'order' | 'name' | 'value'>('order');
   const [parameterSortDirection, setParameterSortDirection] = useState<'asc' | 'desc'>('asc');
+  
+  // CAD 파일 업로드 관련 상태
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [detectedSection, setDetectedSection] = useState<any>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  
+  // CAD 렌더링 및 선택 관련 상태
+  const [cadData, setCadData] = useState<CADData | null>(null);
+  const [selectedLines, setSelectedLines] = useState<Array<{id: string, start: [number, number], end: [number, number]}>>([]);
+  const [isSelectingLines, setIsSelectingLines] = useState(false);
+  const [cadViewMode, setCadViewMode] = useState<'2d' | '3d'>('2d');
+  const [cadZoom, setCadZoom] = useState(1);
+  const [cadPan, setCadPan] = useState<[number, number]>([0, 0]);
+  
+  // CAD 파서 서비스
+  const [cadParserService] = useState(() => CADParserService.getInstance());
 
   useEffect(() => {
     // 사용 가능한 section 파일들 로드
@@ -159,6 +181,277 @@ const IllustrationView: React.FC = () => {
     if (section) {
       loadSectionData(section.filename);
     }
+  };
+
+  // CAD 파일 업로드 핸들러
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      validateAndSetFile(file);
+    }
+  };
+
+  const handleFileDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+      validateAndSetFile(files[0]);
+    }
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+  };
+
+  const validateAndSetFile = (file: File) => {
+    setUploadError(null);
+    setUploadSuccess(false);
+    
+    // 파일 크기 검증 (50MB)
+    if (file.size > 50 * 1024 * 1024) {
+      setUploadError('파일 크기가 50MB를 초과합니다.');
+      return;
+    }
+
+    // 파일 형식 검증 (현재는 DWG만 지원)
+    const allowedTypes = ['.dwg'];
+    const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+    
+    if (!allowedTypes.includes(fileExtension)) {
+      setUploadError('지원하지 않는 파일 형식입니다. 현재 지원 형식: ' + allowedTypes.join(', '));
+      return;
+    }
+
+    setUploadedFile(file);
+  };
+
+  const uploadFile = async () => {
+    if (!uploadedFile) return;
+
+    setIsUploading(true);
+    setUploadProgress(0);
+    setUploadError(null);
+
+    try {
+      // FormData 생성
+      const formData = new FormData();
+      formData.append('file', uploadedFile);
+      formData.append('type', 'section');
+
+      // 업로드 진행률 시뮬레이션
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 200);
+
+      // 파일 업로드 API 호출 (실제 구현 시 서버 엔드포인트로 변경)
+      const response = await fetch('/api/upload-cad', {
+        method: 'POST',
+        body: formData,
+      });
+
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
+      if (response.ok) {
+        const result = await response.json();
+        setUploadSuccess(true);
+        setDetectedSection(result.section);
+        
+        // 성공 후 2초 뒤에 진행 상태 초기화
+        setTimeout(() => {
+          setIsUploading(false);
+          setUploadProgress(0);
+        }, 2000);
+      } else {
+        throw new Error('파일 업로드에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      setUploadError(error instanceof Error ? error.message : '업로드 중 오류가 발생했습니다.');
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const processUploadedFile = async () => {
+    if (!uploadedFile) return;
+
+    setIsProcessing(true);
+    setUploadError(null);
+
+    try {
+      // CAD 파서 서비스 초기화 확인
+      const status = cadParserService.getStatus();
+      console.log('CAD Parser Service Status:', status);
+
+      let parseResult;
+      
+      // 현재는 DWG 파일만 지원
+      if (uploadedFile.name.toLowerCase().endsWith('.dwg')) {
+        console.log('DWG 파일 파싱 시작...');
+        parseResult = await cadParserService.parseDWGFile(uploadedFile);
+      } else {
+        throw new Error('지원하지 않는 파일 형식입니다. DWG 파일을 사용해주세요.');
+      }
+
+      if (parseResult.success && parseResult.data) {
+        console.log('CAD 파일 파싱 성공:', parseResult.data);
+        console.log('총 엔티티 수:', parseResult.data.entities.length);
+        console.log('엔티티 타입별 분류:', {
+          line: parseResult.data.entities.filter(e => e.type === 'line').length,
+          circle: parseResult.data.entities.filter(e => e.type === 'circle').length,
+          arc: parseResult.data.entities.filter(e => e.type === 'arc').length,
+          polyline: parseResult.data.entities.filter(e => e.type === 'polyline').length,
+          text: parseResult.data.entities.filter(e => e.type === 'text').length,
+          dimension: parseResult.data.entities.filter(e => e.type === 'dimension').length
+        });
+        
+        setCadData(parseResult.data);
+        setUploadSuccess(true);
+        setIsProcessing(false);
+        
+        // CAD 렌더링 모드로 전환
+        setActiveTab('cad');
+        setUploadSuccess(false);
+      } else {
+        throw new Error(parseResult.error || '파일 파싱에 실패했습니다.');
+      }
+
+    } catch (error) {
+      console.error('CAD 파일 처리 오류:', error);
+      setUploadError(error instanceof Error ? error.message : '파일 처리 중 오류가 발생했습니다.');
+      setIsProcessing(false);
+    }
+  };
+
+  const resetUpload = () => {
+    setUploadedFile(null);
+    setUploadError(null);
+    setUploadSuccess(false);
+    setDetectedSection(null);
+    setCadData(null);
+    setSelectedLines([]);
+    setUploadProgress(0);
+    setIsUploading(false);
+    setIsProcessing(false);
+  };
+
+  // 선택된 선을 기반으로 단면 생성
+  const createSectionFromSelectedLines = () => {
+    if (selectedLines.length === 0) {
+      alert('단면으로 사용할 선을 선택해주세요.');
+      return;
+    }
+
+    // 선택된 선들을 기반으로 단면 파라미터 생성
+    const bounds = calculateBounds(selectedLines);
+    const width = bounds.max[0] - bounds.min[0];
+    const height = bounds.max[1] - bounds.min[1];
+
+    const generatedSection = {
+      id: `cad-generated-${Date.now()}`,
+      name: `CAD_${uploadedFile?.name.replace(/\.[^/.]+$/, '') || 'Generated'}`,
+      version: '1.0',
+      category: 'custom',
+      parameters: [
+        {
+          key: 'width',
+          label: '폭',
+          type: 'number',
+          unit: 'mm',
+          default: Math.round(width),
+          min: Math.round(width * 0.5),
+          max: Math.round(width * 2),
+          ui: { control: 'input', order: 1 }
+        },
+        {
+          key: 'height',
+          label: '높이',
+          type: 'number',
+          unit: 'mm',
+          default: Math.round(height),
+          min: Math.round(height * 0.5),
+          max: Math.round(height * 2),
+          ui: { control: 'input', order: 2 }
+        }
+      ],
+      derived: [
+        {
+          key: 'area',
+          label: '단면적',
+          unit: 'mm²',
+          expr: 'width * height'
+        },
+        {
+          key: 'perimeter',
+          label: '둘레',
+          unit: 'mm',
+          expr: '2 * (width + height)'
+        }
+      ],
+      constraints: [
+        {
+          expr: 'width > 0 && height > 0',
+          message: '폭과 높이는 0보다 커야 합니다.',
+          severity: 'error'
+        }
+      ],
+      geometry: {
+        draw_ops: [
+          { op: 'rectangle', args: { width: 'width', height: 'height' } }
+        ]
+      }
+    };
+
+    setSectionData(generatedSection);
+    
+    // 파라미터 초기화
+    const initialParams: Record<string, number> = {};
+    generatedSection.parameters.forEach(param => {
+      initialParams[param.key] = param.default;
+    });
+    setParameters(initialParams);
+    calculateDerivedValues(initialParams);
+    validateConstraints(initialParams);
+
+    // 단면 라이브러리 탭으로 전환
+    setActiveTab('library');
+  };
+
+  // 선택된 선들의 경계 계산
+  const calculateBounds = (lines: Array<{id: string, start: [number, number], end: [number, number]}>) => {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    
+    lines.forEach(line => {
+      minX = Math.min(minX, line.start[0], line.end[0]);
+      minY = Math.min(minY, line.start[1], line.end[1]);
+      maxX = Math.max(maxX, line.start[0], line.end[0]);
+      maxY = Math.max(maxY, line.start[1], line.end[1]);
+    });
+
+    return { min: [minX, minY], max: [maxX, maxY] };
+  };
+
+  // 선 선택/해제 토글
+  const toggleLineSelection = (lineId: string) => {
+    setSelectedLines(prev => {
+      const isSelected = prev.some(line => line.id === lineId);
+      if (isSelected) {
+        return prev.filter(line => line.id !== lineId);
+      } else {
+        const line = cadData?.entities.find((e: any) => e.id === lineId);
+        if (line && line.type === 'line') {
+          return [...prev, { id: line.id, start: line.start, end: line.end }];
+        }
+        return prev;
+      }
+    });
   };
 
   const getSortedAndFilteredParameters = () => {
@@ -507,48 +800,79 @@ const IllustrationView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">단면 - {sectionData.name}</h2>
-            <p className="text-sm text-gray-600">단면의 파라미터를 조정하고 형상을 미리보기하세요.</p>
-            
-            {/* Section 선택 콤보박스 */}
-            <div className="mt-3">
-              <label htmlFor="section-select" className="block text-sm font-medium text-gray-700 mb-1">
-                단면 유형 선택
-              </label>
-              <select
-                id="section-select"
-                value={selectedSectionId}
-                onChange={(e) => handleSectionChange(e.target.value)}
-                className="block w-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              >
-                {availableSections.map((section) => (
-                  <option key={section.id} value={section.id}>
-                    {section.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="flex items-center space-x-3">
+      {/* 탭 네비게이션 */}
+      <div className="px-6 pt-4">
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
             <button
-              onClick={resetParameters}
-              className="flex items-center space-x-2 px-3 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              onClick={() => setActiveTab('library')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'library'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
             >
-              <RotateCcw className="h-4 w-4" />
-              <span>기본값 복원</span>
+              📚 단면 라이브러리
             </button>
-            <button className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-              <Download className="h-4 w-4" />
-              <span>도면 저장</span>
+            <button
+              onClick={() => setActiveTab('cad')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'cad'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              🎨 CAD 파일 불러오기
             </button>
-          </div>
+          </nav>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* 단면 라이브러리 탭 */}
+      {activeTab === 'library' && (
+        <>
+          <div className="px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">단면 - {sectionData.name}</h2>
+                <p className="text-sm text-gray-600">단면의 파라미터를 조정하고 형상을 미리보기하세요.</p>
+                
+                {/* Section 선택 콤보박스 */}
+                <div className="mt-3">
+                  <label htmlFor="section-select" className="block text-sm font-medium text-gray-700 mb-1">
+                    단면 유형 선택
+                  </label>
+                  <select
+                    id="section-select"
+                    value={selectedSectionId}
+                    onChange={(e) => handleSectionChange(e.target.value)}
+                    className="block w-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    {availableSections.map((section) => (
+                      <option key={section.id} value={section.id}>
+                        {section.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={resetParameters}
+                  className="flex items-center space-x-2 px-3 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  <span>기본값 복원</span>
+                </button>
+                <button className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                  <Download className="h-4 w-4" />
+                  <span>도면 저장</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 파라미터 입력 패널 */}
         <div className="bg-white rounded-lg border border-gray-200">
           <div className="px-4 py-3 border-b border-gray-200">
@@ -781,62 +1105,526 @@ const IllustrationView: React.FC = () => {
         </div>
       </div>
 
-      {/* 파생값 및 제약조건 패널 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 파생값 */}
-        <div className="bg-white rounded-lg border border-gray-200">
-          <div className="px-4 py-3 border-b border-gray-200">
-            <h3 className="font-semibold text-gray-900">계산된 값</h3>
-          </div>
-          <div className="p-4">
-            <div className="space-y-3">
-              {sectionData.derived.map(item => (
-                <div key={item.key} className="flex justify-between items-center py-2 border-b border-gray-100">
-                  <span className="text-sm text-gray-600">{item.label}</span>
-                  <span className="text-sm font-medium text-gray-900">
-                    {derivedValues[item.key]?.toFixed(2) || '0.00'} {item.unit}
-                  </span>
-                </div>
-              ))}
+        {/* 파생값 및 제약조건 패널 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* 파생값 */}
+          <div className="bg-white rounded-lg border border-gray-200">
+            <div className="px-4 py-3 border-b border-gray-200">
+              <h3 className="font-semibold text-gray-900">계산된 값</h3>
+            </div>
+            <div className="p-4">
+              <div className="space-y-3">
+                {sectionData.derived.map(item => (
+                  <div key={item.key} className="flex justify-between items-center py-2 border-b border-gray-100">
+                    <span className="text-sm text-gray-600">{item.label}</span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {derivedValues[item.key]?.toFixed(2) || '0.00'} {item.unit}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* 제약조건 검증 */}
-        <div className="bg-white rounded-lg border border-gray-200">
-          <div className="px-4 py-3 border-b border-gray-200">
-            <h3 className="font-semibold text-gray-900">제약조건 검증</h3>
-          </div>
-          <div className="p-4">
-            <div className="space-y-3">
-              {constraintResults.map((result, index) => (
-                <div key={index} className={`flex items-center space-x-2 p-2 rounded-md ${
-                  result.isValid 
-                    ? 'bg-green-50 border border-green-200' 
-                    : result.severity === 'error'
-                    ? 'bg-red-50 border border-red-200'
-                    : 'bg-yellow-50 border border-yellow-200'
-                }`}>
-                  {result.isValid ? (
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                  ) : (
-                    <AlertTriangle className="h-4 w-4 text-red-600" />
-                  )}
-                  <span className={`text-sm ${
+          {/* 제약조건 검증 */}
+          <div className="bg-white rounded-lg border border-gray-200">
+            <div className="px-4 py-3 border-b border-gray-200">
+              <h3 className="font-semibold text-gray-900">제약조건 검증</h3>
+            </div>
+            <div className="p-4">
+              <div className="space-y-3">
+                {constraintResults.map((result, index) => (
+                  <div key={index} className={`flex items-center space-x-2 p-2 rounded-md ${
                     result.isValid 
-                      ? 'text-green-800' 
+                      ? 'bg-green-50 border border-green-200' 
                       : result.severity === 'error'
-                      ? 'text-red-800'
-                      : 'text-yellow-800'
+                      ? 'bg-red-50 border border-red-200'
+                      : 'bg-yellow-50 border border-yellow-200'
                   }`}>
-                    {result.message}
-                  </span>
-                </div>
-              ))}
+                    {result.isValid ? (
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <AlertTriangle className="h-4 w-4 text-red-600" />
+                    )}
+                    <span className={`text-sm ${
+                      result.isValid 
+                        ? 'text-green-800' 
+                        : result.severity === 'error'
+                        ? 'text-red-800'
+                        : 'text-yellow-800'
+                    }`}>
+                      {result.message}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+        </>
+      )}
+
+      {/* CAD 파일 불러오기 탭 */}
+      {activeTab === 'cad' && (
+        <div className="px-6 py-8">
+          {!cadData ? (
+            // 파일 업로드 화면
+            <div className="text-center">
+              <div className="mx-auto w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mb-6">
+                <svg className="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 2v7a1 1 0 001 1h7" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">CAD 파일 불러오기</h3>
+              <p className="text-gray-600 mb-6">
+                AutoCAD (.dwg), SketchUp (.skp), 또는 기타 CAD 파일을 불러와서 단면을 정의하세요.
+              </p>
+              
+              {/* 파일 업로드 영역 */}
+              <div className="max-w-md mx-auto">
+                {!uploadedFile ? (
+                  <div 
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors cursor-pointer"
+                    onDrop={handleFileDrop}
+                    onDragOver={handleDragOver}
+                    onClick={() => document.getElementById('file-input')?.click()}
+                  >
+                    <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    <div className="mt-4">
+                      <p className="text-sm text-gray-600">
+                        <span className="font-medium text-blue-600 hover:text-blue-500">파일을 클릭하여 선택</span>하거나
+                      </p>
+                      <p className="text-sm text-gray-500">드래그 앤 드롭으로 파일을 업로드하세요</p>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-2">
+                      지원 형식: .dwg, .dxf, .skp, .3ds, .obj (최대 50MB)
+                    </p>
+                  </div>
+                ) : (
+                  <div className="border border-gray-200 rounded-lg p-6 bg-white">
+                    <div className="flex items-center space-x-3 mb-4">
+                      <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div className="text-left">
+                        <p className="font-medium text-gray-900">{uploadedFile.name}</p>
+                        <p className="text-sm text-gray-500">{(uploadedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                      </div>
+                    </div>
+                    
+                    {uploadError && (
+                      <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                        <p className="text-sm text-red-800">{uploadError}</p>
+                      </div>
+                    )}
+
+                    {uploadSuccess && (
+                      <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
+                        <p className="text-sm text-green-800">파일이 성공적으로 처리되었습니다!</p>
+                      </div>
+                    )}
+
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={processUploadedFile}
+                        disabled={isProcessing}
+                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {isProcessing ? (
+                          <span className="flex items-center justify-center">
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            처리 중...
+                          </span>
+                        ) : (
+                          'CAD 파일 로드'
+                        )}
+                      </button>
+                      <button
+                        onClick={resetUpload}
+                        className="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                      >
+                        취소
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 숨겨진 파일 입력 */}
+                <input
+                  id="file-input"
+                  type="file"
+                  accept=".dwg,.dxf,.skp,.3ds,.obj,.stl,.iges,.step"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+              </div>
+
+              {/* 진행 상태 표시 */}
+              {(isUploading || isProcessing) && (
+                <div className="mt-6 max-w-md mx-auto">
+                  <div className="bg-white border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        {isUploading ? '파일 업로드 중...' : 'CAD 파일 처리 중...'}
+                      </span>
+                      <span className="text-sm text-gray-500">{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="mt-8 text-sm text-gray-500">
+                <p>• CAD 파일을 업로드하면 화면에 렌더링됩니다</p>
+                <p>• 단면으로 사용할 선을 직접 클릭하여 선택하세요</p>
+                <p>• 선택된 선들을 기반으로 단면 파라미터가 자동 생성됩니다</p>
+              </div>
+            </div>
+          ) : (
+            // CAD 렌더링 및 선 선택 화면
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900">CAD 파일: {cadData.name}</h3>
+                  <p className="text-sm text-gray-600">단면으로 사용할 선을 클릭하여 선택하세요</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => setCadViewMode(cadViewMode === '2d' ? '3d' : '2d')}
+                    className="px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                  >
+                    {cadViewMode === '2d' ? '3D 보기' : '2D 보기'}
+                  </button>
+                  <button
+                    onClick={resetUpload}
+                    className="px-3 py-2 text-sm text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                  >
+                    새 파일
+                  </button>
+                </div>
+              </div>
+
+              {/* CAD 뷰어 */}
+              <div className="bg-white border border-gray-200 rounded-lg">
+                <div className="px-4 py-3 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-gray-900">CAD 뷰어</h4>
+                    <div className="flex items-center space-x-2 text-sm text-gray-500">
+                      <span>선택된 선: {selectedLines.length}개</span>
+                      <span>•</span>
+                      <span>레이어: {cadData.layers.join(', ')}</span>
+                    </div>
+                  </div>
+                  
+                  {/* CAD 데이터 디버깅 정보 */}
+                  <div className="mt-2 pt-2 border-t border-gray-200">
+                    <div className="flex items-center justify-between text-xs text-gray-600">
+                      <span>
+                        총 {cadData.entities.length}개 객체 | 
+                        선: {cadData.entities.filter(e => e.type === 'line').length}개 | 
+                        원: {cadData.entities.filter(e => e.type === 'circle').length}개 | 
+                        호: {cadData.entities.filter(e => e.type === 'arc').length}개 | 
+                        폴리라인: {cadData.entities.filter(e => e.type === 'polyline').length}개 | 
+                        텍스트: {cadData.entities.filter(e => e.type === 'text').length}개 | 
+                        치수: {cadData.entities.filter(e => e.type === 'dimension').length}개
+                      </span>
+                      <span>
+                        뷰포트: ({cadData.bounds.min[0].toFixed(0)}, {cadData.bounds.min[1].toFixed(0)}) ~ 
+                        ({cadData.bounds.max[0].toFixed(0)}, {cadData.bounds.max[1].toFixed(0)})
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="p-4">
+                  <div className="relative bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
+                    {/* CAD 렌더링 영역 */}
+                    <div className="relative" style={{ width: '100%', height: '500px' }}>
+                      <svg
+                        width="100%"
+                        height="100%"
+                        viewBox={`${cadData.bounds.min[0] - 50} ${cadData.bounds.min[1] - 50} ${cadData.bounds.max[0] - cadData.bounds.min[0] + 100} ${cadData.bounds.max[1] - cadData.bounds.min[1] + 100}`}
+                        className="cursor-crosshair"
+                      >
+                        {/* 그리드 */}
+                        <defs>
+                          <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e5e7eb" strokeWidth="0.5"/>
+                          </pattern>
+                        </defs>
+                        <rect width="100%" height="100%" fill="url(#grid)" />
+                        
+                        {/* CAD 엔티티 렌더링 */}
+                        {cadData.entities.map((entity: CADEntity) => {
+                          const isSelected = selectedLines.some(line => line.id === entity.id);
+                          
+                          switch (entity.type) {
+                            case 'line':
+                              if (entity.start && entity.end) {
+                                return (
+                                  <g key={entity.id}>
+                                    <line
+                                      x1={entity.start[0]}
+                                      y1={entity.start[1]}
+                                      x2={entity.end[0]}
+                                      y2={entity.end[1]}
+                                      stroke={isSelected ? '#3b82f6' : '#374151'}
+                                      strokeWidth={isSelected ? 3 : 1}
+                                      className="cursor-pointer hover:stroke-blue-500"
+                                      onClick={() => toggleLineSelection(entity.id)}
+                                    />
+                                    {isSelected && (
+                                      <>
+                                        <circle
+                                          cx={entity.start[0]}
+                                          cy={entity.start[1]}
+                                          r="4"
+                                          fill="#3b82f6"
+                                        />
+                                        <circle
+                                          cx={entity.end[0]}
+                                          cy={entity.end[1]}
+                                          r="4"
+                                          fill="#3b82f6"
+                                        />
+                                      </>
+                                    )}
+                                  </g>
+                                );
+                              }
+                              break;
+
+                            case 'circle':
+                              if (entity.center && entity.radius) {
+                                return (
+                                  <g key={entity.id}>
+                                    <circle
+                                      cx={entity.center[0]}
+                                      cy={entity.center[1]}
+                                      r={entity.radius}
+                                      fill="none"
+                                      stroke={isSelected ? '#3b82f6' : '#374151'}
+                                      strokeWidth={isSelected ? 2 : 1}
+                                      className="cursor-pointer hover:stroke-blue-500"
+                                      onClick={() => toggleLineSelection(entity.id)}
+                                    />
+                                    {isSelected && (
+                                      <circle
+                                        cx={entity.center[0]}
+                                        cy={entity.center[1]}
+                                        r="4"
+                                        fill="#3b82f6"
+                                      />
+                                    )}
+                                  </g>
+                                );
+                              }
+                              break;
+
+                            case 'arc':
+                              if (entity.center && entity.radius && entity.startAngle !== undefined && entity.endAngle !== undefined) {
+                                // 호를 여러 개의 선분으로 근사
+                                const steps = 20;
+                                const points = [];
+                                
+                                for (let i = 0; i <= steps; i++) {
+                                  const angle = entity.startAngle + (entity.endAngle - entity.startAngle) * (i / steps);
+                                  const x = entity.center[0] + entity.radius * Math.cos(angle);
+                                  const y = entity.center[1] + entity.radius * Math.sin(angle);
+                                  points.push([x, y]);
+                                }
+                                
+                                return (
+                                  <g key={entity.id}>
+                                    {points.slice(1).map((point, index) => (
+                                      <line
+                                        key={`${entity.id}-${index}`}
+                                        x1={points[index][0]}
+                                        y1={points[index][1]}
+                                        x2={point[0]}
+                                        y2={point[1]}
+                                        stroke={isSelected ? '#3b82f6' : '#374151'}
+                                        strokeWidth={isSelected ? 2 : 1}
+                                        className="cursor-pointer hover:stroke-blue-500"
+                                      />
+                                    ))}
+                                    {isSelected && (
+                                      <circle
+                                        cx={entity.center[0]}
+                                        cy={entity.center[1]}
+                                        r="4"
+                                        fill="#3b82f6"
+                                      />
+                                    )}
+                                  </g>
+                                );
+                              }
+                              break;
+
+                            case 'polyline':
+                              if (entity.vertices && entity.vertices.length > 1) {
+                                const points = entity.vertices;
+                                return (
+                                  <g key={entity.id}>
+                                    {points.slice(1).map((point, index) => (
+                                      <line
+                                        key={`${entity.id}-${index}`}
+                                        x1={points[index][0]}
+                                        y1={points[index][1]}
+                                        x2={point[0]}
+                                        y2={point[1]}
+                                        stroke={isSelected ? '#3b82f6' : '#374151'}
+                                        strokeWidth={isSelected ? 2 : 1}
+                                        className="cursor-pointer hover:stroke-blue-500"
+                                      />
+                                    ))}
+                                    {entity.closed && points.length > 2 && (
+                                      <line
+                                        x1={points[points.length - 1][0]}
+                                        y1={points[points.length - 1][1]}
+                                        x2={points[0][0]}
+                                        y2={points[0][1]}
+                                        stroke={isSelected ? '#3b82f6' : '#374151'}
+                                        strokeWidth={isSelected ? 2 : 1}
+                                        className="cursor-pointer hover:stroke-blue-500"
+                                      />
+                                    )}
+                                    {isSelected && points.map((point, index) => (
+                                      <circle
+                                        key={`${entity.id}-point-${index}`}
+                                        cx={point[0]}
+                                        cy={point[1]}
+                                        r="3"
+                                        fill="#3b82f6"
+                                      />
+                                    ))}
+                                  </g>
+                                );
+                              }
+                              break;
+
+                            case 'text':
+                              if (entity.position && entity.text) {
+                                return (
+                                  <g key={entity.id}>
+                                    <text
+                                      x={entity.position[0]}
+                                      y={entity.position[1]}
+                                      fontSize={entity.height || 12}
+                                      fill="#374151"
+                                      textAnchor="middle"
+                                      dominantBaseline="middle"
+                                      transform={`rotate(${entity.rotation || 0} ${entity.position[0]} ${entity.position[1]})`}
+                                    >
+                                      {entity.text}
+                                    </text>
+                                  </g>
+                                );
+                              }
+                              break;
+
+                            case 'dimension':
+                              if (entity.definitionPoint && entity.textPosition && entity.measurement !== undefined) {
+                                return (
+                                  <g key={entity.id}>
+                                    <line
+                                      x1={entity.definitionPoint[0]}
+                                      y1={entity.definitionPoint[1]}
+                                      x2={entity.textPosition[0]}
+                                      y2={entity.textPosition[1]}
+                                      stroke="#666"
+                                      strokeWidth={1}
+                                      strokeDasharray="5,5"
+                                    />
+                                    <text
+                                      x={entity.textPosition[0]}
+                                      y={entity.textPosition[1]}
+                                      fontSize={10}
+                                      fill="#666"
+                                      textAnchor="middle"
+                                      dominantBaseline="middle"
+                                    >
+                                      {entity.measurement.toFixed(2)}
+                                    </text>
+                                  </g>
+                                );
+                              }
+                              break;
+
+                            default:
+                              console.warn(`지원하지 않는 엔티티 타입: ${entity.type}`);
+                              return null;
+                          }
+                          
+                          return null;
+                        })}
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 선택된 선 정보 및 단면 생성 */}
+              <div className="bg-white border border-gray-200 rounded-lg">
+                <div className="px-4 py-3 border-b border-gray-200">
+                  <h4 className="font-medium text-gray-900">선택된 선 정보</h4>
+                </div>
+                <div className="p-4">
+                  {selectedLines.length === 0 ? (
+                    <p className="text-gray-500 text-center py-8">선택된 선이 없습니다. CAD 뷰어에서 선을 클릭하여 선택하세요.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {selectedLines.map((line, index) => (
+                          <div key={line.id} className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-blue-900">선 {index + 1}</span>
+                              <button
+                                onClick={() => toggleLineSelection(line.id)}
+                                className="text-blue-600 hover:text-blue-800 text-sm"
+                              >
+                                선택 해제
+                              </button>
+                            </div>
+                            <div className="text-xs text-blue-700">
+                              <p>시작점: ({line.start[0].toFixed(1)}, {line.start[1].toFixed(1)})</p>
+                              <p>끝점: ({line.end[0].toFixed(1)}, {line.end[1].toFixed(1)})</p>
+                              <p>길이: {Math.sqrt(Math.pow(line.end[0] - line.start[0], 2) + Math.pow(line.end[1] - line.start[1], 2)).toFixed(1)}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <div className="border-t pt-4">
+                        <button
+                          onClick={createSectionFromSelectedLines}
+                          className="w-full px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium"
+                        >
+                          선택된 선으로 단면 생성
+                        </button>
+                        <p className="text-xs text-gray-500 text-center mt-2">
+                          선택된 선들을 기반으로 단면 파라미터가 자동 생성됩니다
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

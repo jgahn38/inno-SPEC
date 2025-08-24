@@ -14,3 +14,5 @@ export { MEngineService } from './MEngineService';
 export { TableSchemaService } from './TableSchemaService';
 export { MParser } from './MParser';
 export { DatabaseService } from './DatabaseService';
+export { BridgeDataService } from './BridgeDataService';
+export { CADParserService } from './CADParserService';

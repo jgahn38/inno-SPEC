@@ -4,6 +4,12 @@ export { Bridge } from './Bridge';
 export { Tenant, TenantSettings, CustomField, BrandingSettings, SecuritySettings, PasswordPolicy, CreateTenantRequest, UpdateTenantRequest } from './Tenant';
 export { User, UserRole, UserProfile, Permission, CreateUserRequest, UpdateUserRequest, LoginRequest, LoginResponse } from './User';
 
+// 교량별 데이터 관리 타입
+export * from './BridgeData';
+
+// CAD 파싱 관련 타입
+export { CADEntity, CADData, CADParseResult } from '../services/CADParserService';
+
 // 프로젝트 데이터 제공자 인터페이스
 export interface IProjectDataProvider {
   /**

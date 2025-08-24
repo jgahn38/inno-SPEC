@@ -9,9 +9,16 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "node server.js",
-    "server": "nodemon server.js"
+    "server": "nodemon server.js",
+    "sync:restore": "node scripts/sync-data.js restore",
+    "sync:backup": "node scripts/sync-data.js backup",
+    "sync:status": "node scripts/sync-data.js status",
+    "backup:status": "node scripts/auto-backup.js status",
+    "backup:list": "node scripts/auto-backup.js list",
+    "backup:cleanup": "node scripts/auto-backup.js cleanup"
   },
   "dependencies": {
+    "@mlightcad/libredwg-web": "^0.1.6",
     "express": "^4.18.2",
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",

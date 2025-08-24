@@ -3,8 +3,8 @@ import { Building2, FolderOpen, Settings, Search, Bell, HelpCircle, User, LogOut
 import { Tenant, User as UserType } from '../types';
 
 interface HeaderProps {
-  currentView: 'projects' | 'evaluation' | 'tables' | 'databases';
-  onNavigate: (view: 'projects' | 'evaluation' | 'tables' | 'databases') => void;
+  currentView: 'projects' | 'evaluation' | 'tables' | 'databases' | 'sync' | 'functions' | 'settings';
+  onNavigate: (view: 'projects' | 'evaluation' | 'tables' | 'databases' | 'sync' | 'functions' | 'settings') => void;
   currentTenant: Tenant;
   currentUser: UserType;
   onLogout: () => void;
@@ -12,6 +12,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentTenant, currentUser, onLogout }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
+
   return (
     <header className="bg-white border-b border-gray-200 shadow-sm">
       <div className="px-4">
@@ -42,7 +43,17 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentTenant,
                     : 'text-gray-600 hover:text-gray-900 border-transparent hover:border-gray-300 font-semibold'
                 }`}
               >
-                테이블 관리
+                테이블
+              </button>
+              <button
+                onClick={() => onNavigate('functions')}
+                className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  currentView === 'functions' 
+                    ? 'text-blue-600 border-blue-600 font-semibold' 
+                    : 'text-gray-600 hover:text-gray-900 border-transparent hover:border-gray-300 font-semibold'
+                }`}
+              >
+                함수
               </button>
               <button
                 onClick={() => onNavigate('databases')}
@@ -52,7 +63,17 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentTenant,
                     : 'text-gray-600 hover:text-gray-900 border-transparent hover:border-gray-300 font-semibold'
                 }`}
               >
-                데이터베이스
+                DB
+              </button>
+              <button
+                onClick={() => onNavigate('sync')}
+                className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  currentView === 'sync' 
+                    ? 'text-blue-600 border-blue-600 font-semibold' 
+                    : 'text-gray-600 hover:text-gray-900 border-transparent hover:border-gray-300 font-semibold'
+                }`}
+              >
+                동기화
               </button>
             </nav>
           </div>

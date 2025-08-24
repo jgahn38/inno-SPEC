@@ -3,10 +3,40 @@ import { TableSchema, TableField, FieldType, ValidationRule } from '../types';
 export class TableSchemaService {
   private static instance: TableSchemaService;
   private schemas: Map<string, TableSchema>;
+  private readonly STORAGE_KEY = 'inno_spec_table_schemas';
 
   private constructor() {
     this.schemas = new Map();
+    this.loadFromLocalStorage();
     this.initializeDefaultSchemas();
+  }
+
+  // LocalStorage에서 데이터 로드
+  private loadFromLocalStorage(): void {
+    try {
+      const stored = localStorage.getItem(this.STORAGE_KEY);
+      if (stored) {
+        const schemasArray = JSON.parse(stored);
+        schemasArray.forEach((schema: any) => {
+          // Date 객체 복원
+          schema.createdAt = new Date(schema.createdAt);
+          schema.updatedAt = new Date(schema.updatedAt);
+          this.schemas.set(schema.id, schema);
+        });
+      }
+    } catch (error) {
+      console.error('LocalStorage에서 테이블 스키마 로드 중 오류:', error);
+    }
+  }
+
+  // LocalStorage에 데이터 저장
+  private saveToLocalStorage(): void {
+    try {
+      const schemasArray = Array.from(this.schemas.values());
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(schemasArray));
+    } catch (error) {
+      console.error('LocalStorage에 테이블 스키마 저장 중 오류:', error);
+    }
   }
 
   public static getInstance(): TableSchemaService {
@@ -194,6 +224,9 @@ export class TableSchemaService {
     this.schemas.set('table-1', table1Schema);
     this.schemas.set('table-2', table2Schema);
     this.schemas.set('table-3', table3Schema);
+    
+    // 기본 스키마를 localStorage에 저장
+    this.saveToLocalStorage();
   }
 
   // 모든 테이블 스키마 가져오기
@@ -220,6 +253,7 @@ export class TableSchemaService {
     schema.createdAt = new Date();
     schema.updatedAt = new Date();
     this.schemas.set(schema.id, schema);
+    this.saveToLocalStorage(); // 스키마 추가 후 저장
   }
 
   // 테이블 스키마 업데이트
@@ -236,6 +270,7 @@ export class TableSchemaService {
     };
 
     this.schemas.set(tableId, updatedSchema);
+    this.saveToLocalStorage(); // 스키마 업데이트 후 저장
   }
 
   // 테이블 스키마 삭제
@@ -245,6 +280,7 @@ export class TableSchemaService {
     }
 
     this.schemas.delete(tableId);
+    this.saveToLocalStorage(); // 스키마 삭제 후 저장
   }
 
   // 테이블 필드 추가
@@ -261,6 +297,7 @@ export class TableSchemaService {
     schema.fields.push(field);
     schema.updatedAt = new Date();
     this.schemas.set(tableId, schema);
+    this.saveToLocalStorage(); // 필드 추가 후 저장
   }
 
   // 테이블 필드 업데이트
@@ -281,6 +318,7 @@ export class TableSchemaService {
     };
     schema.updatedAt = new Date();
     this.schemas.set(tableId, schema);
+    this.saveToLocalStorage(); // 필드 업데이트 후 저장
   }
 
   // 테이블 필드 삭제
@@ -298,6 +336,7 @@ export class TableSchemaService {
     schema.fields.splice(fieldIndex, 1);
     schema.updatedAt = new Date();
     this.schemas.set(tableId, schema);
+    this.saveToLocalStorage(); // 필드 삭제 후 저장
   }
 
   // 지원되는 필드 타입 가져오기
