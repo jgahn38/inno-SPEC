@@ -3,11 +3,15 @@ import { TableSchema, TableField, FieldType, ValidationRule } from '../types';
 export class TableSchemaService {
   private static instance: TableSchemaService;
   private schemas: Map<string, TableSchema>;
+  private fields: Map<string, TableField>;
   private readonly STORAGE_KEY = 'inno_spec_table_schemas';
+  private readonly FIELDS_STORAGE_KEY = 'inno_spec_fields';
 
   private constructor() {
     this.schemas = new Map();
+    this.fields = new Map();
     this.loadFromLocalStorage();
+    this.loadFieldsFromLocalStorage();
     this.initializeDefaultSchemas();
   }
 
@@ -36,6 +40,31 @@ export class TableSchemaService {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(schemasArray));
     } catch (error) {
       console.error('LocalStorage에 테이블 스키마 저장 중 오류:', error);
+    }
+  }
+
+  // LocalStorage에서 필드 데이터 로드
+  private loadFieldsFromLocalStorage(): void {
+    try {
+      const stored = localStorage.getItem(this.FIELDS_STORAGE_KEY);
+      if (stored) {
+        const fieldsArray = JSON.parse(stored);
+        fieldsArray.forEach((field: any) => {
+          this.fields.set(field.id, field);
+        });
+      }
+    } catch (error) {
+      console.error('LocalStorage에서 필드 로드 중 오류:', error);
+    }
+  }
+
+  // LocalStorage에 필드 데이터 저장
+  private saveFieldsToLocalStorage(): void {
+    try {
+      const fieldsArray = Array.from(this.fields.values());
+      localStorage.setItem(this.FIELDS_STORAGE_KEY, JSON.stringify(fieldsArray));
+    } catch (error) {
+      console.error('LocalStorage에 필드 저장 중 오류:', error);
     }
   }
 
@@ -234,14 +263,29 @@ export class TableSchemaService {
     return Array.from(this.schemas.values());
   }
 
+  // 모든 필드 가져오기
+  public getAllFields(): TableField[] {
+    return Array.from(this.fields.values());
+  }
+
   // 특정 테이블 스키마 가져오기
   public getSchema(tableId: string): TableSchema | undefined {
     return this.schemas.get(tableId);
   }
 
+  // 특정 필드 가져오기
+  public getField(fieldId: string): TableField | undefined {
+    return this.fields.get(fieldId);
+  }
+
   // 테이블 스키마 존재 여부 확인
   public hasSchema(tableId: string): boolean {
     return this.schemas.has(tableId);
+  }
+
+  // 필드 존재 여부 확인
+  public hasField(fieldId: string): boolean {
+    return this.fields.has(fieldId);
   }
 
   // 테이블 스키마 추가
@@ -254,6 +298,16 @@ export class TableSchemaService {
     schema.updatedAt = new Date();
     this.schemas.set(schema.id, schema);
     this.saveToLocalStorage(); // 스키마 추가 후 저장
+  }
+
+  // 필드 추가
+  public addField(field: TableField): void {
+    if (this.fields.has(field.id)) {
+      throw new Error(`필드 '${field.id}'가 이미 존재합니다.`);
+    }
+    
+    this.fields.set(field.id, field);
+    this.saveFieldsToLocalStorage(); // 필드 추가 후 저장
   }
 
   // 테이블 스키마 업데이트
@@ -273,6 +327,22 @@ export class TableSchemaService {
     this.saveToLocalStorage(); // 스키마 업데이트 후 저장
   }
 
+  // 필드 업데이트
+  public updateField(fieldId: string, updates: Partial<TableField>): void {
+    const existingField = this.fields.get(fieldId);
+    if (!existingField) {
+      throw new Error(`필드 '${fieldId}'를 찾을 수 없습니다.`);
+    }
+
+    const updatedField: TableField = {
+      ...existingField,
+      ...updates
+    };
+
+    this.fields.set(fieldId, updatedField);
+    this.saveFieldsToLocalStorage(); // 필드 업데이트 후 저장
+  }
+
   // 테이블 스키마 삭제
   public deleteSchema(tableId: string): void {
     if (!this.schemas.has(tableId)) {
@@ -283,60 +353,14 @@ export class TableSchemaService {
     this.saveToLocalStorage(); // 스키마 삭제 후 저장
   }
 
-  // 테이블 필드 추가
-  public addField(tableId: string, field: TableField): void {
-    const schema = this.schemas.get(tableId);
-    if (!schema) {
-      throw new Error(`테이블 스키마 '${tableId}'를 찾을 수 없습니다.`);
+  // 필드 삭제
+  public deleteField(fieldId: string): void {
+    if (!this.fields.has(fieldId)) {
+      throw new Error(`필드 '${fieldId}'를 찾을 수 없습니다.`);
     }
 
-    if (schema.fields.some(f => f.name === field.name)) {
-      throw new Error(`필드 '${field.name}'가 이미 존재합니다.`);
-    }
-
-    schema.fields.push(field);
-    schema.updatedAt = new Date();
-    this.schemas.set(tableId, schema);
-    this.saveToLocalStorage(); // 필드 추가 후 저장
-  }
-
-  // 테이블 필드 업데이트
-  public updateField(tableId: string, fieldName: string, updates: Partial<TableField>): void {
-    const schema = this.schemas.get(tableId);
-    if (!schema) {
-      throw new Error(`테이블 스키마 '${tableId}'를 찾을 수 없습니다.`);
-    }
-
-    const fieldIndex = schema.fields.findIndex(f => f.name === fieldName);
-    if (fieldIndex === -1) {
-      throw new Error(`필드 '${fieldName}'를 찾을 수 없습니다.`);
-    }
-
-    schema.fields[fieldIndex] = {
-      ...schema.fields[fieldIndex],
-      ...updates
-    };
-    schema.updatedAt = new Date();
-    this.schemas.set(tableId, schema);
-    this.saveToLocalStorage(); // 필드 업데이트 후 저장
-  }
-
-  // 테이블 필드 삭제
-  public deleteField(tableId: string, fieldName: string): void {
-    const schema = this.schemas.get(tableId);
-    if (!schema) {
-      throw new Error(`테이블 스키마 '${tableId}'를 찾을 수 없습니다.`);
-    }
-
-    const fieldIndex = schema.fields.findIndex(f => f.name === fieldName);
-    if (fieldIndex === -1) {
-      throw new Error(`필드 '${fieldName}'를 찾을 수 없습니다.`);
-    }
-
-    schema.fields.splice(fieldIndex, 1);
-    schema.updatedAt = new Date();
-    this.schemas.set(tableId, schema);
-    this.saveToLocalStorage(); // 필드 삭제 후 저장
+    this.fields.delete(fieldId);
+    this.saveFieldsToLocalStorage(); // 필드 삭제 후 저장
   }
 
   // 지원되는 필드 타입 가져오기

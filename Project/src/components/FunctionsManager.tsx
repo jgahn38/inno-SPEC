@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Save, X, Variable, Code, Play, Copy, Download, Upload, Calculator, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, X, Variable, Code, Play, Copy, Download, Upload, Calculator, Search, GripVertical } from 'lucide-react';
 
 interface FunctionDefinition {
   id: string;
@@ -46,6 +46,7 @@ const FunctionsManager: React.FC = () => {
   const [editingVariable, setEditingVariable] = useState<VariableDefinition | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [draggedItem, setDraggedItem] = useState<string | null>(null);
 
   // 새 함수 폼 상태
   const [newFunction, setNewFunction] = useState<Partial<FunctionDefinition>>({
@@ -291,6 +292,16 @@ const FunctionsManager: React.FC = () => {
     }
   };
 
+  const getVariableCategoryLabel = (category: string) => {
+    switch (category) {
+      case 'input': return '입력';
+      case 'output': return '출력';
+      case 'intermediate': return '중간';
+      case 'constant': return '상수';
+      default: return category;
+    }
+  };
+
   const getScopeLabel = (scope: string) => {
     switch (scope) {
       case 'global': return '전역';
@@ -315,6 +326,53 @@ const FunctionsManager: React.FC = () => {
      variable.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
      variable.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
   );
+
+  const handleDragStart = (e: React.DragEvent, itemId: string) => {
+    setDraggedItem(itemId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    if (!draggedItem || draggedItem === targetId) return;
+
+    if (activeTab === 'functions') {
+      const draggedIndex = functions.findIndex(f => f.id === draggedItem);
+      const targetIndex = functions.findIndex(f => f.id === targetId);
+      
+      if (draggedIndex !== -1 && targetIndex !== -1) {
+        const newFunctions = [...functions];
+        const [draggedFunction] = newFunctions.splice(draggedIndex, 1);
+        newFunctions.splice(targetIndex, 0, draggedFunction);
+        
+        setFunctions(newFunctions);
+        // 순서 변경을 로컬 상태에 저장 (실제 서비스 연동 시 여기에 저장 로직 추가)
+      }
+    } else if (activeTab === 'variables') {
+      const draggedIndex = variables.findIndex(v => v.id === draggedItem);
+      const targetIndex = variables.findIndex(v => v.id === targetId);
+      
+      if (draggedIndex !== -1 && targetIndex !== -1) {
+        const newVariables = [...variables];
+        const [draggedVariable] = newVariables.splice(draggedIndex, 1);
+        newVariables.splice(targetIndex, 0, draggedVariable);
+        
+        setVariables(newVariables);
+        // 순서 변경을 로컬 상태에 저장 (실제 서비스 연동 시 여기에 저장 로직 추가)
+      }
+    }
+    
+    setDraggedItem(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedItem(null);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -397,129 +455,171 @@ const FunctionsManager: React.FC = () => {
 
         {/* 함수 탭 */}
         {activeTab === 'functions' && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">함수 목록</h2>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">함수명</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">설명</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">카테고리</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">매개변수</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">반환값</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">작업</th>
+          <div className="bg-white shadow overflow-hidden sm:rounded-md">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10"></th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">함수명</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    설명
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">카테고리</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">매개변수</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">반환값</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                    
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredFunctions.map((func, index) => (
+                  <tr
+                    key={func.id}
+                    className={`hover:bg-gray-50 cursor-pointer ${draggedItem === func.id ? 'opacity-50' : ''}`}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', func.id);
+                      setDraggedItem(func.id);
+                    }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const draggedFuncId = e.dataTransfer.getData('text/plain');
+                      const draggedIndex = functions.findIndex(f => f.id === draggedFuncId);
+                      const dropIndex = index;
+                      
+                      if (draggedIndex !== -1 && draggedIndex !== dropIndex) {
+                        const newOrder = [...functions];
+                        const [draggedItem] = newOrder.splice(draggedIndex, 1);
+                        newOrder.splice(dropIndex, 0, draggedItem);
+                        setFunctions(newOrder);
+                        // TODO: 실제 서비스가 있다면 여기서 순서를 저장
+                      }
+                      setDraggedItem(null);
+                    }}
+                    onDragEnd={() => setDraggedItem(null)}
+                    onClick={() => handleEditFunction(func)}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 cursor-move">
+                      <GripVertical className="h-4 w-4" />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {func.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {func.description || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {getCategoryLabel(func.category)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {func.parameters.length}개
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {func.returnType} {func.returnUnit && `(${func.returnUnit})`}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium w-20">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteFunction(func.id);
+                        }}
+                        className="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-50 transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredFunctions.map((func) => (
-                    <tr key={func.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{func.name}</div>
-                        <div className="text-sm text-gray-500">{func.tags.join(', ')}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900 max-w-xs truncate">{func.description}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {getCategoryLabel(func.category)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {func.parameters.length}개
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {func.returnType} {func.returnUnit && `(${func.returnUnit})`}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleEditFunction(func)}
-                            className="text-blue-600 hover:text-blue-900"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteFunction(func.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 
         {/* 변수 탭 */}
         {activeTab === 'variables' && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">변수 목록</h2>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">변수명</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">설명</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">타입</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">카테고리</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">범위</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">작업</th>
+          <div className="bg-white shadow overflow-hidden sm:rounded-md">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10"></th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">변수명</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">설명</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">타입</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">카테고리</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">범위</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                    
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredVariables.map((variable, index) => (
+                  <tr
+                    key={variable.id}
+                    className={`hover:bg-gray-50 cursor-pointer ${draggedItem === variable.id ? 'opacity-50' : ''}`}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/plain', variable.id);
+                      setDraggedItem(variable.id);
+                    }}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const draggedVariableId = e.dataTransfer.getData('text/plain');
+                      const draggedIndex = variables.findIndex(v => v.id === draggedVariableId);
+                      const dropIndex = index;
+                      
+                      if (draggedIndex !== -1 && draggedIndex !== dropIndex) {
+                        const newOrder = [...variables];
+                        const [draggedItem] = newOrder.splice(draggedIndex, 1);
+                        newOrder.splice(dropIndex, 0, draggedItem);
+                        setVariables(newOrder);
+                        // TODO: 실제 서비스가 있다면 여기서 순서를 저장
+                      }
+                      setDraggedItem(null);
+                    }}
+                    onDragEnd={() => setDraggedItem(null)}
+                    onClick={() => handleEditVariable(variable)}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 cursor-move">
+                      <GripVertical className="h-4 w-4" />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {variable.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {variable.description || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {variable.type} {variable.unit && `(${variable.unit})`}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        {getVariableCategoryLabel(variable.category)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                        {getScopeLabel(variable.scope)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium w-20">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteVariable(variable.id);
+                        }}
+                        className="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-50 transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredVariables.map((variable) => (
-                    <tr key={variable.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{variable.name}</div>
-                        <div className="text-sm text-gray-500">{variable.tags.join(', ')}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900 max-w-xs truncate">{variable.description}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {variable.type} {variable.unit && `(${variable.unit})`}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          {getCategoryLabel(variable.category)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                          {getScopeLabel(variable.scope)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleEditVariable(variable)}
-                            className="text-blue-600 hover:text-blue-900"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteVariable(variable.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 
