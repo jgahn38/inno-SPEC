@@ -19,7 +19,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentTenant,
         <div className="flex items-center justify-between h-14">
           <div className="flex items-center">
             <div className="flex items-center space-x-2 w-64 px-2">
-              <img src="/src/assets/image.png" alt="inno-SPEC" className="w-6 h-6" />
+              <img src="/assets/image.png" alt="inno-SPEC" className="w-6 h-6" />
               <span className="text-lg font-bold text-gray-800">inno-SPEC</span>
             </div>
             
