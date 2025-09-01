@@ -65,6 +65,70 @@ export interface CheckItem {
   criteria?: string;
 }
 
+// 화면 구성 관련 타입
+export interface ScreenConfig {
+  id: string;
+  name: string;
+  displayName: string;
+  description?: string;
+  type: 'dashboard' | 'custom';
+  layout: 'single' | 'grid' | 'tabs';
+  components: ScreenComponent[];
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ScreenComponent {
+  id: string;
+  type: 'table' | 'variable' | 'chart' | 'input' | 'output';
+  componentId: string; // 테이블 ID 또는 변수 ID
+  displayName: string;
+  position: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  config: ComponentConfig;
+}
+
+export interface ComponentConfig {
+  showHeader?: boolean;
+  showPagination?: boolean;
+  showSearch?: boolean;
+  showFilters?: boolean;
+  maxRows?: number;
+  refreshInterval?: number;
+  customStyles?: Record<string, any>;
+}
+
+export interface LNBConfig {
+  id: string;
+  name: string;
+  displayName: string;
+  icon?: string;
+  order: number;
+  screenId?: string; // 연결된 화면 ID
+  children?: LNBConfig[]; // 하위 메뉴
+  type?: 'independent' | 'parent' | 'child';
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ScreenTemplate {
+  id: string;
+  name: string;
+  displayName: string;
+  description?: string;
+  category: 'structural' | 'material' | 'load' | 'analysis' | 'custom';
+  defaultComponents: ScreenComponent[];
+  isSystem: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // 공통 테이블 스키마 관련 타입
 export interface TableSchema {
   id: string;

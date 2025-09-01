@@ -1,10 +1,13 @@
-import { BridgeDatabase, DatabaseRecord, Project, TableSchema } from '../types';
+import { BridgeDatabase, DatabaseRecord, Project, TableSchema, LNBConfig, ScreenConfig, ScreenTemplate } from '../types';
 
 export interface SyncData {
   databases: BridgeDatabase[];
   records: Record<string, DatabaseRecord[]>;
   projects: Project[];
   tableSchemas: TableSchema[];
+  lnbConfigs: LNBConfig[];
+  screenConfigs: ScreenConfig[];
+  screenTemplates: ScreenTemplate[];
   lastSync: string;
   version: string;
 }
@@ -14,6 +17,9 @@ export interface SyncOptions {
   includeProjects?: boolean;
   includeTableSchemas?: boolean;
   includeRecords?: boolean;
+  includeLNBConfigs?: boolean;
+  includeScreenConfigs?: boolean;
+  includeScreenTemplates?: boolean;
 }
 
 export class DataSyncService {
@@ -39,6 +45,9 @@ export class DataSyncService {
       records: this.getRecordsFromStorage(),
       projects: this.getProjectsFromStorage(),
       tableSchemas: this.getTableSchemasFromMemory(),
+      lnbConfigs: this.getLNBConfigsFromStorage(),
+      screenConfigs: this.getScreenConfigsFromStorage(),
+      screenTemplates: this.getScreenTemplatesFromStorage(),
       lastSync: new Date().toISOString(),
       version: this.SYNC_VERSION
     };
@@ -69,6 +78,18 @@ export class DataSyncService {
 
     if (options.includeTableSchemas !== false) {
       syncData.tableSchemas = this.getTableSchemasFromMemory();
+    }
+
+    if (options.includeLNBConfigs !== false) {
+      syncData.lnbConfigs = this.getLNBConfigsFromStorage();
+    }
+
+    if (options.includeScreenConfigs !== false) {
+      syncData.screenConfigs = this.getScreenConfigsFromStorage();
+    }
+
+    if (options.includeScreenTemplates !== false) {
+      syncData.screenTemplates = this.getScreenTemplatesFromStorage();
     }
 
     return syncData;
@@ -153,6 +174,21 @@ export class DataSyncService {
     // 테이블 스키마 import
     if (syncData.tableSchemas) {
       this.importTableSchemas(syncData.tableSchemas);
+    }
+
+    // LNB 구성 import
+    if (syncData.lnbConfigs) {
+      this.importLNBConfigs(syncData.lnbConfigs);
+    }
+
+    // 화면 구성 import
+    if (syncData.screenConfigs) {
+      this.importScreenConfigs(syncData.screenConfigs);
+    }
+
+    // 화면 템플릿 import
+    if (syncData.screenTemplates) {
+      this.importScreenTemplates(syncData.screenTemplates);
     }
 
     // 동기화 정보 저장
@@ -244,6 +280,33 @@ export class DataSyncService {
     }
   }
 
+  private getLNBConfigsFromStorage(): LNBConfig[] {
+    try {
+      const stored = localStorage.getItem('lnbConfigs');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private getScreenConfigsFromStorage(): ScreenConfig[] {
+    try {
+      const stored = localStorage.getItem('screenConfigs');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private getScreenTemplatesFromStorage(): ScreenTemplate[] {
+    try {
+      const stored = localStorage.getItem('screenTemplates');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  }
+
   private importDatabases(databases: BridgeDatabase[]): void {
     localStorage.setItem('bridge_databases', JSON.stringify(databases));
   }
@@ -262,6 +325,18 @@ export class DataSyncService {
     
     // 앱 재시작 시 TableSchemaService가 이 데이터를 로드할 수 있도록 함
     // 실제로는 TableSchemaService의 메서드를 직접 호출하는 것이 좋음
+  }
+
+  private importLNBConfigs(configs: LNBConfig[]): void {
+    localStorage.setItem('lnbConfigs', JSON.stringify(configs));
+  }
+
+  private importScreenConfigs(configs: ScreenConfig[]): void {
+    localStorage.setItem('screenConfigs', JSON.stringify(configs));
+  }
+
+  private importScreenTemplates(templates: ScreenTemplate[]): void {
+    localStorage.setItem('screenTemplates', JSON.stringify(templates));
   }
 
   private saveSyncInfo(syncData: SyncData): void {

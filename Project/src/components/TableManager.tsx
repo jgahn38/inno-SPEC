@@ -1,14 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { TableSchema, TableField, FieldType } from '../types';
 import { TableSchemaService } from '../services/TableSchemaService';
-import { Plus, Edit, Trash2, Save, X, Columns, Search, Table, Check, GripVertical } from 'lucide-react';
+import { Plus, Save, X, Columns, Search, Table, GripVertical } from 'lucide-react';
 
-interface TableManagerProps {
-  tenantId: string;
-  projectId: string;
-}
-
-const TableManager: React.FC<TableManagerProps> = ({ tenantId, projectId }) => {
+const TableManager: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'tables' | 'fields'>('tables');
   const [schemas, setSchemas] = useState<TableSchema[]>([]);
   const [fields, setFields] = useState<TableField[]>([]);
@@ -42,21 +37,21 @@ const TableManager: React.FC<TableManagerProps> = ({ tenantId, projectId }) => {
 
   const tableSchemaService = TableSchemaService.getInstance();
 
-  useEffect(() => {
-    loadSchemas();
-    loadFields();
-  }, []);
-
-  const loadSchemas = () => {
+  const loadSchemas = useCallback(() => {
     const allSchemas = tableSchemaService.getAllSchemas();
-    setSchemas(allSchemas);
-  };
+      setSchemas(allSchemas);
+  }, [tableSchemaService]);
 
-  const loadFields = () => {
+  const loadFields = useCallback(() => {
     // 독립적으로 정의된 필드들을 로드
     const allFields = tableSchemaService.getAllFields();
     setFields(allFields);
-  };
+  }, [tableSchemaService]);
+
+  useEffect(() => {
+    loadSchemas();
+    loadFields();
+  }, [loadSchemas, loadFields]);
 
   const getFieldTypeLabel = (type: FieldType) => {
     switch (type) {
@@ -169,13 +164,13 @@ const TableManager: React.FC<TableManagerProps> = ({ tenantId, projectId }) => {
       alert('필드명과 표시명은 필수 입력 항목입니다.');
       return;
     }
-
-    const field: TableField = {
+      
+      const field: TableField = {
       ...newField,
-      id: `field-${Date.now()}`,
+        id: `field-${Date.now()}`,
       name: newField.name!,
       displayName: newField.displayName!,
-      description: newField.description || '',
+        description: newField.description || '',
       type: newField.type || 'text'
     } as TableField;
 
@@ -230,7 +225,7 @@ const TableManager: React.FC<TableManagerProps> = ({ tenantId, projectId }) => {
       fields: schema.fields.map(f => 
         f.id === editingField.id ? updatedField : f
       ),
-      updatedAt: new Date()
+        updatedAt: new Date()
     }));
     setSchemas(updatedSchemas);
     
@@ -293,60 +288,7 @@ const TableManager: React.FC<TableManagerProps> = ({ tenantId, projectId }) => {
     return schemas.filter(schema => schema.fields.some(f => f.id === fieldId));
   };
 
-  const handleDragStart = (e: React.DragEvent, itemId: string) => {
-    setDraggedItem(itemId);
-    e.dataTransfer.effectAllowed = 'move';
-  };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  };
-
-  const handleDrop = (e: React.DragEvent, targetId: string) => {
-    e.preventDefault();
-    if (!draggedItem || draggedItem === targetId) return;
-
-    if (activeTab === 'tables') {
-      const draggedIndex = schemas.findIndex(s => s.id === draggedItem);
-      const targetIndex = schemas.findIndex(s => s.id === targetId);
-      
-      if (draggedIndex !== -1 && targetIndex !== -1) {
-        const newSchemas = [...schemas];
-        const [draggedSchema] = newSchemas.splice(draggedIndex, 1);
-        newSchemas.splice(targetIndex, 0, draggedSchema);
-        
-        setSchemas(newSchemas);
-        // 순서 변경을 서비스에 저장
-        newSchemas.forEach((schema, index) => {
-          // order 속성이 타입에 정의되지 않아 서비스 호출 제거
-          // tableSchemaService.updateSchema(schema.id, { order: index });
-        });
-      }
-    } else if (activeTab === 'fields') {
-      const draggedIndex = fields.findIndex(f => f.id === draggedItem);
-      const targetIndex = fields.findIndex(f => f.id === targetId);
-      
-      if (draggedIndex !== -1 && targetIndex !== -1) {
-        const newFields = [...fields];
-        const [draggedField] = newFields.splice(draggedIndex, 1);
-        newFields.splice(targetIndex, 0, draggedField);
-        
-        setFields(newFields);
-        // 순서 변경을 서비스에 저장
-        newFields.forEach((field, index) => {
-          // order 속성이 타입에 정의되지 않아 서비스 호출 제거
-          // tableSchemaService.updateField(field.id, { order: index });
-        });
-      }
-    }
-    
-    setDraggedItem(null);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedItem(null);
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -359,60 +301,60 @@ const TableManager: React.FC<TableManagerProps> = ({ tenantId, projectId }) => {
             모든 프로젝트에서 공통으로 사용할 수 있습니다.
           </p>
         </div>
-
+        
         {/* 탭 네비게이션 */}
         <div className="border-b border-gray-200 mb-6">
           <nav className="-mb-px flex space-x-8">
-            <button
-              onClick={() => setActiveTab('tables')}
+              <button
+                onClick={() => setActiveTab('tables')}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'tables'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
+                  activeTab === 'tables'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
               <Table className="inline-block w-4 h-4 mr-2" />
-              테이블 정의
-            </button>
-            <button
-              onClick={() => setActiveTab('fields')}
+                테이블 정의
+              </button>
+              <button
+                onClick={() => setActiveTab('fields')}
               className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'fields'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
+                  activeTab === 'fields'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
               <Columns className="inline-block w-4 h-4 mr-2" />
-              필드 정의
-            </button>
-          </nav>
+                필드 정의
+              </button>
+            </nav>
         </div>
-
+        
         {/* 테이블 정의 탭 */}
         {activeTab === 'tables' && (
-          <div>
+                         <div>
             {/* 테이블 검색 및 추가 */}
             <div className="flex justify-between items-center mb-6">
               <div className="flex-1 max-w-md">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <input
-                    type="text"
+                             <input
+                               type="text"
                     placeholder="테이블 검색..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
-                </div>
+                           </div>
               </div>
-              <button
+                             <button
                 onClick={() => setShowTableModal(true)}
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
+                             >
                 <Plus className="h-4 w-4" />
                 <span>테이블 추가</span>
-              </button>
-            </div>
+                             </button>
+                           </div>
 
             {/* 테이블 목록 */}
             <div className="bg-white shadow overflow-hidden sm:rounded-md">
@@ -426,11 +368,11 @@ const TableManager: React.FC<TableManagerProps> = ({ tenantId, projectId }) => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">필드 수</th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
                       
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredSchemas.map((schema, index) => (
+                               </th>
+                             </tr>
+                           </thead>
+                           <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredSchemas.map((schema) => (
                     <tr
                                   key={schema.id}
                                   draggable
@@ -443,7 +385,7 @@ const TableManager: React.FC<TableManagerProps> = ({ tenantId, projectId }) => {
                                     e.preventDefault();
                                     const draggedSchemaId = e.dataTransfer.getData('text/plain');
                                     const draggedIndex = schemas.findIndex(s => s.id === draggedSchemaId);
-                                    const dropIndex = index;
+                                    const dropIndex = schemas.findIndex(s => s.id === schema.id);
                                     
                                     if (draggedIndex !== -1 && draggedIndex !== dropIndex) {
                                       const newSchemas = [...schemas];
@@ -471,21 +413,21 @@ const TableManager: React.FC<TableManagerProps> = ({ tenantId, projectId }) => {
                                 >
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 cursor-move">
                                     <GripVertical className="h-4 w-4" />
-                                  </td>
+                                 </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                     {schema.name}
-                                  </td>
+                                 </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {schema.displayName}
-                                  </td>
+                                 </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {schema.description || '-'}
-                                  </td>
+                                 </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                     {schema.fields?.length || 0}개
-                                  </td>
+                                 </td>
                                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium w-20">
-                                    <button
+                                   <button
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         handleDeleteTable(schema.id);
@@ -493,47 +435,47 @@ const TableManager: React.FC<TableManagerProps> = ({ tenantId, projectId }) => {
                                       className="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-50 transition-colors"
                                     >
                                       <X className="h-4 w-4" />
-                                    </button>
-                                  </td>
-                                </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+                                   </button>
+                                 </td>
+                               </tr>
+                             ))}
+                           </tbody>
+                         </table>
+                       </div>
+                  </div>
+                )}
 
         {/* 필드 정의 탭 */}
         {activeTab === 'fields' && (
-          <div>
+                <div>
             {/* 필드 검색 및 추가 */}
             <div className="flex justify-between items-center mb-6">
               <div className="flex-1 max-w-md">
-                <div className="relative">
+                  <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <input
-                    type="text"
+                    <input
+                      type="text"
                     placeholder="필드 검색..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                    />
+                  </div>
                 </div>
-              </div>
-              <button
+                  <button
                 onClick={() => setShowFieldModal(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
-                <Plus className="h-4 w-4" />
-                <span>필드 추가</span>
-              </button>
-            </div>
-
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>필드 추가</span>
+                  </button>
+              </div>
+              
             {/* 필드 목록 */}
             <div className="bg-white shadow overflow-hidden sm:rounded-md">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10"></th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">필드명</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">표시명</th>
@@ -542,11 +484,11 @@ const TableManager: React.FC<TableManagerProps> = ({ tenantId, projectId }) => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">사용 테이블</th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
                       
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredFields.map((field, index) => (
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredFields.map((field) => (
                     <tr 
                       key={field.id} 
                       className={`hover:bg-gray-50 cursor-pointer ${draggedItem === field.id ? 'opacity-50' : ''}`}
@@ -560,7 +502,7 @@ const TableManager: React.FC<TableManagerProps> = ({ tenantId, projectId }) => {
                         e.preventDefault();
                         const draggedFieldId = e.dataTransfer.getData('text/plain');
                         const draggedIndex = fields.findIndex(f => f.id === draggedFieldId);
-                        const dropIndex = index;
+                        const dropIndex = fields.findIndex(f => f.id === field.id);
                         
                         if (draggedIndex !== -1 && draggedIndex !== dropIndex) {
                           const newOrder = [...fields];
@@ -587,26 +529,26 @@ const TableManager: React.FC<TableManagerProps> = ({ tenantId, projectId }) => {
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center justify-center">
-                          <GripVertical className="h-4 w-4 text-gray-400 cursor-move" />
-                        </div>
-                      </td>
+                          <GripVertical className="h-4 w-4 cursor-move" />
+                          </div>
+                        </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">{field.name}</div>
-                      </td>
+                        </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {field.displayName}
-                      </td>
+                        </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {getFieldTypeLabel(field.type)}
-                      </td>
-                      <td className="px-6 py-4">
+                        </td>
+                        <td className="px-6 py-4">
                         <div className="text-sm text-gray-900 max-w-xs truncate">{field.description || '-'}</div>
-                      </td>
+                        </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {getTablesUsingField(field.id).length}개
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium w-20">
-                        <button
+                            <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDeleteField(field.id);
@@ -614,12 +556,12 @@ const TableManager: React.FC<TableManagerProps> = ({ tenantId, projectId }) => {
                           className="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-50 transition-colors"
                         >
                           <X className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                            </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
             </div>
           </div>
         )}
@@ -633,54 +575,54 @@ const TableManager: React.FC<TableManagerProps> = ({ tenantId, projectId }) => {
                   <h3 className="text-lg font-medium text-gray-900">
                     {editingSchema ? '테이블 수정' : '테이블 추가'}
                   </h3>
-                  <button
-                    onClick={() => {
+              <button
+                onClick={() => {
                       setShowTableModal(false);
                       setEditingSchema(null);
                       resetTableForm();
-                    }}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="h-6 w-6" />
-                  </button>
-                </div>
-                
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                   {/* 1열: 테이블 정보 */}
-                  <div className="space-y-6">
-                    <div>
+            <div className="space-y-6">
+                <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">테이블명 (영문) *</label>
-                      <input
-                        type="text"
+                  <input
+                    type="text"
                         value={newTable.name}
                         onChange={(e) => setNewTable({ ...newTable, name: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="테이블명을 입력하세요 (영문)"
                       />
-                    </div>
-
-                    <div>
+                </div>
+                
+                <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">표시명 (한글) *</label>
-                      <input
-                        type="text"
+                  <input
+                    type="text"
                         value={newTable.displayName}
                         onChange={(e) => setNewTable({ ...newTable, displayName: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="표시명을 입력하세요 (한글)"
                       />
-                    </div>
-
-                    <div>
+              </div>
+              
+              <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">설명</label>
-                      <textarea
+                <textarea
                         value={newTable.description}
                         onChange={(e) => setNewTable({ ...newTable, description: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        rows={3}
+                  rows={3}
                         placeholder="테이블에 대한 설명을 입력하세요"
-                      />
-                    </div>
-                  </div>
+                />
+              </div>
+                </div>
 
                   {/* 2열: 필드 선택 및 순서 조정 */}
                   <div>
@@ -690,7 +632,7 @@ const TableManager: React.FC<TableManagerProps> = ({ tenantId, projectId }) => {
                         <div>
                           <h5 className="block text-sm font-medium text-gray-700 mb-2">사용할 필드 추가</h5>
                           <div className="flex space-x-2">
-                            <select
+                      <select
                               value=""
                               onChange={(e) => {
                                 const fieldId = e.target.value;
@@ -709,21 +651,21 @@ const TableManager: React.FC<TableManagerProps> = ({ tenantId, projectId }) => {
                                   </option>
                                 ))
                               }
-                            </select>
-                          </div>
-                        </div>
-
+                      </select>
+                      </div>
+                    </div>
+                    
                         {/* 순서 조정 영역 */}
                         {selectedFieldIds.length > 0 && (
                           <div>
                             <div className="flex justify-between items-center mb-2">
                               <h5 className="block text-sm font-medium text-gray-700">선택된 필드 순서 조정</h5>
-                              <button
+                      <button
                                 onClick={() => setSelectedFieldIds([])}
                                 className="text-xs text-red-600 hover:text-red-800 px-2 py-1 rounded border border-red-200 hover:border-red-300 transition-colors"
-                              >
+                      >
                                 모든 필드 제거
-                              </button>
+                      </button>
                             </div>
                             <div className="border border-gray-200 rounded-md p-3 bg-gray-50">
                               {selectedFieldIds.map((fieldId, index) => {
@@ -756,73 +698,73 @@ const TableManager: React.FC<TableManagerProps> = ({ tenantId, projectId }) => {
                                     <div className="flex items-center space-x-3">
                                       <div className="flex items-center justify-center w-6">
                                         <GripVertical className="h-4 w-4 text-gray-400 cursor-move" />
-                                      </div>
+                    </div>
                                       <span className="text-sm font-medium text-gray-500 w-6 text-center">
                                         {index + 1}
-                                      </span>
+                              </span>
                                       <div>
                                         <div className="text-sm font-medium text-gray-900">{field.displayName}</div>
                                         <div className="text-xs text-gray-500">{field.name}</div>
                                       </div>
                                     </div>
-                                    <button
+                              <button
                                       onClick={() => {
                                         setSelectedFieldIds(selectedFieldIds.filter(id => id !== fieldId));
                                       }}
                                       className="text-gray-400 hover:text-red-500 p-1"
                                     >
                                       <X className="h-4 w-4" />
-                                    </button>
+                              </button>
                                   </div>
                                 );
                               })}
                             </div>
-                          </div>
-                        )}
+                  </div>
+                )}
                       </div>
                     ) : (
-                      <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8 text-gray-500">
                         <p>등록된 필드가 없습니다.</p>
                         <p className="text-sm mt-1">먼저 필드를 등록해주세요.</p>
-                      </div>
-                    )}
                   </div>
-                </div>
-
+                )}
+              </div>
+            </div>
+            
                 <div className="flex justify-end space-x-3 mt-6">
-                  <button
-                    onClick={() => {
+              <button
+                onClick={() => {
                       setShowTableModal(false);
                       setEditingSchema(null);
                       resetTableForm();
-                    }}
+                }}
                     className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    취소
-                  </button>
-                  <button
+              >
+                취소
+              </button>
+              <button
                     onClick={editingSchema ? handleUpdateTable : handleAddTable}
                     disabled={fields.length === 0}
                     className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
                     <Save className="h-4 w-4" />
                     <span>{editingSchema ? '수정' : '추가'}</span>
-                  </button>
+              </button>
                 </div>
-              </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
         {/* 필드 추가/수정 모달 */}
         {showFieldModal && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
-              <div className="mt-3">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-medium text-gray-900">
                     {editingField ? '필드 수정' : '필드 추가'}
-                  </h3>
+              </h3>
                   <button
                     onClick={() => {
                       setShowFieldModal(false);
@@ -836,31 +778,31 @@ const TableManager: React.FC<TableManagerProps> = ({ tenantId, projectId }) => {
                 </div>
                 
                 <div className="grid grid-cols-1 gap-6">
-                  <div>
+                <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">필드명 (영문) *</label>
-                    <input
-                      type="text"
+                  <input
+                    type="text"
                       value={newField.name}
                       onChange={(e) => setNewField({ ...newField, name: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="필드명을 입력하세요 (영문)"
-                    />
-                  </div>
-
-                  <div>
+                  />
+                </div>
+                
+                <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">표시명 (한글) *</label>
-                    <input
-                      type="text"
+                  <input
+                    type="text"
                       value={newField.displayName}
                       onChange={(e) => setNewField({ ...newField, displayName: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="표시명을 입력하세요 (한글)"
-                    />
-                  </div>
-
-                  <div>
+                  />
+                </div>
+                
+                <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">데이터 타입</label>
-                    <select
+                  <select
                       value={newField.type}
                       onChange={(e) => setNewField({ ...newField, type: e.target.value as FieldType })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -871,44 +813,44 @@ const TableManager: React.FC<TableManagerProps> = ({ tenantId, projectId }) => {
                       <option value="boolean">불린</option>
                       <option value="decimal">소수</option>
                       <option value="integer">정수</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">설명</label>
-                    <textarea
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">설명</label>
+                  <textarea
                       value={newField.description}
                       onChange={(e) => setNewField({ ...newField, description: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       rows={3}
                       placeholder="필드에 대한 설명을 입력하세요"
-                    />
-                  </div>
+                  />
                 </div>
-
-                <div className="flex justify-end space-x-3 mt-6">
-                  <button
-                    onClick={() => {
+              </div>
+              
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => {
                       setShowFieldModal(false);
                       setEditingField(null);
                       resetFieldForm();
                     }}
                     className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    취소
-                  </button>
-                  <button
+                >
+                  취소
+                </button>
+                <button
                     onClick={editingField ? handleUpdateField : handleAddField}
                     className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                  >
+                >
                     <Save className="h-4 w-4" />
                     <span>{editingField ? '수정' : '추가'}</span>
-                  </button>
-                </div>
+                </button>
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
       </div>
     </div>
   );

@@ -74,12 +74,23 @@ npm run sync:restore
 - **DatabaseService**: 데이터베이스 데이터 관리 (localStorage)
 - **ProjectService**: 프로젝트 데이터 관리 (localStorage)
 - **TableSchemaService**: 테이블 스키마 관리 (localStorage)
+- **ScreenService**: LNB 구성, 화면 구성, 화면 템플릿 관리 (localStorage)
 
 ### 데이터 저장소
 
 - **localStorage**: 브라우저 기반 데이터 저장
 - **JSON 파일**: 백업 및 동기화용 데이터 포맷
 - **Git**: 백업 파일 버전 관리
+
+### 동기화 대상 데이터
+
+- **데이터베이스**: 교량 데이터베이스 정보
+- **프로젝트**: 프로젝트 및 교량 정보
+- **테이블 스키마**: 테이블 구조 및 필드 정의
+- **데이터 레코드**: 실제 데이터 값들
+- **LNB 메뉴 구성**: 좌측 네비게이션 메뉴 구조
+- **화면 구성**: 각 화면의 컴포넌트 배치 및 설정
+- **화면 템플릿**: 재사용 가능한 화면 템플릿
 
 ## 📁 파일 구조
 

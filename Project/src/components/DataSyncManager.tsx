@@ -17,7 +17,10 @@ const DataSyncManager: React.FC = () => {
     includeDatabases: true,
     includeProjects: true,
     includeTableSchemas: true,
-    includeRecords: true
+    includeRecords: true,
+    includeLNBConfigs: true,
+    includeScreenConfigs: true,
+    includeScreenTemplates: true
   });
 
   useEffect(() => {
@@ -178,6 +181,36 @@ const DataSyncManager: React.FC = () => {
               className="rounded border-gray-300"
             />
             <span className="text-sm">데이터 레코드</span>
+          </label>
+
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={exportOptions.includeLNBConfigs}
+              onChange={(e) => setExportOptions(prev => ({ ...prev, includeLNBConfigs: e.target.checked }))}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm">LNB 메뉴 구성</span>
+          </label>
+
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={exportOptions.includeScreenConfigs}
+              onChange={(e) => setExportOptions(prev => ({ ...prev, includeScreenConfigs: e.target.checked }))}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm">화면 구성</span>
+          </label>
+
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={exportOptions.includeScreenTemplates}
+              onChange={(e) => setExportOptions(prev => ({ ...prev, includeScreenTemplates: e.target.checked }))}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm">화면 템플릿</span>
           </label>
         </div>
 

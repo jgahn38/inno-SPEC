@@ -3,8 +3,8 @@ import { Building2, FolderOpen, Settings, Search, Bell, HelpCircle, User, LogOut
 import { Tenant, User as UserType } from '../types';
 
 interface HeaderProps {
-  currentView: 'projects' | 'evaluation' | 'tables' | 'databases' | 'sync' | 'functions' | 'settings';
-  onNavigate: (view: 'projects' | 'evaluation' | 'tables' | 'databases' | 'sync' | 'functions' | 'settings') => void;
+  currentView: 'projects' | 'evaluation' | 'tables' | 'databases' | 'sync' | 'functions' | 'screens' | 'settings';
+  onNavigate: (view: 'projects' | 'evaluation' | 'tables' | 'databases' | 'sync' | 'functions' | 'screens' | 'settings') => void;
   currentTenant: Tenant;
   currentUser: UserType;
   onLogout: () => void;
@@ -54,6 +54,16 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentTenant,
                 }`}
               >
                 함수
+              </button>
+              <button
+                onClick={() => onNavigate('screens')}
+                className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  currentView === 'screens' 
+                    ? 'text-blue-600 border-blue-600 font-semibold' 
+                    : 'text-gray-600 hover:text-gray-900 border-transparent hover:border-gray-300 font-semibold'
+                }`}
+              >
+                화면
               </button>
               <button
                 onClick={() => onNavigate('databases')}

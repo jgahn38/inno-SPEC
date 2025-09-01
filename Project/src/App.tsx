@@ -6,15 +6,16 @@ import TableManager from './components/TableManager';
 import DatabaseManager from './components/DatabaseManager';
 import FunctionsManager from './components/FunctionsManager';
 import DataSyncManager from './components/DataSyncManager';
+import ScreenManager from './components/ScreenManager';
 import LoginView from './components/LoginView';
-import { Project } from './types';
+import { Project, Bridge } from './types';
 import { TenantProvider, useTenant } from './contexts/TenantContext';
 import { ProjectService } from './services/ProjectService';
 import { LocalStorageProjectProvider } from './services/dataProviders/LocalStorageProjectProvider';
 
 function AppContent() {
   const { currentTenant, currentUser, isAuthenticated, isLoading, logout } = useTenant();
-  const [currentView, setCurrentView] = useState<'projects' | 'evaluation' | 'tables' | 'databases' | 'sync' | 'functions'>('projects');
+  const [currentView, setCurrentView] = useState<'projects' | 'evaluation' | 'tables' | 'databases' | 'sync' | 'functions' | 'screens' | 'settings'>('projects');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedBridge, setSelectedBridge] = useState<Bridge | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -31,7 +32,7 @@ function AppContent() {
     setCurrentView('evaluation');
   };
 
-  const handleNavigate = (view: 'projects' | 'evaluation' | 'tables' | 'databases' | 'sync' | 'functions') => {
+  const handleNavigate = (view: 'projects' | 'evaluation' | 'tables' | 'databases' | 'sync' | 'functions' | 'screens' | 'settings') => {
     console.log('Navigating to:', view); // 디버깅용 로그
     setCurrentView(view);
   };
@@ -89,7 +90,7 @@ function AppContent() {
       />
       
       <main className="flex-1" style={{ height: 'calc(100vh - 64px)' }}>
-        {console.log('Current view:', currentView)} {/* 디버깅용 로그 */}
+        {(() => { console.log('Current view:', currentView); return null; })()}
         {currentView === 'projects' ? (
           <ProjectList 
             onProjectSelect={handleProjectSelect}
@@ -133,10 +134,11 @@ function AppContent() {
         ) : currentView === 'databases' ? (
           <DatabaseManager 
             tenantId={currentTenant.id}
-            projectId={selectedProject?.id || 'default'}
           />
         ) : currentView === 'functions' ? (
           <FunctionsManager />
+        ) : currentView === 'screens' ? (
+          <ScreenManager />
         ) : currentView === 'sync' ? (
           <DataSyncManager />
         ) : (

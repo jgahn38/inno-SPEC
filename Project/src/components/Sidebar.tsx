@@ -1,5 +1,6 @@
 import React from 'react';
 import { Settings, Database, ChevronDown, Grid as Bridge, Image, Building2, Anchor, BarChart3 } from 'lucide-react';
+import { screenService } from '../services/ScreenService';
 import { Project, Bridge as BridgeType } from '../types';
 
 interface SidebarProps {
@@ -24,31 +25,89 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
   const [expandedCategories, setExpandedCategories] = React.useState<Set<string>>(new Set(['BRIDGE_STATUS', 'MODELING']));
 
-  const menuItems = [
-    // 대시보드
-    { id: 'dashboard', label: '대시보드', icon: BarChart3, category: 'DASHBOARD' },
-    
-    // 교량현황
-    { id: 'bridge-specs', label: '교량제원', icon: Database, category: 'BRIDGE_STATUS' },
-    { id: 'structure-status', label: '구조물 현황', icon: Building2, category: 'BRIDGE_STATUS' },
-    { id: 'bearing-status', label: '교량받침 현황', icon: Anchor, category: 'BRIDGE_STATUS' },
-    
-    // 모델링
-    { id: 'section', label: '단면', icon: Image, category: 'MODELING' },
-    
-    // 프로젝트 설정
-    { id: 'settings', label: '프로젝트 설정', icon: Settings, category: 'SETTINGS' },
-  ];
+  // LNB 구성에서 메뉴 생성
+  type MenuItem = { id: string; label: string; icon: React.ComponentType<any>; category: string };
+
+  const getIconComponent = (iconName?: string): React.ComponentType<any> => {
+    const iconMap: Record<string, React.ComponentType<any>> = {
+      'BarChart3': BarChart3,
+      'Building2': Building2,
+      'Database': Database,
+      'Image': Image,
+      'Anchor': Anchor,
+      'Settings': Settings,
+    };
+    return iconMap[iconName || 'Settings'] || Settings;
+  };
+
+  const toCategory = (name: string): string => {
+    switch (name) {
+      case 'dashboard': return 'DASHBOARD';
+      case 'bridge-status': return 'BRIDGE_STATUS';
+      case 'modeling': return 'MODELING';
+      case 'project-settings': return 'SETTINGS';
+      default: return name.toUpperCase();
+    }
+  };
+
+  const toItemId = (name: string): string => {
+    if (name === 'project-settings') return 'settings';
+    return name;
+  };
+
+  const lnbConfigs = React.useMemo(() => screenService.getLNBConfigs(), []);
+
+  const menuItems: MenuItem[] = React.useMemo(() => {
+    const items: MenuItem[] = [];
+    // 상위 메뉴 순서대로
+    lnbConfigs.forEach(top => {
+      const category = toCategory(top.name);
+      if (top.children && top.children.length > 0) {
+        // 하위 메뉴 정렬 후 푸시
+        const sortedChildren = [...top.children].sort((a, b) => (a.order || 0) - (b.order || 0));
+        sortedChildren.forEach(child => {
+          items.push({
+            id: toItemId(child.name),
+            label: child.displayName,
+            icon: getIconComponent(child.icon),
+            category,
+          });
+        });
+      } else {
+        // 독립 메뉴는 카테고리 헤더 없이 바로 표시되도록 'INDEPENDENT' 그룹에 넣음
+        const independentCategory = (top.name === 'dashboard') ? 'DASHBOARD' : (top.name === 'project-settings') ? 'SETTINGS' : 'INDEPENDENT';
+        items.push({
+          id: toItemId(top.name),
+          label: top.displayName,
+          icon: getIconComponent(top.icon),
+          category: independentCategory,
+        });
+      }
+    });
+    return items;
+  }, [lnbConfigs]);
 
   const groupedMenuItems = menuItems.reduce((acc, item) => {
     if (!acc[item.category]) {
-      acc[item.category] = [];
+      acc[item.category] = [] as MenuItem[];
     }
-    acc[item.category].push(item);
+    (acc[item.category] as MenuItem[]).push(item);
     return acc;
-  }, {} as Record<string, typeof menuItems>);
+  }, {} as Record<string, MenuItem[] | undefined>);
+
+  // 카테고리 레이블 매핑 (상위 메뉴의 displayName 사용)
+  const categoryDisplayNameMap = React.useMemo(() => {
+    const map: Record<string, string> = {};
+    lnbConfigs.forEach(top => {
+      if (top.children && top.children.length > 0) {
+        map[toCategory(top.name)] = top.displayName;
+      }
+    });
+    return map;
+  }, [lnbConfigs]);
 
   const getCategoryLabel = (category: string) => {
+    if (categoryDisplayNameMap[category]) return categoryDisplayNameMap[category];
     switch (category) {
       case 'BRIDGE_STATUS': return '교량현황';
       case 'MODELING': return '모델링';
@@ -147,6 +206,28 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </div>
               );
             }
+            if (category === 'INDEPENDENT') {
+              return (
+                <div key={category}>
+                  {items.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => onMenuSelect(item.id)}
+                      className={`w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
+                        activeMenu === item.id ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-700'
+                      }`}
+                    >
+                      <item.icon className="h-5 w-5" />
+                      <span className="font-medium">{item.label}</span>
+                    </button>
+                  ))}
+                  {/* 구분선 */}
+                  <div className="px-4 py-2">
+                    <div className="border-t border-gray-200"></div>
+                  </div>
+                </div>
+              );
+            }
             
             if (category === 'SETTINGS') {
               return (
@@ -180,7 +261,18 @@ const Sidebar: React.FC<SidebarProps> = ({
                   onClick={() => toggleCategory(category)}
                   className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-100 transition-colors"
                 >
-                  <span className="text-base font-semibold text-gray-800">{getCategoryLabel(category)}</span>
+                  <div className="flex items-center space-x-3">
+                    {/* 상위 메뉴 아이콘 표시 */}
+                    {(() => {
+                      const topMenu = lnbConfigs.find(top => toCategory(top.name) === category);
+                      if (topMenu && topMenu.icon) {
+                        const IconComponent = getIconComponent(topMenu.icon);
+                        return <IconComponent className="h-5 w-5 text-gray-600" />;
+                      }
+                      return null;
+                    })()}
+                    <span className="text-base font-semibold text-gray-800">{getCategoryLabel(category)}</span>
+                  </div>
                   <ChevronDown 
                     className={`h-4 w-4 text-gray-500 transition-transform ${
                       isCategoryExpanded(category) ? 'rotate-180' : ''

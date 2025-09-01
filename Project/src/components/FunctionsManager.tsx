@@ -628,9 +628,21 @@ const FunctionsManager: React.FC = () => {
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
             <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
               <div className="mt-3">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  {editingFunction ? '함수 수정' : '함수 추가'}
-                </h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    {editingFunction ? '함수 수정' : '함수 추가'}
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setShowFunctionModal(false);
+                      resetFunctionForm();
+                      setEditingFunction(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -724,15 +736,16 @@ const FunctionsManager: React.FC = () => {
                       resetFunctionForm();
                       setEditingFunction(null);
                     }}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
                   >
-                    <X className="h-4 w-4" />
+                    취소
                   </button>
                   <button
                     onClick={editingFunction ? handleUpdateFunction : handleAddFunction}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                   >
                     <Save className="h-4 w-4" />
+                    <span>{editingFunction ? '수정' : '추가'}</span>
                   </button>
                 </div>
               </div>
@@ -745,9 +758,21 @@ const FunctionsManager: React.FC = () => {
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
             <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
               <div className="mt-3">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  {editingVariable ? '변수 수정' : '변수 추가'}
-                </h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    {editingVariable ? '변수 수정' : '변수 추가'}
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setShowVariableModal(false);
+                      resetVariableForm();
+                      setEditingVariable(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
                 
                 <div className="space-y-4">
                   <div>
@@ -857,15 +882,16 @@ const FunctionsManager: React.FC = () => {
                       resetVariableForm();
                       setEditingVariable(null);
                     }}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
                   >
-                    <X className="h-4 w-4" />
+                    취소
                   </button>
                   <button
                     onClick={editingVariable ? handleUpdateVariable : handleAddVariable}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                   >
                     <Save className="h-4 w-4" />
+                    <span>{editingVariable ? '수정' : '추가'}</span>
                   </button>
                 </div>
               </div>
