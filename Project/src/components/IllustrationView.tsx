@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, Settings, Download, RotateCcw, Plus, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
-import { CADParserService, CADData, CADEntity } from '../services/CADParserService';
+import { CADParserService, CADData, CADEntity, LayerInfo } from '../services/CADParserService';
+import LayerSelectionModal from './LayerSelectionModal';
 
 interface SectionParameter {
   key: string;
@@ -75,6 +76,11 @@ const IllustrationView: React.FC = () => {
   const [cadViewMode, setCadViewMode] = useState<'2d' | '3d'>('2d');
   const [cadZoom, setCadZoom] = useState(1);
   const [cadPan, setCadPan] = useState<[number, number]>([0, 0]);
+  
+  // 레이어 선택 관련 상태
+  const [showLayerSelection, setShowLayerSelection] = useState(false);
+  const [availableLayers, setAvailableLayers] = useState<LayerInfo[]>([]);
+  const [selectedLayers, setSelectedLayers] = useState<string[]>([]);
   
   // CAD 파서 서비스
   const [cadParserService] = useState(() => CADParserService.getInstance());
@@ -290,15 +296,43 @@ const IllustrationView: React.FC = () => {
       const status = cadParserService.getStatus();
       console.log('CAD Parser Service Status:', status);
 
-      let parseResult;
-      
       // 현재는 DWG 파일만 지원
       if (uploadedFile.name.toLowerCase().endsWith('.dwg')) {
-        console.log('DWG 파일 파싱 시작...');
-        parseResult = await cadParserService.parseDWGFile(uploadedFile);
+        console.log('DWG 파일 레이어 정보 추출 시작...');
+        
+        // 먼저 레이어 정보 추출
+        const layerResult = await cadParserService.extractLayerInfo(uploadedFile);
+        
+        if (layerResult.success && layerResult.layers.length > 0) {
+          console.log('레이어 정보 추출 성공:', layerResult.layers);
+          setAvailableLayers(layerResult.layers);
+          setShowLayerSelection(true);
+          setIsProcessing(false);
+        } else {
+          throw new Error(layerResult.error || '레이어 정보 추출에 실패했습니다.');
+        }
       } else {
         throw new Error('지원하지 않는 파일 형식입니다. DWG 파일을 사용해주세요.');
       }
+
+    } catch (error) {
+      console.error('CAD 파일 처리 오류:', error);
+      setUploadError(error instanceof Error ? error.message : '파일 처리 중 오류가 발생했습니다.');
+      setIsProcessing(false);
+    }
+  };
+
+  const handleLayerSelectionConfirm = async (selectedLayerNames: string[]) => {
+    if (!uploadedFile) return;
+
+    setSelectedLayers(selectedLayerNames);
+    setShowLayerSelection(false);
+    setIsProcessing(true);
+
+    try {
+      console.log('선택된 레이어로 DWG 파일 파싱 시작:', selectedLayerNames);
+      
+      const parseResult = await cadParserService.parseDWGFile(uploadedFile, selectedLayerNames);
 
       if (parseResult.success && parseResult.data) {
         console.log('CAD 파일 파싱 성공:', parseResult.data);
@@ -324,8 +358,8 @@ const IllustrationView: React.FC = () => {
       }
 
     } catch (error) {
-      console.error('CAD 파일 처리 오류:', error);
-      setUploadError(error instanceof Error ? error.message : '파일 처리 중 오류가 발생했습니다.');
+      console.error('CAD 파일 파싱 오류:', error);
+      setUploadError(error instanceof Error ? error.message : '파일 파싱 중 오류가 발생했습니다.');
       setIsProcessing(false);
     }
   };
@@ -1625,6 +1659,18 @@ const IllustrationView: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* 레이어 선택 모달 */}
+      <LayerSelectionModal
+        isOpen={showLayerSelection}
+        layers={availableLayers}
+        fileName={uploadedFile?.name || ''}
+        onClose={() => {
+          setShowLayerSelection(false);
+          setIsProcessing(false);
+        }}
+        onConfirm={handleLayerSelectionConfirm}
+      />
     </div>
   );
 };

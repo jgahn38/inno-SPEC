@@ -25,7 +25,8 @@ const ScreenManager: React.FC = () => {
     isActive: true, 
     parentId: '', 
     isParent: false,
-    type: 'independent' as 'independent' | 'parent' | 'child'
+    type: 'independent' as 'independent' | 'parent' | 'child',
+    screenId: ''
   });
   const [newScreen, setNewScreen] = useState({ 
     name: '', 
@@ -126,6 +127,7 @@ const ScreenManager: React.FC = () => {
           order: childOrder,
           isActive: newLNB.isActive,
           type: 'child',
+          screenId: newLNB.screenId,
           createdAt: new Date(),
           updatedAt: new Date(),
         } as LNBConfig];
@@ -133,7 +135,7 @@ const ScreenManager: React.FC = () => {
       } else {
         screenService.createLNBConfig({ ...newLNB, order: newOrder, type: newLNB.type, children: newLNB.type === 'parent' ? [] : [] });
       }
-      setNewLNB({ name: '', displayName: '', icon: '', order: 0, isActive: true, parentId: '', isParent: false, type: 'independent' });
+      setNewLNB({ name: '', displayName: '', icon: '', order: 0, isActive: true, parentId: '', isParent: false, type: 'independent', screenId: '' });
       setShowLNBModal(false);
       loadData();
     }
@@ -149,7 +151,8 @@ const ScreenManager: React.FC = () => {
       isActive: lnb.isActive,
       parentId: '',
       isParent: false,
-      type: lnb.type || (lnb.children && lnb.children.length > 0 ? 'parent' : 'independent')
+      type: lnb.type || (lnb.children && lnb.children.length > 0 ? 'parent' : 'independent'),
+      screenId: lnb.screenId || ''
     });
     setShowLNBModal(true);
   };
@@ -164,7 +167,7 @@ const ScreenManager: React.FC = () => {
           if (parent) {
             const updatedChildren = (parent.children || []).map(child => 
               child.id === editingLNB.id 
-                ? { ...child, ...newLNB, type: 'child' as const }
+                ? { ...child, ...newLNB, type: 'child' as const, screenId: newLNB.screenId }
                 : child
             );
             screenService.updateLNBConfig(parentId, { children: updatedChildren });
@@ -176,7 +179,7 @@ const ScreenManager: React.FC = () => {
       }
       
       setEditingLNB(null);
-      setNewLNB({ name: '', displayName: '', icon: '', order: 0, isActive: true, parentId: '', isParent: false, type: 'independent' });
+      setNewLNB({ name: '', displayName: '', icon: '', order: 0, isActive: true, parentId: '', isParent: false, type: 'independent', screenId: '' });
       setShowLNBModal(false);
       loadData();
     }
@@ -200,7 +203,8 @@ const ScreenManager: React.FC = () => {
       isActive: child.isActive,
       parentId: parentId,
       isParent: false,
-      type: 'child'
+      type: 'child',
+      screenId: child.screenId || ''
     });
     setShowLNBModal(true);
   };
@@ -278,7 +282,7 @@ const ScreenManager: React.FC = () => {
   };
 
   const resetLNBForm = () => {
-    setNewLNB({ name: '', displayName: '', icon: '', order: 0, isActive: true, parentId: '', isParent: false, type: 'independent' });
+    setNewLNB({ name: '', displayName: '', icon: '', order: 0, isActive: true, parentId: '', isParent: false, type: 'independent', screenId: '' });
     setEditingLNB(null);
   };
 
@@ -931,6 +935,26 @@ const ScreenManager: React.FC = () => {
                   </div>
 
 
+
+                  {/* 화면 연결 선택 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">연결된 화면</label>
+                    <select
+                      value={newLNB.screenId}
+                      onChange={(e) => setNewLNB({ ...newLNB, screenId: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">화면을 선택하세요 (선택사항)</option>
+                      {screens.map(screen => (
+                        <option key={screen.id} value={screen.id}>
+                          {screen.displayName} ({screen.name})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      메뉴 클릭 시 연결된 화면으로 이동합니다. 선택하지 않으면 메뉴만 표시됩니다.
+                    </p>
+                  </div>
 
                   <div className="flex items-center">
                     <input

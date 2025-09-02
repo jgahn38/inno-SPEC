@@ -18,7 +18,7 @@
     "backup:cleanup": "node scripts/auto-backup.js cleanup"
   },
   "dependencies": {
-    "@mlightcad/libredwg-web": "^0.1.6",
+    "@mlightcad/libredwg-web": "^0.1.9",
     "express": "^4.18.2",
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",
