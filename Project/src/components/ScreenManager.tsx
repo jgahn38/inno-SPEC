@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Eye, Settings, Save, X, GripVertical, BarChart3, Building2, Image, Anchor, Database, Variable, Table, Grid3X3 } from 'lucide-react';
 import { screenService } from '../services/ScreenService';
-import { ScreenConfig, ScreenComponent, LNBConfig, ScreenTemplate } from '../types';
+import { variableService } from '../services/VariableService';
+import { ScreenConfig, ScreenComponent, LNBConfig, SystemScreenType } from '../types';
 import { TableSchemaService } from '../services/TableSchemaService';
 import ScreenCanvas from './ScreenCanvas';
 
 const ScreenManager: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'lnb' | 'screens' | 'templates'>('lnb');
+  const [activeTab, setActiveTab] = useState<'lnb' | 'screens'>('lnb');
   const [lnbConfigs, setLnbConfigs] = useState<LNBConfig[]>([]);
   const [screens, setScreens] = useState<ScreenConfig[]>([]);
-  const [templates, setTemplates] = useState<ScreenTemplate[]>([]);
+
   const [showLNBModal, setShowLNBModal] = useState(false);
   const [showScreenModal, setShowScreenModal] = useState(false);
   const [showComponentModal, setShowComponentModal] = useState(false);
@@ -26,20 +27,33 @@ const ScreenManager: React.FC = () => {
     parentId: '', 
     isParent: false,
     type: 'independent' as 'independent' | 'parent' | 'child',
-    screenId: ''
+    screenId: '',
+    systemScreenType: '' as SystemScreenType | ''
   });
   const [newScreen, setNewScreen] = useState({ 
     name: '', 
     displayName: '', 
     description: '', 
     type: 'custom' as 'dashboard' | 'custom', 
-    layout: 'single' as 'single' | 'grid' | 'tabs', 
+    layout: 'single' as 'single' | 'grid', 
     components: [] as ScreenComponent[] 
   });
 
   // 테이블과 변수 데이터
   const [tables, setTables] = useState<any[]>([]);
   const [variables, setVariables] = useState<any[]>([]);
+
+  // 시스템 화면 표시명 반환 함수
+  const getSystemScreenDisplayName = (systemScreenType: SystemScreenType): string => {
+    switch (systemScreenType) {
+      case 'dashboard': return '대시보드';
+      case 'project-settings': return '프로젝트 설정';
+      case 'section-library': return '단면 라이브러리';
+      case 'user-profile': return '사용자 프로필';
+      case 'system-settings': return '시스템 설정';
+      default: return '알 수 없음';
+    }
+  };
   const [newComponent, setNewComponent] = useState({
     type: 'table' as 'table' | 'variable',
     componentId: '',
@@ -70,6 +84,16 @@ const ScreenManager: React.FC = () => {
     }
   }, []);
 
+  // VariableService 구독
+  useEffect(() => {
+    const unsubscribe = variableService.subscribe((variables) => {
+      const variablesForCanvas = variableService.getVariablesForScreenCanvas();
+      setVariables(variablesForCanvas);
+    });
+
+    return unsubscribe;
+  }, []);
+
   const loadData = () => {
     const lnbData = screenService.getLNBConfigs();
     
@@ -85,7 +109,7 @@ const ScreenManager: React.FC = () => {
     
     setLnbConfigs(migratedLnbData);
     setScreens(screenService.getScreens());
-    setTemplates(screenService.getTemplates());
+
   };
 
   const loadTableAndVariableData = () => {
@@ -94,15 +118,9 @@ const ScreenManager: React.FC = () => {
     const allTables = Array.from(tableService.getAllSchemas().values());
     setTables(allTables);
 
-    // 변수 데이터 로드 (샘플 데이터)
-    const sampleVariables = [
-      { id: 'var-1', name: 'concrete_strength', displayName: '콘크리트 강도', type: 'number', unit: 'MPa' },
-      { id: 'var-2', name: 'steel_yield', displayName: '철근 항복강도', type: 'number', unit: 'MPa' },
-      { id: 'var-3', name: 'section_width', displayName: '단면 폭', type: 'number', unit: 'mm' },
-      { id: 'var-4', name: 'section_height', displayName: '단면 높이', type: 'number', unit: 'mm' },
-      { id: 'var-5', name: 'project_name', displayName: '프로젝트명', type: 'string' }
-    ];
-    setVariables(sampleVariables);
+    // 변수 데이터 로드 (VariableService 사용)
+    const variablesForCanvas = variableService.getVariablesForScreenCanvas();
+    setVariables(variablesForCanvas);
   };
 
   // LNB 구성 관리
@@ -127,15 +145,23 @@ const ScreenManager: React.FC = () => {
           order: childOrder,
           isActive: newLNB.isActive,
           type: 'child',
-          screenId: newLNB.screenId,
+          screenId: newLNB.screenId || undefined,
+          systemScreenType: newLNB.systemScreenType || undefined,
           createdAt: new Date(),
           updatedAt: new Date(),
         } as LNBConfig];
         screenService.updateLNBConfig(parent.id, { children: nextChildren });
       } else {
-        screenService.createLNBConfig({ ...newLNB, order: newOrder, type: newLNB.type, children: newLNB.type === 'parent' ? [] : [] });
+        screenService.createLNBConfig({ 
+          ...newLNB, 
+          order: newOrder, 
+          type: newLNB.type, 
+          children: newLNB.type === 'parent' ? [] : [],
+          screenId: newLNB.type === 'parent' ? undefined : (newLNB.screenId === 'placeholder' ? undefined : (newLNB.screenId || undefined)),
+          systemScreenType: newLNB.type === 'parent' ? undefined : (newLNB.systemScreenType === 'placeholder' ? undefined : (newLNB.systemScreenType || undefined))
+        });
       }
-      setNewLNB({ name: '', displayName: '', icon: '', order: 0, isActive: true, parentId: '', isParent: false, type: 'independent', screenId: '' });
+      setNewLNB({ name: '', displayName: '', icon: '', order: 0, isActive: true, parentId: '', isParent: false, type: 'independent', screenId: '', systemScreenType: '' });
       setShowLNBModal(false);
       loadData();
     }
@@ -152,7 +178,8 @@ const ScreenManager: React.FC = () => {
       parentId: '',
       isParent: false,
       type: lnb.type || (lnb.children && lnb.children.length > 0 ? 'parent' : 'independent'),
-      screenId: lnb.screenId || ''
+      screenId: lnb.screenId || '',
+      systemScreenType: lnb.systemScreenType || ''
     });
     setShowLNBModal(true);
   };
@@ -167,7 +194,7 @@ const ScreenManager: React.FC = () => {
           if (parent) {
             const updatedChildren = (parent.children || []).map(child => 
               child.id === editingLNB.id 
-                ? { ...child, ...newLNB, type: 'child' as const, screenId: newLNB.screenId }
+                ? { ...child, ...newLNB, type: 'child' as const, screenId: newLNB.screenId, systemScreenType: newLNB.systemScreenType }
                 : child
             );
             screenService.updateLNBConfig(parentId, { children: updatedChildren });
@@ -175,11 +202,16 @@ const ScreenManager: React.FC = () => {
         }
       } else {
         // 상위/독립 메뉴 편집
-        screenService.updateLNBConfig(editingLNB.id, newLNB);
+        const updateData = {
+          ...newLNB,
+          screenId: newLNB.type === 'parent' ? undefined : (newLNB.screenId === 'placeholder' ? undefined : (newLNB.screenId || undefined)),
+          systemScreenType: newLNB.type === 'parent' ? undefined : (newLNB.systemScreenType === 'placeholder' ? undefined : (newLNB.systemScreenType || undefined))
+        };
+        screenService.updateLNBConfig(editingLNB.id, updateData);
       }
       
       setEditingLNB(null);
-      setNewLNB({ name: '', displayName: '', icon: '', order: 0, isActive: true, parentId: '', isParent: false, type: 'independent', screenId: '' });
+      setNewLNB({ name: '', displayName: '', icon: '', order: 0, isActive: true, parentId: '', isParent: false, type: 'independent', screenId: '', systemScreenType: '' });
       setShowLNBModal(false);
       loadData();
     }
@@ -204,7 +236,8 @@ const ScreenManager: React.FC = () => {
       parentId: parentId,
       isParent: false,
       type: 'child',
-      screenId: child.screenId || ''
+      screenId: child.screenId || '',
+      systemScreenType: child.systemScreenType || ''
     });
     setShowLNBModal(true);
   };
@@ -254,6 +287,13 @@ const ScreenManager: React.FC = () => {
 
   const handleUpdateScreen = () => {
     if (editingScreen && newScreen.name && newScreen.displayName) {
+      console.log('🔄 화면 수정 요청:', {
+        editingScreenId: editingScreen.id,
+        oldScreen: editingScreen,
+        newScreenData: newScreen,
+        layoutChanged: editingScreen.layout !== newScreen.layout
+      });
+      
       screenService.updateScreen(editingScreen.id, newScreen);
       setEditingScreen(null);
       setNewScreen({ name: '', displayName: '', description: '', type: 'custom', layout: 'single', components: [] });
@@ -282,7 +322,7 @@ const ScreenManager: React.FC = () => {
   };
 
   const resetLNBForm = () => {
-    setNewLNB({ name: '', displayName: '', icon: '', order: 0, isActive: true, parentId: '', isParent: false, type: 'independent', screenId: '' });
+    setNewLNB({ name: '', displayName: '', icon: '', order: 0, isActive: true, parentId: '', isParent: false, type: 'independent', screenId: '', systemScreenType: '' });
     setEditingLNB(null);
   };
 
@@ -393,10 +433,11 @@ const ScreenManager: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* 헤더 */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">화면 구성 관리</h1>
-          <p className="mt-2 text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">화면 구성 관리</h1>
+          <p className="text-gray-600">
             LNB 메뉴와 화면을 직접 구성하여 내진성능평가 시스템을 맞춤형으로 설정할 수 있습니다.
           </p>
         </div>
@@ -424,16 +465,7 @@ const ScreenManager: React.FC = () => {
             >
               화면 구성
             </button>
-            <button
-              onClick={() => setActiveTab('templates')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'templates'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              화면 템플릿
-            </button>
+
           </nav>
         </div>
 
@@ -511,9 +543,17 @@ const ScreenManager: React.FC = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           <span className="font-semibold">{lnb.displayName}</span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {lnb.screenId ? screens.find(s => s.id === lnb.screenId)?.displayName || '연결됨' : '-'}
-                        </td>
+                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                           {lnb.type === 'parent' ? (
+                             <span className="text-gray-400 italic">상위 메뉴 (화면 연결 불가)</span>
+                           ) : lnb.systemScreenType ? (
+                             `[시스템] ${getSystemScreenDisplayName(lnb.systemScreenType)}`
+                           ) : lnb.screenId ? (
+                             screens.find(s => s.id === lnb.screenId)?.displayName || '연결됨'
+                           ) : (
+                             '-'
+                           )}
+                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             lnb.isActive
@@ -572,7 +612,12 @@ const ScreenManager: React.FC = () => {
                             <span className="ml-4 text-gray-600">{child.displayName}</span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {child.screenId ? screens.find(s => s.id === child.screenId)?.displayName || '연결됨' : '-'}
+                            {child.systemScreenType ? 
+                              `[시스템] ${getSystemScreenDisplayName(child.systemScreenType)}` :
+                              child.screenId ? 
+                                screens.find(s => s.id === child.screenId)?.displayName || '연결됨' : 
+                                '-'
+                            }
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -626,38 +671,27 @@ const ScreenManager: React.FC = () => {
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">화면명</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">표시명</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">타입</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">레이아웃</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">컴포넌트 수</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상태</th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-40"></th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {screens.map((screen) => (
-                    <tr key={screen.id} className="hover:bg-gray-50">
+                    <tr 
+                      key={screen.id} 
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => handleEditScreen(screen)}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{screen.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{screen.displayName}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {screen.type === 'dashboard' ? '대시보드' : '사용자정의'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {screen.layout === 'single' ? '단일' : screen.layout === 'grid' ? '그리드' : '탭'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{screen.components.length}개</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          screen.isActive
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {screen.isActive ? '활성' : '비활성'}
-                        </span>
+                        {screen.layout === 'single' ? '단일' : screen.layout === 'tabs' ? '탭' : '그리드'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium w-40">
                         <div className="flex justify-end space-x-2">
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setCurrentScreenId(screen.id);
                               setShowVisualEditor(true);
                             }}
@@ -667,16 +701,13 @@ const ScreenManager: React.FC = () => {
                             <Grid3X3 className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => handleEditScreen(screen)}
-                            className="text-blue-600 hover:text-blue-900 p-1 rounded-full hover:bg-blue-50 transition-colors"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteScreen(screen.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteScreen(screen.id);
+                            }}
                             className="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-50 transition-colors"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <X className="h-4 w-4" />
                           </button>
                         </div>
                       </td>
@@ -688,39 +719,7 @@ const ScreenManager: React.FC = () => {
           </div>
         )}
 
-        {/* 화면 템플릿 탭 */}
-        {activeTab === 'templates' && (
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">화면 템플릿</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {templates.map((template) => (
-                <div key={template.id} className="bg-white rounded-lg shadow p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-medium text-gray-900">{template.displayName}</h3>
-                    {template.isSystem && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        시스템
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-gray-600 mb-4">{template.description}</p>
-                  <div className="flex items-center justify-between text-sm text-gray-500">
-                    <span>컴포넌트: {template.defaultComponents.length}개</span>
-                    <span className="capitalize">{template.category}</span>
-                  </div>
-                  <div className="mt-4 flex space-x-2">
-                    <button className="flex-1 px-3 py-2 text-sm font-medium text-blue-600 border border-blue-600 rounded-md hover:bg-blue-50 transition-colors">
-                      사용하기
-                    </button>
-                    <button className="px-3 py-2 text-sm font-medium text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
-                      <Eye className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+
 
         {/* LNB 메뉴 추가/수정 모달 */}
         {showLNBModal && (
@@ -758,13 +757,18 @@ const ScreenManager: React.FC = () => {
                         <span>독립</span>
                       </label>
                       <label className="flex items-center space-x-1">
-                        <input
-                          type="radio"
-                          name="lnbType"
-                          value="parent"
-                          checked={newLNB.type === 'parent'}
-                          onChange={(e) => setNewLNB({ ...newLNB, type: e.target.value as 'independent' | 'parent' | 'child' })}
-                        />
+                                                 <input
+                           type="radio"
+                           name="lnbType"
+                           value="parent"
+                           checked={newLNB.type === 'parent'}
+                           onChange={(e) => setNewLNB({ 
+                             ...newLNB, 
+                             type: e.target.value as 'independent' | 'parent' | 'child',
+                             screenId: '',
+                             systemScreenType: ''
+                           })}
+                         />
                         <span>상위</span>
                       </label>
                       <label className="flex items-center space-x-1">
@@ -822,7 +826,7 @@ const ScreenManager: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">표시명 (한글) *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">표시명 *</label>
                     <input
                       type="text"
                       value={newLNB.displayName}
@@ -936,25 +940,94 @@ const ScreenManager: React.FC = () => {
 
 
 
-                  {/* 화면 연결 선택 */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">연결된 화면</label>
-                    <select
-                      value={newLNB.screenId}
-                      onChange={(e) => setNewLNB({ ...newLNB, screenId: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">화면을 선택하세요 (선택사항)</option>
-                      {screens.map(screen => (
-                        <option key={screen.id} value={screen.id}>
-                          {screen.displayName} ({screen.name})
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-gray-500 mt-1">
-                      메뉴 클릭 시 연결된 화면으로 이동합니다. 선택하지 않으면 메뉴만 표시됩니다.
-                    </p>
-                  </div>
+                                     {/* 화면 연결 선택 */}
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">연결된 화면</label>
+                     
+                     {/* 상위 메뉴인 경우 화면 연결 비활성화 */}
+                     {newLNB.type === 'parent' ? (
+                       <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-500">
+                         상위 메뉴는 화면 연결이 불가능합니다. (화면 없음으로 고정)
+                       </div>
+                     ) : (
+                       <>
+                         {/* 화면 타입 선택 */}
+                         <div className="mb-3">
+                           <div className="flex items-center space-x-4 text-sm">
+                             <label className="flex items-center space-x-1">
+                               <input
+                                 type="radio"
+                                 name="screenType"
+                                 value="user"
+                                 checked={newLNB.screenId !== '' && newLNB.systemScreenType === ''}
+                                 onChange={() => setNewLNB({ ...newLNB, screenId: 'placeholder', systemScreenType: '' })}
+                               />
+                               <span>사용자 생성 화면</span>
+                             </label>
+                             <label className="flex items-center space-x-1">
+                               <input
+                                 type="radio"
+                                 name="screenType"
+                                 value="system"
+                                 checked={newLNB.systemScreenType !== ''}
+                                 onChange={() => setNewLNB({ ...newLNB, screenId: '', systemScreenType: 'placeholder' })}
+                               />
+                               <span>시스템 화면</span>
+                             </label>
+                             <label className="flex items-center space-x-1">
+                               <input
+                                 type="radio"
+                                 name="screenType"
+                                 value="none"
+                                 checked={newLNB.screenId === '' && newLNB.systemScreenType === ''}
+                                 onChange={() => setNewLNB({ ...newLNB, screenId: '', systemScreenType: '' })}
+                               />
+                               <span>화면 없음</span>
+                             </label>
+                           </div>
+                         </div>
+
+                         {/* 사용자 생성 화면 선택 */}
+                         {newLNB.screenId !== '' && newLNB.systemScreenType === '' && (
+                           <select
+                             value={newLNB.screenId === 'placeholder' ? '' : newLNB.screenId}
+                             onChange={(e) => setNewLNB({ ...newLNB, screenId: e.target.value })}
+                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           >
+                             <option value="">사용자 화면을 선택하세요</option>
+                             {screens.map(screen => (
+                               <option key={screen.id} value={screen.id}>
+                                 {screen.displayName} ({screen.name})
+                               </option>
+                             ))}
+                           </select>
+                         )}
+
+                         {/* 시스템 화면 선택 */}
+                         {newLNB.systemScreenType !== '' && (
+                           <select
+                             value={newLNB.systemScreenType === 'placeholder' ? '' : newLNB.systemScreenType}
+                             onChange={(e) => setNewLNB({ ...newLNB, systemScreenType: e.target.value as SystemScreenType })}
+                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           >
+                             <option value="">시스템 화면을 선택하세요</option>
+                             <option value="dashboard">대시보드</option>
+                             <option value="project-settings">프로젝트 설정</option>
+                             <option value="section-library">단면 라이브러리</option>
+                             <option value="user-profile">사용자 프로필</option>
+                             <option value="system-settings">시스템 설정</option>
+                           </select>
+                         )}
+                       </>
+                     )}
+
+                     <p className="text-xs text-gray-500 mt-1">
+                       {newLNB.type === 'parent' 
+                         ? '상위 메뉴는 하위 메뉴를 그룹화하는 용도로만 사용됩니다.'
+                         : '메뉴 클릭 시 연결된 화면으로 이동합니다. 시스템 화면은 미리 정의된 화면입니다.'
+                       }
+                     </p>
+                   </div>
 
                   <div className="flex items-center">
                     <input
@@ -987,7 +1060,7 @@ const ScreenManager: React.FC = () => {
                     className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                   >
                     <Save className="h-4 w-4" />
-                    <span>{editingLNB ? '수정' : '추가'}</span>
+                    <span>{editingLNB ? '저장' : '추가'}</span>
                   </button>
                 </div>
               </div>
@@ -1028,7 +1101,7 @@ const ScreenManager: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">표시명 (한글) *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">표시명 *</label>
                     <input
                       type="text"
                       value={newScreen.displayName}
@@ -1049,30 +1122,7 @@ const ScreenManager: React.FC = () => {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">타입</label>
-                    <select
-                      value={newScreen.type}
-                      onChange={(e) => setNewScreen({ ...newScreen, type: e.target.value as 'dashboard' | 'custom' })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="custom">사용자정의</option>
-                      <option value="dashboard">대시보드</option>
-                    </select>
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">레이아웃</label>
-                    <select
-                      value={newScreen.layout}
-                      onChange={(e) => setNewScreen({ ...newScreen, layout: e.target.value as 'single' | 'grid' | 'tabs' })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="single">단일</option>
-                      <option value="grid">그리드</option>
-                      <option value="tabs">탭</option>
-                    </select>
-                  </div>
                 </div>
 
                 <div className="flex justify-end space-x-3 mt-6">
@@ -1090,7 +1140,7 @@ const ScreenManager: React.FC = () => {
                     className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                   >
                     <Save className="h-4 w-4" />
-                    <span>{editingScreen ? '수정' : '추가'}</span>
+                    <span>{editingScreen ? '저장' : '추가'}</span>
                   </button>
                 </div>
               </div>
@@ -1416,25 +1466,88 @@ const ScreenManager: React.FC = () => {
                 </div>
                 
                 <div className="h-[800px]">
-                  <ScreenCanvas
-                    layout={screens.find(s => s.id === currentScreenId)?.layout || 'single'}
-                    components={screens.find(s => s.id === currentScreenId)?.components || []}
-                    onComponentsChange={(newComponents) => {
-                      const updatedScreens = screens.map(screen =>
-                        screen.id === currentScreenId
-                          ? { ...screen, components: newComponents }
-                          : screen
-                      );
+                  {(() => {
+                    const currentScreen = screens.find(s => s.id === currentScreenId);
+                    console.log('🎯 ScreenCanvas에 전달되는 데이터:', {
+                      currentScreenId,
+                      currentScreen,
+                      hasScreen: !!currentScreen,
+                      screenLayout: currentScreen?.layout,
+                      tablesCount: tables.length,
+                      variablesCount: variables.length,
+                      tables: tables.map(t => ({ id: t.id, displayName: t.displayName })),
+                      variables: variables.map(v => ({ id: v.id, displayName: v.displayName }))
+                    });
+                    return (
+                      <ScreenCanvas
+                        screen={currentScreen || null}
+                        components={currentScreen?.components || []}
+                        onComponentsChange={(newComponents) => {
+                          const updatedScreens = screens.map(screen =>
+                            screen.id === currentScreenId
+                              ? { ...screen, components: newComponents }
+                              : screen
+                          );
+                          setScreens(updatedScreens);
+                          // 화면 업데이트
+                          const currentScreen = screens.find(s => s.id === currentScreenId);
+                          if (currentScreen) {
+                            screenService.updateScreen(currentScreenId, { components: newComponents });
+                          }
+                        }}
+                        onLayoutChange={(newLayout, gridConfig, tabs, components) => {
+                      console.log('ScreenManager onLayoutChange 호출:', { newLayout, gridConfig, tabs, components });
+                      console.log('현재 화면들:', screens);
+                      console.log('현재 화면 ID:', currentScreenId);
+                      
+                      const updatedScreens = screens.map(screen => {
+                        if (screen.id === currentScreenId) {
+                          const updatedScreen = { 
+                            ...screen, 
+                            layout: newLayout,
+                            gridConfig: gridConfig,
+                            tabs: tabs,
+                            ...(components && { components: components })
+                          };
+                          console.log('🔄 화면 업데이트:', {
+                            screenId: screen.id,
+                            oldLayout: screen.layout,
+                            newLayout: newLayout,
+                            oldTabs: screen.tabs,
+                            newTabs: tabs,
+                            fullOldScreen: screen,
+                            fullNewScreen: updatedScreen
+                          });
+                          return updatedScreen;
+                        }
+                        return screen;
+                      });
+                      
+                      console.log('업데이트된 화면들:', updatedScreens);
                       setScreens(updatedScreens);
+                      
                       // 화면 업데이트
                       const currentScreen = screens.find(s => s.id === currentScreenId);
                       if (currentScreen) {
-                        screenService.updateScreen(currentScreenId, { components: newComponents });
+                        const updateData: any = {
+                          layout: newLayout,
+                          gridConfig: gridConfig,
+                          tabs: tabs
+                        };
+                        
+                        if (components) {
+                          updateData.components = components;
+                        }
+                        
+                        console.log('ScreenService 업데이트:', updateData);
+                        screenService.updateScreen(currentScreenId, updateData);
                       }
-                    }}
-                    availableTables={tables}
-                    availableVariables={variables}
-                  />
+                        }}
+                        availableTables={tables}
+                        availableVariables={variables}
+                      />
+                    );
+                  })()}
                 </div>
               </div>
             </div>

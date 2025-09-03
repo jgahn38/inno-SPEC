@@ -11,6 +11,7 @@ interface SidebarProps {
   projects: Project[];
   onProjectChange: (project: Project) => void;
   onBridgeChange: (bridge: BridgeType) => void;
+  onLNBMenuClick?: (menuId: string) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -20,7 +21,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   selectedBridge,
   projects, 
   onProjectChange,
-  onBridgeChange
+  onBridgeChange,
+  onLNBMenuClick
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
   const [expandedCategories, setExpandedCategories] = React.useState<Set<string>>(new Set(['BRIDGE_STATUS', 'MODELING']));
@@ -189,7 +191,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                   {items.map((item) => (
                     <button
                       key={item.id}
-                      onClick={() => onMenuSelect(item.id)}
+                      onClick={() => {
+                        onMenuSelect(item.id);
+                        if (onLNBMenuClick) {
+                          onLNBMenuClick(item.id);
+                        }
+                      }}
                       className={`w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
                         activeMenu === item.id ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-700'
                       }`}
@@ -212,7 +219,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                   {items.map((item) => (
                     <button
                       key={item.id}
-                      onClick={() => onMenuSelect(item.id)}
+                      onClick={() => {
+                        onMenuSelect(item.id);
+                        if (onLNBMenuClick) {
+                          onLNBMenuClick(item.id);
+                        }
+                      }}
                       className={`w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
                         activeMenu === item.id ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-700'
                       }`}
@@ -241,7 +253,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                   {items.map((item) => (
                     <button
                       key={item.id}
-                      onClick={() => onMenuSelect(item.id)}
+                      onClick={() => {
+                        onMenuSelect(item.id);
+                        if (onLNBMenuClick) {
+                          onLNBMenuClick(item.id);
+                        }
+                      }}
                       className={`w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
                         activeMenu === item.id ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600' : 'text-gray-700'
                       }`}
@@ -286,7 +303,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                     {items.map((item) => (
                       <button
                         key={item.id}
-                        onClick={() => onMenuSelect(item.id)}
+                        onClick={() => {
+                        onMenuSelect(item.id);
+                        if (onLNBMenuClick) {
+                          onLNBMenuClick(item.id);
+                        }
+                      }}
                         className={`w-full flex items-center space-x-3 px-8 py-2.5 text-left hover:bg-gray-100 transition-colors ${
                           activeMenu === item.id ? 'bg-blue-100 text-blue-700' : 'text-gray-600'
                         }`}

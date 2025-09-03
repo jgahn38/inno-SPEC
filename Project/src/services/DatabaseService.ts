@@ -19,7 +19,6 @@ export class DatabaseService {
     this.databases = new Map();
     this.records = new Map();
     this.loadFromLocalStorage();
-    this.initializeDefaultDatabases();
   }
 
   public static getInstance(): DatabaseService {
@@ -81,161 +80,7 @@ export class DatabaseService {
     }
   }
 
-  // 기본 DB 초기화
-  private initializeDefaultDatabases(): void {
-    // 이미 기본 DB가 존재하면 초기화하지 않음
-    if (this.databases.size > 0) {
-      return;
-    }
 
-    // 교량받침DB
-    const bearingDB: BridgeDatabase = {
-      id: 'db-bearing-1',
-      name: 'bearing_database',
-      displayName: '교량받침DB',
-      description: '교량받침의 물리적 특성 및 내진성능 관련 데이터베이스',
-      category: 'bearing',
-      version: '1.0.0',
-      lastUpdated: new Date(),
-      recordCount: 0,
-      isActive: true,
-      metadata: {
-        source: 'KICT 표준',
-        lastMaintenance: new Date().toISOString()
-      },
-      fields: [
-        {
-          id: 'field-bearing-1',
-          name: 'bearing_type',
-          displayName: '받침 유형',
-          type: 'text',
-          unit: '',
-          description: '받침의 종류 (고정받침, 이동받침, 롤러받침 등)',
-          isRequired: true,
-          defaultValue: '',
-          validationRules: []
-        },
-        {
-          id: 'field-bearing-2',
-          name: 'material',
-          displayName: '재료',
-          type: 'text',
-          unit: '',
-          description: '받침 제작 재료',
-          isRequired: true,
-          defaultValue: '',
-          validationRules: []
-        },
-        {
-          id: 'field-bearing-3',
-          name: 'load_capacity',
-          displayName: '하중용량',
-          type: 'number',
-          unit: 'kN',
-          description: '받침이 견딜 수 있는 최대 하중',
-          isRequired: true,
-          defaultValue: 0,
-          validationRules: []
-        }
-      ],
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-
-    // 내진DB
-    const seismicDB: BridgeDatabase = {
-      id: 'db-seismic-1',
-      name: 'seismic_database',
-      displayName: '내진DB',
-      description: '지진하중 및 내진설계 관련 데이터베이스',
-      category: 'seismic',
-      version: '1.0.0',
-      lastUpdated: new Date(),
-      recordCount: 0,
-      isActive: true,
-      metadata: {
-        source: '국토교통부 기준',
-        lastMaintenance: new Date().toISOString()
-      },
-      fields: [
-        {
-          id: 'field-seismic-1',
-          name: 'seismic_zone',
-          displayName: '지진대',
-          type: 'text',
-          unit: '',
-          description: '지진대 분류 (1등급, 2등급, 3등급)',
-          isRequired: true,
-          defaultValue: '',
-          validationRules: []
-        },
-        {
-          id: 'field-seismic-2',
-          name: 'design_acceleration',
-          displayName: '설계지반가속도',
-          type: 'decimal',
-          unit: 'g',
-          description: '설계 기준 지반가속도',
-          isRequired: true,
-          defaultValue: 0,
-          validationRules: []
-        }
-      ],
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-
-    // 재료DB
-    const materialDB: BridgeDatabase = {
-      id: 'db-material-1',
-      name: 'material_database',
-      displayName: '재료DB',
-      description: '콘크리트, 철근 등 건설재료의 물성 데이터베이스',
-      category: 'material',
-      version: '1.0.0',
-      lastUpdated: new Date(),
-      recordCount: 0,
-      isActive: true,
-      metadata: {
-        source: 'KS 표준',
-        lastMaintenance: new Date().toISOString()
-      },
-      fields: [
-        {
-          id: 'field-material-1',
-          name: 'material_name',
-          displayName: '재료명',
-          type: 'text',
-          unit: '',
-          description: '재료의 명칭',
-          isRequired: true,
-          defaultValue: '',
-          validationRules: []
-        },
-        {
-          id: 'field-material-2',
-          name: 'compressive_strength',
-          displayName: '압축강도',
-          type: 'number',
-          unit: 'MPa',
-          description: '재료의 압축강도',
-          isRequired: true,
-          defaultValue: 0,
-          validationRules: []
-        }
-      ],
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-
-    this.databases.set(bearingDB.id, bearingDB);
-    this.databases.set(seismicDB.id, seismicDB);
-    this.databases.set(materialDB.id, materialDB);
-    this.records.set(bearingDB.id, []);
-    this.records.set(seismicDB.id, []);
-    this.records.set(materialDB.id, []);
-    this.saveToLocalStorage(); // 기본 DB 초기화 후 저장
-  }
 
   // 모든 DB 가져오기
   public getAllDatabases(): BridgeDatabase[] {
@@ -448,7 +293,6 @@ export class DatabaseService {
     this.records.clear();
     localStorage.removeItem(this.STORAGE_KEY_DATABASES);
     localStorage.removeItem(this.STORAGE_KEY_RECORDS);
-    this.initializeDefaultDatabases();
   }
 
   // LocalStorage 데이터 확인 (디버깅용)

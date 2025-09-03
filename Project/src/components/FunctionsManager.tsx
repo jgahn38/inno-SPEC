@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Save, X, Variable, Code, Play, Copy, Download, Upload, Calculator, Search, GripVertical } from 'lucide-react';
+import { variableService } from '../services/VariableService';
+import { VariableDefinition } from '../types';
 
 interface FunctionDefinition {
   id: string;
@@ -22,19 +24,7 @@ interface FunctionDefinition {
   updatedAt: Date;
 }
 
-interface VariableDefinition {
-  id: string;
-  name: string;
-  description: string;
-  type: 'number' | 'string' | 'boolean';
-  unit?: string;
-  defaultValue?: any;
-  category: 'input' | 'output' | 'intermediate' | 'constant';
-  scope: 'global' | 'project' | 'bridge';
-  tags: string[];
-  createdAt: Date;
-  updatedAt: Date;
-}
+
 
 const FunctionsManager: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'functions' | 'variables'>('functions');
@@ -63,6 +53,7 @@ const FunctionsManager: React.FC = () => {
   // 새 변수 폼 상태
   const [newVariable, setNewVariable] = useState<Partial<VariableDefinition>>({
     name: '',
+    displayName: '',
     description: '',
     type: 'number',
     category: 'input',
@@ -71,91 +62,14 @@ const FunctionsManager: React.FC = () => {
   });
 
   useEffect(() => {
-    loadSampleData();
+    // VariableService 구독
+    const unsubscribe = variableService.subscribe((variables) => {
+      setVariables(variables);
+    });
+    return unsubscribe;
   }, []);
 
-  const loadSampleData = () => {
-    // 샘플 함수 데이터
-    const sampleFunctions: FunctionDefinition[] = [
-      {
-        id: 'func-1',
-        name: 'calculateMomentCapacity',
-        description: '콘크리트 단면의 휨강도 계산',
-        category: 'structural',
-        parameters: [
-          { name: 'fc', type: 'number', description: '콘크리트 압축강도', unit: 'MPa' },
-          { name: 'b', type: 'number', description: '단면 폭', unit: 'mm' },
-          { name: 'd', type: 'number', description: '유효높이', unit: 'mm' },
-          { name: 'As', type: 'number', description: '철근 단면적', unit: 'mm²' },
-          { name: 'fy', type: 'number', description: '철근 항복강도', unit: 'MPa' }
-        ],
-        expression: 'min(0.85 * fc * b * d * (d - 0.5 * d), As * fy * (d - 0.5 * d))',
-        returnType: 'number',
-        returnUnit: 'N·mm',
-        examples: [
-          'calculateMomentCapacity(30, 300, 500, 1500, 400)',
-          'calculateMomentCapacity(fc, b, d, As, fy)'
-        ],
-        tags: ['휨강도', '콘크리트', '철근'],
-        createdAt: new Date(),
-        updatedAt: new Date()
-      },
-      {
-        id: 'func-2',
-        name: 'calculateShearCapacity',
-        description: '콘크리트 단면의 전단강도 계산',
-        category: 'structural',
-        parameters: [
-          { name: 'fc', type: 'number', description: '콘크리트 압축강도', unit: 'MPa' },
-          { name: 'b', type: 'number', description: '단면 폭', unit: 'mm' },
-          { name: 'd', type: 'number', description: '유효높이', unit: 'mm' }
-        ],
-        expression: '0.17 * sqrt(fc) * b * d',
-        returnType: 'number',
-        returnUnit: 'N',
-        examples: [
-          'calculateShearCapacity(30, 300, 500)',
-          'calculateShearCapacity(fc, b, d)'
-        ],
-        tags: ['전단강도', '콘크리트'],
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    ];
 
-    // 샘플 변수 데이터
-    const sampleVariables: VariableDefinition[] = [
-      {
-        id: 'var-1',
-        name: 'concreteStrength',
-        description: '콘크리트 설계기준압축강도',
-        type: 'number',
-        unit: 'MPa',
-        defaultValue: 30,
-        category: 'input',
-        scope: 'global',
-        tags: ['콘크리트', '강도'],
-        createdAt: new Date(),
-        updatedAt: new Date()
-      },
-      {
-        id: 'var-2',
-        name: 'steelStrength',
-        description: '철근 항복강도',
-        type: 'number',
-        unit: 'MPa',
-        defaultValue: 400,
-        category: 'input',
-        scope: 'global',
-        tags: ['철근', '강도'],
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    ];
-
-    setFunctions(sampleFunctions);
-    setVariables(sampleVariables);
-  };
 
   const handleAddFunction = () => {
     if (!newFunction.name || !newFunction.expression) {
@@ -209,8 +123,8 @@ const FunctionsManager: React.FC = () => {
   };
 
   const handleAddVariable = () => {
-    if (!newVariable.name || !newVariable.type) {
-      alert('변수명과 타입은 필수 입력 항목입니다.');
+    if (!newVariable.name || !newVariable.displayName || !newVariable.type) {
+      alert('변수명, 표시명, 타입은 필수 입력 항목입니다.');
       return;
     }
 
@@ -222,7 +136,7 @@ const FunctionsManager: React.FC = () => {
       updatedAt: new Date()
     } as VariableDefinition;
 
-    setVariables([...variables, variableDef]);
+    variableService.addVariable(variableDef);
     resetVariableForm();
     setShowVariableModal(false);
   };
@@ -234,18 +148,16 @@ const FunctionsManager: React.FC = () => {
   };
 
   const handleUpdateVariable = () => {
-    if (!editingVariable || !newVariable.name || !newVariable.type) {
-      alert('변수명과 타입은 필수 입력 항목입니다.');
+    if (!editingVariable || !newVariable.name || !newVariable.displayName || !newVariable.type) {
+      alert('변수명, 표시명, 타입은 필수 입력 항목입니다.');
       return;
     }
 
-    const updatedVariables = variables.map(v => 
-      v.id === editingVariable.id 
-        ? { ...v, ...newVariable, updatedAt: new Date() }
-        : v
-    );
+    variableService.updateVariable(editingVariable.id, {
+      ...newVariable,
+      updatedAt: new Date()
+    });
     
-    setVariables(updatedVariables);
     resetVariableForm();
     setEditingVariable(null);
     setShowVariableModal(false);
@@ -253,7 +165,7 @@ const FunctionsManager: React.FC = () => {
 
   const handleDeleteVariable = (variableId: string) => {
     if (confirm('정말로 이 변수를 삭제하시겠습니까?')) {
-      setVariables(variables.filter(v => v.id !== variableId));
+      variableService.deleteVariable(variableId);
     }
   };
 
@@ -273,6 +185,7 @@ const FunctionsManager: React.FC = () => {
   const resetVariableForm = () => {
     setNewVariable({
       name: '',
+      displayName: '',
       description: '',
       type: 'number',
       category: 'input',
@@ -545,6 +458,7 @@ const FunctionsManager: React.FC = () => {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10"></th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">변수명</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">표시명</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">설명</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">타입</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">카테고리</th>
@@ -588,6 +502,9 @@ const FunctionsManager: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {variable.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {variable.displayName || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {variable.description || '-'}
@@ -745,7 +662,7 @@ const FunctionsManager: React.FC = () => {
                     className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                   >
                     <Save className="h-4 w-4" />
-                    <span>{editingFunction ? '수정' : '추가'}</span>
+                    <span>{editingFunction ? '저장' : '추가'}</span>
                   </button>
                 </div>
               </div>
@@ -776,13 +693,24 @@ const FunctionsManager: React.FC = () => {
                 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">변수명 *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">변수명 (영문) *</label>
                     <input
                       type="text"
                       value={newVariable.name}
                       onChange={(e) => setNewVariable({ ...newVariable, name: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="변수명을 입력하세요"
+                      placeholder="변수명을 입력하세요 (영문)"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">표시명 *</label>
+                    <input
+                      type="text"
+                      value={newVariable.displayName}
+                      onChange={(e) => setNewVariable({ ...newVariable, displayName: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="표시명을 입력하세요 (한글)"
                     />
                   </div>
 
@@ -891,7 +819,7 @@ const FunctionsManager: React.FC = () => {
                     className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                   >
                     <Save className="h-4 w-4" />
-                    <span>{editingVariable ? '수정' : '추가'}</span>
+                    <span>{editingVariable ? '저장' : '추가'}</span>
                   </button>
                 </div>
               </div>

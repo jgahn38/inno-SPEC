@@ -73,6 +73,8 @@ export interface ScreenConfig {
   description?: string;
   type: 'dashboard' | 'custom';
   layout: 'single' | 'grid' | 'tabs';
+  gridConfig?: { rows: number; cols: number };
+  tabs?: string[];
   components: ScreenComponent[];
   isActive: boolean;
   createdAt: Date;
@@ -91,6 +93,8 @@ export interface ScreenComponent {
     height: number;
   };
   config: ComponentConfig;
+  layer?: number; // 레이어 순서 (높을수록 위에 표시)
+  tabIndex?: number; // 탭 인덱스 (탭 레이아웃인 경우)
 }
 
 export interface ComponentConfig {
@@ -109,13 +113,22 @@ export interface LNBConfig {
   displayName: string;
   icon?: string;
   order: number;
-  screenId?: string; // 연결된 화면 ID
+  screenId?: string; // 연결된 화면 ID (사용자 생성 화면인 경우)
+  systemScreenType?: SystemScreenType; // 시스템 화면 타입 (시스템 화면인 경우)
   children?: LNBConfig[]; // 하위 메뉴
   type?: 'independent' | 'parent' | 'child';
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
+
+// 시스템 화면 타입 정의
+export type SystemScreenType = 
+  | 'dashboard'      // 대시보드
+  | 'project-settings' // 프로젝트 설정
+  | 'section-library'  // 단면 라이브러리
+  | 'user-profile'     // 사용자 프로필
+  | 'system-settings'; // 시스템 설정
 
 export interface ScreenTemplate {
   id: string;
@@ -293,4 +306,20 @@ export interface UpdateDatabaseRequest {
   fields?: DatabaseField[];
   metadata?: Record<string, any>;
   isActive?: boolean;
+}
+
+// 변수 정의 관련 타입
+export interface VariableDefinition {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string;
+  type: 'number' | 'string' | 'boolean';
+  unit?: string;
+  defaultValue?: any;
+  category: 'input' | 'output' | 'intermediate' | 'constant';
+  scope: 'global' | 'project' | 'bridge';
+  tags?: string[];
+  createdAt: Date;
+  updatedAt: Date;
 }

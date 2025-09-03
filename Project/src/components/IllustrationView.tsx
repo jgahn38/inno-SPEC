@@ -833,9 +833,10 @@ const IllustrationView: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* 탭 네비게이션 */}
-      <div className="px-6 pt-4">
+    <div className="p-6">
+      <div className="space-y-6">
+        {/* 탭 네비게이션 */}
+        <div className="px-6 pt-4">
         <div className="border-b border-gray-200">
           <nav className="-mb-px flex space-x-8">
             <button
@@ -866,10 +867,9 @@ const IllustrationView: React.FC = () => {
       {activeTab === 'library' && (
         <>
           <div className="px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">단면 - {sectionData.name}</h2>
-                <p className="text-sm text-gray-600">단면의 파라미터를 조정하고 형상을 미리보기하세요.</p>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">단면 - {sectionData.name}</h2>
+              <p className="text-sm text-gray-600">단면의 파라미터를 조정하고 형상을 미리보기하세요.</p>
                 
                 {/* Section 선택 콤보박스 */}
                 <div className="mt-3">
@@ -903,7 +903,6 @@ const IllustrationView: React.FC = () => {
                   <span>도면 저장</span>
                 </button>
               </div>
-            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1671,6 +1670,7 @@ const IllustrationView: React.FC = () => {
         }}
         onConfirm={handleLayerSelectionConfirm}
       />
+      </div>
     </div>
   );
 };

@@ -602,7 +602,7 @@ const TableManager: React.FC = () => {
                 </div>
                 
                 <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">표시명 (한글) *</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">표시명 *</label>
                   <input
                     type="text"
                         value={newTable.displayName}
@@ -748,7 +748,7 @@ const TableManager: React.FC = () => {
                     className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
                     <Save className="h-4 w-4" />
-                    <span>{editingSchema ? '수정' : '추가'}</span>
+                    <span>{editingSchema ? '저장' : '추가'}</span>
               </button>
                 </div>
             </div>
@@ -790,7 +790,7 @@ const TableManager: React.FC = () => {
                 </div>
                 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">표시명 (한글) *</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">표시명 *</label>
                   <input
                     type="text"
                       value={newField.displayName}
@@ -844,7 +844,7 @@ const TableManager: React.FC = () => {
                     className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                 >
                     <Save className="h-4 w-4" />
-                    <span>{editingField ? '수정' : '추가'}</span>
+                    <span>{editingField ? '저장' : '추가'}</span>
                 </button>
               </div>
             </div>

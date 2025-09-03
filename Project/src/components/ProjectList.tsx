@@ -8,7 +8,7 @@ interface ProjectListProps {
   tenantId: string;
 }
 
-const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect }) => {
+const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId }) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -113,34 +113,35 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect }) => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-6">
-      {/* Breadcrumb */}
-      <div className="flex items-center space-x-2 text-sm text-gray-500 mb-4">
-        <span>프로젝트</span>
-        <span>/</span>
-        <span className="text-gray-900">모든 프로젝트</span>
-      </div>
-      
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">프로젝트</h1>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* 헤더 */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">프로젝트</h1>
+              <p className="text-gray-600">
+                내진성능평가 프로젝트를 생성하고 관리하세요. 
+                각 프로젝트는 독립적인 교량 데이터와 분석 결과를 가집니다.
+              </p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <button className="flex items-center space-x-2 px-3 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
+                <Filter className="h-4 w-4" />
+                <span>필터</span>
+              </button>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                <span>프로젝트 만들기</span>
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center space-x-3">
-          <button className="flex items-center space-x-2 px-3 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
-            <Filter className="h-4 w-4" />
-            <span>필터</span>
-          </button>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            <span>프로젝트 만들기</span>
-          </button>
-        </div>
-      </div>
 
-      {loading ? (
+        {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -284,6 +285,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect }) => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { ScreenConfig, ScreenComponent, LNBConfig, ScreenTemplate } from '../types';
+import { ScreenConfig, ScreenComponent, LNBConfig, ScreenTemplate, SystemScreenType } from '../types';
 
 class ScreenService {
   private screens: ScreenConfig[] = [];
@@ -6,38 +6,10 @@ class ScreenService {
   private templates: ScreenTemplate[] = [];
 
   constructor() {
-    this.initializeDefaultTemplates();
     this.loadFromLocalStorage();
   }
 
-  // 기본 템플릿 초기화
-  private initializeDefaultTemplates() {
-    this.templates = [
-      {
-        id: 'dashboard-basic',
-        name: 'dashboard-basic',
-        displayName: '기본 대시보드',
-        description: '기본적인 대시보드 템플릿',
-        category: 'custom',
-        defaultComponents: [
-          {
-            id: 'welcome-card',
-            type: 'output',
-            componentId: 'welcome',
-            displayName: '환영 메시지',
-            position: { x: 0, y: 0, width: 12, height: 2 },
-            config: {
-              showHeader: true,
-              customStyles: { backgroundColor: '#f8fafc' }
-            }
-          }
-        ],
-        isSystem: true,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    ];
-  }
+
 
   // LNB 구성 관리
   getLNBConfigs(): LNBConfig[] {
@@ -106,11 +78,22 @@ class ScreenService {
     const index = this.screens.findIndex(screen => screen.id === id);
     if (index === -1) return null;
 
+    const oldScreen = this.screens[index];
     this.screens[index] = {
       ...this.screens[index],
       ...updates,
       updatedAt: new Date()
     };
+
+    console.log('🔄 ScreenService.updateScreen:', {
+      screenId: id,
+      oldLayout: oldScreen.layout,
+      newLayout: updates.layout,
+      oldTabs: oldScreen.tabs,
+      newTabs: updates.tabs,
+      fullOldScreen: oldScreen,
+      fullNewScreen: this.screens[index]
+    });
 
     this.saveToLocalStorage();
     return this.screens[index];
@@ -188,6 +171,7 @@ class ScreenService {
     try {
       localStorage.setItem('screenConfigs', JSON.stringify(this.screens));
       localStorage.setItem('lnbConfigs', JSON.stringify(this.lnbConfigs));
+      console.log('Saved LNB configs to localStorage:', this.lnbConfigs);
     } catch (error) {
       console.error('Failed to save screen configs to localStorage:', error);
     }
@@ -199,10 +183,26 @@ class ScreenService {
       const savedLNBConfigs = localStorage.getItem('lnbConfigs');
 
       if (savedScreens) {
-        this.screens = JSON.parse(savedScreens);
+        const parsedScreens = JSON.parse(savedScreens);
+        this.screens = parsedScreens.map((screen: any) => ({
+          ...screen,
+          createdAt: new Date(screen.createdAt),
+          updatedAt: new Date(screen.updatedAt)
+        }));
       }
       if (savedLNBConfigs) {
-        this.lnbConfigs = JSON.parse(savedLNBConfigs);
+        const parsedLNBConfigs = JSON.parse(savedLNBConfigs);
+        this.lnbConfigs = parsedLNBConfigs.map((config: any) => ({
+          ...config,
+          createdAt: new Date(config.createdAt),
+          updatedAt: new Date(config.updatedAt),
+          children: config.children ? config.children.map((child: any) => ({
+            ...child,
+            createdAt: new Date(child.createdAt),
+            updatedAt: new Date(child.updatedAt)
+          })) : undefined
+        }));
+        console.log('Loaded LNB configs from localStorage:', this.lnbConfigs);
       }
     } catch (error) {
       console.error('Failed to load screen configs from localStorage:', error);
@@ -211,6 +211,7 @@ class ScreenService {
 
   // 기본 LNB 구성 생성
   createDefaultLNBConfig(): void {
+    console.log('Creating default LNB config. Current configs length:', this.lnbConfigs.length);
     if (this.lnbConfigs.length === 0) {
       const defaultConfigs: Omit<LNBConfig, 'id' | 'createdAt' | 'updatedAt'>[] = [
         // 대시보드 (독립적인 메뉴)
@@ -219,6 +220,7 @@ class ScreenService {
           displayName: '대시보드',
           icon: 'BarChart3',
           order: 1,
+          systemScreenType: 'dashboard',
           isActive: true,
           children: []
         },
@@ -275,6 +277,7 @@ class ScreenService {
               displayName: '단면',
               icon: 'Image',
               order: 1,
+              systemScreenType: 'section-library',
               isActive: true,
               children: []
             }
@@ -287,15 +290,132 @@ class ScreenService {
           displayName: '프로젝트 설정',
           icon: 'Settings',
           order: 4,
+          systemScreenType: 'project-settings',
           isActive: true,
           children: []
         }
       ];
 
       defaultConfigs.forEach(config => {
+        console.log('Creating LNB config:', config);
         this.createLNBConfig(config);
       });
     }
+  }
+
+  // 시스템 화면 관련 메서드들
+  
+  /**
+   * LNB가 시스템 화면인지 확인
+   */
+  isSystemScreen(lnbConfig: LNBConfig): boolean {
+    return !!lnbConfig.systemScreenType;
+  }
+
+  /**
+   * LNB가 사용자 생성 화면인지 확인
+   */
+  isUserScreen(lnbConfig: LNBConfig): boolean {
+    return !!lnbConfig.screenId && !lnbConfig.systemScreenType;
+  }
+
+  /**
+   * 시스템 화면 타입에 따른 화면 컴포넌트 반환
+   */
+  getSystemScreenComponent(systemScreenType: SystemScreenType): React.ComponentType {
+    switch (systemScreenType) {
+      case 'dashboard':
+        return require('../components/DashboardView').default;
+      case 'project-settings':
+        return require('../components/ProjectSettings').default;
+      case 'section-library':
+        return require('../components/IllustrationView').default;
+      case 'user-profile':
+        return require('../components/UserProfileView').default;
+      case 'system-settings':
+        return require('../components/SystemSettingsView').default;
+      default:
+        throw new Error(`Unknown system screen type: ${systemScreenType}`);
+    }
+  }
+
+  /**
+   * LNB 설정 유효성 검사
+   */
+  validateLNBConfig(config: Partial<LNBConfig>): string[] {
+    const errors: string[] = [];
+
+    if (!config.displayName?.trim()) {
+      errors.push('표시명은 필수입니다.');
+    }
+
+    if (!config.name?.trim()) {
+      errors.push('메뉴명은 필수입니다.');
+    }
+
+    // 시스템 화면과 사용자 화면 중 하나만 설정되어야 함
+    if (config.systemScreenType && config.screenId) {
+      errors.push('시스템 화면과 사용자 화면을 동시에 설정할 수 없습니다.');
+    }
+
+    if (!config.systemScreenType && !config.screenId) {
+      errors.push('시스템 화면 또는 사용자 화면 중 하나를 선택해야 합니다.');
+    }
+
+    return errors;
+  }
+
+  /**
+   * 기본 시스템 LNB 구성 생성
+   */
+  createDefaultSystemLNBConfigs(): LNBConfig[] {
+    return [
+      {
+        id: 'lnb-dashboard',
+        name: 'dashboard',
+        displayName: '대시보드',
+        icon: 'BarChart3',
+        order: 1,
+        systemScreenType: 'dashboard',
+        type: 'independent',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 'lnb-project-settings',
+        name: 'project-settings',
+        displayName: '프로젝트 설정',
+        icon: 'Settings',
+        order: 2,
+        systemScreenType: 'project-settings',
+        type: 'independent',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        id: 'lnb-section-library',
+        name: 'section-library',
+        displayName: '단면 라이브러리',
+        icon: 'Building2',
+        order: 3,
+        systemScreenType: 'section-library',
+        type: 'independent',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ];
+  }
+
+  // LNB 설정 초기화 (개발용)
+  resetLNBConfigs(): void {
+    console.log('Resetting LNB configs...');
+    this.lnbConfigs = [];
+    localStorage.removeItem('lnbConfigs');
+    this.createDefaultLNBConfig();
+    console.log('LNB configs reset completed. New configs:', this.lnbConfigs);
   }
 
   // 기본 구성 초기화 기능 제거 (요구사항)

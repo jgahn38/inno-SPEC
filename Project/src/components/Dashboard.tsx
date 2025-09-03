@@ -6,22 +6,24 @@ import ProjectSettings from './ProjectSettings';
 import { Project, Bridge, BridgeData } from '../types';
 import { BridgeDataService } from '../services/BridgeDataService';
 
-interface EvaluationViewProps {
+interface DashboardProps {
   project: Project;
   selectedBridge: Bridge | null;
   projects: Project[];
   onProjectChange: (project: Project) => void;
   onBridgeChange: (bridge: Bridge) => void;
   onProjectUpdate: (updatedProject: Project) => void;
+  onLNBMenuClick?: (menuId: string) => void;
 }
 
-const EvaluationView: React.FC<EvaluationViewProps> = ({ 
+const Dashboard: React.FC<DashboardProps> = ({ 
   project, 
   selectedBridge, 
   projects, 
   onProjectChange, 
-  onBridgeChange,
-  onProjectUpdate
+  onBridgeChange, 
+  onProjectUpdate,
+  onLNBMenuClick
 }) => {
   const [activeMenu, setActiveMenu] = useState('dashboard');
   const [isBridgeDropdownOpen, setIsBridgeDropdownOpen] = useState(false);
@@ -254,6 +256,7 @@ const EvaluationView: React.FC<EvaluationViewProps> = ({
         projects={projects}
         onProjectChange={onProjectChange}
         onBridgeChange={onBridgeChange}
+        onLNBMenuClick={onLNBMenuClick}
       />
       <div className="flex-1 bg-gray-50 overflow-auto">
         {/* 교량 선택 헤더 - 대시보드와 프로젝트 설정 메뉴일 때는 표시하지 않음 */}
@@ -333,4 +336,4 @@ const getBridgeTypeLabel = (type: Bridge['type']) => {
   }
 };
 
-export default EvaluationView;
+export default Dashboard;

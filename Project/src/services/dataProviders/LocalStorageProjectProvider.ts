@@ -5,101 +5,10 @@ export class LocalStorageProjectProvider implements IProjectDataProvider {
   private readonly STORAGE_KEY = 'inno_spec_projects';
   
   constructor() {
-    this.initializeDefaultProjects();
+    // 샘플 프로젝트 초기화 제거 - 데이터 동기화 관리에서 관리
   }
   
-  private initializeDefaultProjects(): void {
-    const existing = localStorage.getItem(this.STORAGE_KEY);
-    if (!existing) {
-      const defaultProjects: Project[] = [
-        {
-          id: 'project-1',
-          name: '기본 프로젝트 1',
-          description: '기본 프로젝트 설명입니다.',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          status: 'active',
-          category: 'general',
-          tags: ['기본', '샘플'],
-          metadata: {},
-          bridges: [
-            {
-              id: 'bridge-1',
-              name: '교량 A',
-              description: '기본 교량',
-              type: 'concrete',
-              length: 35,
-              width: 8,
-              spanCount: 3,
-              height: 2.5,
-              constructionYear: 2020,
-              location: '서울시',
-              status: 'active',
-              createdAt: new Date(),
-              updatedAt: new Date()
-            }
-          ]
-        },
-        {
-          id: 'project-2',
-          name: '기본 프로젝트 2',
-          description: '두 번째 기본 프로젝트입니다.',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          status: 'active',
-          category: 'general',
-          tags: ['기본', '샘플'],
-          metadata: {},
-          bridges: [
-            {
-              id: 'bridge-2',
-              name: '교량 B',
-              description: '두 번째 기본 교량',
-              type: 'steel',
-              length: 40,
-              width: 10,
-              spanCount: 4,
-              height: 3.0,
-              constructionYear: 2019,
-              location: '부산시',
-              status: 'active',
-              createdAt: new Date(),
-              updatedAt: new Date()
-            }
-          ]
-        },
-        {
-          id: 'project-3',
-          name: '기본 프로젝트 3',
-          description: '세 번째 기본 프로젝트입니다.',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          status: 'active',
-          category: 'general',
-          tags: ['기본', '샘플'],
-          metadata: {},
-          bridges: [
-            {
-              id: 'bridge-3',
-              name: '교량 C',
-              description: '세 번째 기본 교량',
-              type: 'composite',
-              length: 45,
-              width: 12,
-              spanCount: 5,
-              height: 3.5,
-              constructionYear: 2021,
-              location: '대구시',
-              status: 'active',
-              createdAt: new Date(),
-              updatedAt: new Date()
-            }
-          ]
-        }
-      ];
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(defaultProjects));
-    }
-  }
+
   
   private getProjectsFromStorage(): Project[] {
     try {

@@ -14,7 +14,7 @@ export class BridgeDataService {
   private static instance: BridgeDataService;
 
   private constructor() {
-    this.initializeDefaultData();
+    // 샘플 데이터 초기화 제거 - 데이터 동기화 관리에서 관리
   }
 
   public static getInstance(): BridgeDataService {
@@ -24,16 +24,7 @@ export class BridgeDataService {
     return BridgeDataService.instance;
   }
 
-  /**
-   * 기본 데이터 초기화
-   */
-  private initializeDefaultData(): void {
-    const existing = localStorage.getItem(this.STORAGE_KEY);
-    if (!existing) {
-      const defaultData: BridgeData[] = [];
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(defaultData));
-    }
-  }
+
 
   /**
    * 교량별 데이터 가져오기
