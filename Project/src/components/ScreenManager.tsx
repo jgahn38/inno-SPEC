@@ -696,7 +696,7 @@ const ScreenManager: React.FC = () => {
                               setShowVisualEditor(true);
                             }}
                             className="text-purple-600 hover:text-purple-900 p-1 rounded-full hover:bg-purple-50 transition-colors"
-                            title="시각적 편집"
+                            title="레이아웃 캔버스"
                           >
                             <Grid3X3 className="h-4 w-4" />
                           </button>
@@ -836,6 +836,88 @@ const ScreenManager: React.FC = () => {
                     />
                   </div>
 
+                  {/* 화면 연결 선택 */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">연결된 화면</label>
+                    
+                    {/* 상위 메뉴인 경우 화면 연결 비활성화 */}
+                    {newLNB.type === 'parent' ? (
+                      <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-500">
+                        상위 메뉴는 화면 연결이 불가능합니다. (화면 없음으로 고정)
+                      </div>
+                    ) : (
+                      <>
+                        {/* 화면 타입 선택 */}
+                        <div className="mb-3">
+                          <div className="flex items-center space-x-4 text-sm">
+                            <label className="flex items-center space-x-1">
+                              <input
+                                type="radio"
+                                name="screenType"
+                                value="user"
+                                checked={newLNB.screenId !== '' && newLNB.systemScreenType === ''}
+                                onChange={() => setNewLNB({ ...newLNB, screenId: 'placeholder', systemScreenType: '' })}
+                              />
+                              <span>사용자 생성 화면</span>
+                            </label>
+                            <label className="flex items-center space-x-1">
+                              <input
+                                type="radio"
+                                name="screenType"
+                                value="system"
+                                checked={newLNB.systemScreenType !== ''}
+                                onChange={() => setNewLNB({ ...newLNB, screenId: '', systemScreenType: 'placeholder' })}
+                              />
+                              <span>시스템 화면</span>
+                            </label>
+                            <label className="flex items-center space-x-1">
+                              <input
+                                type="radio"
+                                name="screenType"
+                                value="none"
+                                checked={newLNB.screenId === '' && newLNB.systemScreenType === ''}
+                                onChange={() => setNewLNB({ ...newLNB, screenId: '', systemScreenType: '' })}
+                              />
+                              <span>화면 없음</span>
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* 사용자 생성 화면 선택 */}
+                        {newLNB.screenId !== '' && newLNB.systemScreenType === '' && (
+                          <select
+                            value={newLNB.screenId === 'placeholder' ? '' : newLNB.screenId}
+                            onChange={(e) => setNewLNB({ ...newLNB, screenId: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">사용자 화면을 선택하세요</option>
+                            {screens.map(screen => (
+                              <option key={screen.id} value={screen.id}>
+                                {screen.displayName} ({screen.name})
+                              </option>
+                            ))}
+                          </select>
+                        )}
+
+                        {/* 시스템 화면 선택 */}
+                        {newLNB.systemScreenType !== '' && (
+                          <select
+                            value={newLNB.systemScreenType === 'placeholder' ? '' : newLNB.systemScreenType}
+                            onChange={(e) => setNewLNB({ ...newLNB, systemScreenType: e.target.value as SystemScreenType })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">시스템 화면을 선택하세요</option>
+                            <option value="dashboard">대시보드</option>
+                            <option value="project-settings">프로젝트 설정</option>
+                            <option value="section-library">단면 라이브러리</option>
+                            <option value="user-profile">사용자 프로필</option>
+                            <option value="system-settings">시스템 설정</option>
+                          </select>
+                        )}
+                      </>
+                    )}
+                  </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">아이콘</label>
                     <div className="border border-gray-300 rounded-md p-3 bg-gray-50">
@@ -937,97 +1019,6 @@ const ScreenManager: React.FC = () => {
                       </div>
                     </div>
                   </div>
-
-
-
-                                     {/* 화면 연결 선택 */}
-                   <div>
-                     <label className="block text-sm font-medium text-gray-700 mb-1">연결된 화면</label>
-                     
-                     {/* 상위 메뉴인 경우 화면 연결 비활성화 */}
-                     {newLNB.type === 'parent' ? (
-                       <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-500">
-                         상위 메뉴는 화면 연결이 불가능합니다. (화면 없음으로 고정)
-                       </div>
-                     ) : (
-                       <>
-                         {/* 화면 타입 선택 */}
-                         <div className="mb-3">
-                           <div className="flex items-center space-x-4 text-sm">
-                             <label className="flex items-center space-x-1">
-                               <input
-                                 type="radio"
-                                 name="screenType"
-                                 value="user"
-                                 checked={newLNB.screenId !== '' && newLNB.systemScreenType === ''}
-                                 onChange={() => setNewLNB({ ...newLNB, screenId: 'placeholder', systemScreenType: '' })}
-                               />
-                               <span>사용자 생성 화면</span>
-                             </label>
-                             <label className="flex items-center space-x-1">
-                               <input
-                                 type="radio"
-                                 name="screenType"
-                                 value="system"
-                                 checked={newLNB.systemScreenType !== ''}
-                                 onChange={() => setNewLNB({ ...newLNB, screenId: '', systemScreenType: 'placeholder' })}
-                               />
-                               <span>시스템 화면</span>
-                             </label>
-                             <label className="flex items-center space-x-1">
-                               <input
-                                 type="radio"
-                                 name="screenType"
-                                 value="none"
-                                 checked={newLNB.screenId === '' && newLNB.systemScreenType === ''}
-                                 onChange={() => setNewLNB({ ...newLNB, screenId: '', systemScreenType: '' })}
-                               />
-                               <span>화면 없음</span>
-                             </label>
-                           </div>
-                         </div>
-
-                         {/* 사용자 생성 화면 선택 */}
-                         {newLNB.screenId !== '' && newLNB.systemScreenType === '' && (
-                           <select
-                             value={newLNB.screenId === 'placeholder' ? '' : newLNB.screenId}
-                             onChange={(e) => setNewLNB({ ...newLNB, screenId: e.target.value })}
-                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                           >
-                             <option value="">사용자 화면을 선택하세요</option>
-                             {screens.map(screen => (
-                               <option key={screen.id} value={screen.id}>
-                                 {screen.displayName} ({screen.name})
-                               </option>
-                             ))}
-                           </select>
-                         )}
-
-                         {/* 시스템 화면 선택 */}
-                         {newLNB.systemScreenType !== '' && (
-                           <select
-                             value={newLNB.systemScreenType === 'placeholder' ? '' : newLNB.systemScreenType}
-                             onChange={(e) => setNewLNB({ ...newLNB, systemScreenType: e.target.value as SystemScreenType })}
-                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                           >
-                             <option value="">시스템 화면을 선택하세요</option>
-                             <option value="dashboard">대시보드</option>
-                             <option value="project-settings">프로젝트 설정</option>
-                             <option value="section-library">단면 라이브러리</option>
-                             <option value="user-profile">사용자 프로필</option>
-                             <option value="system-settings">시스템 설정</option>
-                           </select>
-                         )}
-                       </>
-                     )}
-
-                     <p className="text-xs text-gray-500 mt-1">
-                       {newLNB.type === 'parent' 
-                         ? '상위 메뉴는 하위 메뉴를 그룹화하는 용도로만 사용됩니다.'
-                         : '메뉴 클릭 시 연결된 화면으로 이동합니다. 시스템 화면은 미리 정의된 화면입니다.'
-                       }
-                     </p>
-                   </div>
 
                   <div className="flex items-center">
                     <input
@@ -1455,7 +1446,7 @@ const ScreenManager: React.FC = () => {
               <div className="mt-3">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-medium text-gray-900">
-                    {screens.find(s => s.id === currentScreenId)?.displayName} - 시각적 편집
+                    {screens.find(s => s.id === currentScreenId)?.displayName} - 레이아웃 캔버스
                   </h3>
                   <button
                     onClick={() => setShowVisualEditor(false)}
