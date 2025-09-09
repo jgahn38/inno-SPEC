@@ -1,0 +1,17 @@
+{
+  "name": "database-lib",
+  "sourceRoot": "packages/database-lib/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "packages/database-lib/dist",
+        "main": "packages/database-lib/src/index.ts",
+        "tsConfig": "packages/database-lib/tsconfig.json"
+      }
+    }
+  },
+  "tags": []
+}

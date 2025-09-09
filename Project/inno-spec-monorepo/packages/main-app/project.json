@@ -1,0 +1,30 @@
+{
+  "name": "main-app",
+  "sourceRoot": "packages/main-app/src",
+  "projectType": "application",
+  "targets": {
+    "dev": {
+      "executor": "@nx/vite:dev-server",
+      "options": {
+        "buildTarget": "main-app:build",
+        "port": 4200,
+        "host": "localhost"
+      }
+    },
+    "build": {
+      "executor": "@nx/vite:build",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "packages/main-app/dist",
+        "configFile": "packages/main-app/vite.config.ts"
+      }
+    },
+    "preview": {
+      "executor": "@nx/vite:preview-server",
+      "options": {
+        "buildTarget": "main-app:build"
+      }
+    }
+  },
+  "tags": []
+}
