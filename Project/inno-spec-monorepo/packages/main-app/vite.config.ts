@@ -5,12 +5,11 @@ import path from 'path';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  root: __dirname,
   server: {
-    port: 4200,
     host: 'localhost',
+    port: 5173,
     strictPort: true,
-    open: true
+    open: true,
   },
   optimizeDeps: {
     exclude: ['lucide-react'],
@@ -18,11 +17,6 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    rollupOptions: {
-      input: {
-        main: path.resolve(__dirname, 'index.html'),
-      },
-    },
   },
   publicDir: 'public',
   resolve: {

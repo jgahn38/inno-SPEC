@@ -7,8 +7,10 @@
       "executor": "@nx/vite:dev-server",
       "options": {
         "buildTarget": "main-app:build",
-        "port": 4200,
-        "host": "localhost"
+        "configFile": "packages/main-app/vite.config.ts",
+        "port": 5173,
+        "host": "localhost",
+        "root": "packages/main-app"
       }
     },
     "build": {
@@ -16,7 +18,8 @@
       "outputs": ["{options.outputPath}"],
       "options": {
         "outputPath": "packages/main-app/dist",
-        "configFile": "packages/main-app/vite.config.ts"
+        "configFile": "packages/main-app/vite.config.ts",
+        "root": "packages/main-app"
       }
     },
     "preview": {

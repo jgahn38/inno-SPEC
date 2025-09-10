@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import ProjectList from './components/ProjectList';
 import Dashboard from './components/Dashboard';
-import TableManager from './components/TableManager';
-import DatabaseManager from './components/DatabaseManager';
+import { TableManager, DatabaseManager } from '@inno-spec/database-lib';
 import FunctionsManager from './components/FunctionsManager';
 import DataSyncManager from './components/DataSyncManager';
 import ScreenManager from './components/ScreenManager';
@@ -77,7 +76,7 @@ const UserScreenView: React.FC<{
 };
 
 function AppContent() {
-  const { currentTenant, currentUser, isAuthenticated, isLoading, logout } = useTenant();
+  const { currentTenant, currentUser, isAuthenticated, logout } = useTenant();
   const [currentView, setCurrentView] = useState<'projects' | 'evaluation' | 'tables' | 'databases' | 'sync' | 'functions' | 'screens' | 'settings' | 'user-screen' | 'illustration' | 'project-settings' | 'no-screen' | 'dashboard'>('projects');
   const [currentUserScreen, setCurrentUserScreen] = useState<string | null>(null);
   const [currentLNBMenu, setCurrentLNBMenu] = useState<any>(null);
@@ -228,18 +227,6 @@ function AppContent() {
     setSelectedBridge(null);
     setProjects([]);
   };
-
-  // 로딩 중
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">로딩 중...</p>
-        </div>
-      </div>
-    );
-  }
 
   // 인증되지 않은 경우 로그인 화면
   if (!isAuthenticated || !currentTenant || !currentUser) {
