@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Grid as BridgeIcon, ChevronDown } from 'lucide-react';
-import Sidebar from './Sidebar';
+import { Sidebar } from '@inno-spec/ui-lib';
 import IllustrationView from './IllustrationView';
 import ProjectSettings from './ProjectSettings';
 import { Project, Bridge } from '@inno-spec/shared';
@@ -14,6 +14,8 @@ interface DashboardProps {
   onBridgeChange: (bridge: Bridge) => void;
   onProjectUpdate: (updatedProject: Project) => void;
   onLNBMenuClick?: (menuId: string) => void;
+  lnbConfigs?: any[];
+  activeMenu?: string;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
@@ -22,10 +24,19 @@ const Dashboard: React.FC<DashboardProps> = ({
   projects, 
   onProjectChange, 
   onBridgeChange, 
-  onProjectUpdate,
-  onLNBMenuClick
+  onProjectUpdate, 
+  onLNBMenuClick,
+  lnbConfigs = [],
+  activeMenu: propActiveMenu = 'dashboard'
 }) => {
-  const [activeMenu, setActiveMenu] = useState('dashboard');
+  const [activeMenu, setActiveMenu] = useState(propActiveMenu);
+  
+  // 메뉴 클릭 처리
+  const handleMenuSelect = (menuId: string) => {
+    console.log('Dashboard menu selected:', menuId);
+    // Dashboard 컴포넌트에서는 항상 'dashboard'로 유지
+    setActiveMenu('dashboard');
+  };
   const [isBridgeDropdownOpen, setIsBridgeDropdownOpen] = useState(false);
   // const [bridgeData, setBridgeData] = useState<BridgeData | null>(null); // 사용하지 않음
   const [bridgeDataService] = useState(() => BridgeDataService.getInstance());
@@ -250,13 +261,14 @@ const Dashboard: React.FC<DashboardProps> = ({
     <div className="flex h-full">
       <Sidebar 
         activeMenu={activeMenu} 
-        onMenuSelect={setActiveMenu}
+        onMenuSelect={handleMenuSelect}
         selectedProject={project}
         selectedBridge={selectedBridge}
         projects={projects}
         onProjectChange={onProjectChange}
         onBridgeChange={onBridgeChange}
         onLNBMenuClick={onLNBMenuClick}
+        lnbConfigs={lnbConfigs}
       />
       <div className="flex-1 bg-gray-50 overflow-auto">
         {/* 교량 선택 헤더 - 대시보드와 프로젝트 설정 메뉴일 때는 표시하지 않음 */}

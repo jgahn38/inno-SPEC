@@ -3,7 +3,7 @@ import { Plus, Settings, Save, X, GripVertical, BarChart3, Building2, Image, Anc
 import { screenService } from '../services/ScreenService';
 import { variableService } from '../services/VariableService';
 import { ScreenConfig, ScreenComponent, LNBConfig, SystemScreenType, UserScreenDataStructure } from '@inno-spec/shared';
-import { TableSchemaService } from '../services/TableSchemaService';
+import { TableSchemaService } from '@inno-spec/database-app';
 import ScreenCanvas from './ScreenCanvas';
 
 const ScreenManager: React.FC = () => {

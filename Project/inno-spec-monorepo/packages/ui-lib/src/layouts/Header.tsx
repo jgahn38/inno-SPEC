@@ -50,21 +50,31 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentTenant,
             {/* 프로그램 명칭 영역 */}
             <div className="flex items-center space-x-4 w-64 px-2">
               <div 
-                className="w-6 h-6 rounded-sm flex items-center justify-center"
+                className="w-6 h-6 rounded-lg flex items-center justify-center relative overflow-hidden"
                 style={{
-                  background: 'linear-gradient(135deg, #f97316 0%, #dc2626 100%)'
+                  background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 50%, #1a1a1a 100%)',
+                  boxShadow: '0 0 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
                 }}
               >
-                <Zap className="w-4 h-4 text-white stroke-2" />
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/20 to-blue-500/20 rounded-lg"></div>
+                <Zap className="w-4 h-4 text-cyan-300 stroke-2 relative z-10" style={{ filter: 'drop-shadow(0 0 4px rgba(34, 211, 238, 0.5))' }} />
               </div>
-              <span className="text-2xl font-bold text-gray-800">inno-DEX</span>
+              <span 
+                className="text-2xl font-bold bg-gradient-to-r from-gray-900 via-black to-gray-900 bg-clip-text text-transparent"
+                style={{
+                  textShadow: '0 0 10px rgba(0, 0, 0, 0.3)',
+                  letterSpacing: '0.05em'
+                }}
+              >
+                inno-DEX
+              </span>
             </div>
 
             {/* 앱 선택 콤보박스 - LNB 오른쪽 구분선 위치에 배치 */}
             <div className="relative" style={{ marginLeft: '0px' }}>
               <button
                 onClick={() => setShowAppMenu(!showAppMenu)}
-                className="flex items-center justify-between space-x-2 px-3 py-1.5 text-sm font-semibold text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 w-32"
+                className="flex items-center justify-between space-x-2 px-3 py-1.5 text-sm font-semibold text-white rounded-lg transition-colors duration-200 w-32"
                 style={{ 
                   backgroundColor: '#1f2937', 
                   border: '1px solid #374151',
@@ -82,7 +92,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentTenant,
               </button>
 
               {showAppMenu && (
-                <div className="absolute top-full left-0 mt-2 w-36 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden">
+                <div className="absolute top-full left-0 mt-2 w-36 bg-white rounded-lg border border-gray-200 z-50 overflow-hidden">
                   <div className="py-1">
                     {apps.map((app) => (
                       <button
@@ -93,7 +103,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentTenant,
                         }}
                         className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors duration-150 ${
                           selectedApp === app.value 
-                            ? 'bg-gradient-to-r from-blue-50 to-blue-100 text-blue-700 border-l-4 border-blue-500' 
+                            ? 'bg-gray-100 text-gray-900 border-l-4 border-gray-400' 
                             : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                         }`}
                       >
@@ -136,16 +146,18 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentTenant,
           
           <div className="flex items-center space-x-4">
             {/* 테넌트 정보 */}
-            <div className="flex items-center space-x-2 px-3 py-1.5 bg-blue-50 rounded-md">
+            <div className="flex items-center space-x-2 px-3 py-1.5 bg-gray-100 rounded-md border border-gray-200">
               <div 
-                className="w-4 h-4 rounded-sm flex items-center justify-center"
+                className="w-4 h-4 rounded-md flex items-center justify-center relative overflow-hidden"
                 style={{
-                  background: 'linear-gradient(135deg, #f97316 0%, #dc2626 100%)'
+                  background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 50%, #1a1a1a 100%)',
+                  boxShadow: '0 0 10px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
                 }}
               >
-                <Zap className="w-3 h-3 text-white stroke-2" />
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/20 to-blue-500/20 rounded-md"></div>
+                <Zap className="w-3 h-3 text-cyan-300 stroke-2 relative z-10" style={{ filter: 'drop-shadow(0 0 2px rgba(34, 211, 238, 0.5))' }} />
               </div>
-              <span className="text-sm font-medium text-blue-700">{currentTenant.name}</span>
+              <span className="text-sm font-medium text-gray-800">{currentTenant.name}</span>
             </div>
             
             {/* Search */}

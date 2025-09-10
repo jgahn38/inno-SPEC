@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ScreenConfig, ScreenComponent, Bridge, Project } from '@inno-spec/shared';
-import { TableSchemaService } from '../services/TableSchemaService';
+import { TableSchemaService } from '@inno-spec/database-app';
 import { variableService } from '../services/VariableService';
 import { ChevronDown, Building2 } from 'lucide-react';
 

@@ -1,6 +1,6 @@
 import React from 'react';
-import { Settings, ChevronDown, Image, Building2, Anchor, BarChart3 } from 'lucide-react';
-import { Project, Bridge as BridgeType } from '@inno-spec/shared';
+import { Settings, ChevronDown, Image, Building2, Anchor, BarChart3, Database, Variable, Table } from 'lucide-react';
+import { Project, Bridge as BridgeType, LNBConfig } from '@inno-spec/shared';
 
 export interface SidebarProps {
   activeMenu: string;
@@ -11,9 +11,10 @@ export interface SidebarProps {
   onProjectChange: (project: Project) => void;
   onBridgeChange: (bridge: BridgeType) => void;
   onLNBMenuClick?: (menuId: string) => void;
+  lnbConfigs?: LNBConfig[];
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ 
+const Sidebar: React.FC<SidebarProps> = React.memo(({ 
   activeMenu, 
   onMenuSelect, 
   selectedProject, 
@@ -21,10 +22,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   projects, 
   onProjectChange,
   onBridgeChange: _onBridgeChange,
-  onLNBMenuClick
+  onLNBMenuClick,
+  lnbConfigs = []
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
-  const [expandedCategories, setExpandedCategories] = React.useState<Set<string>>(new Set(['BRIDGE_STATUS', 'MODELING']));
+  const [expandedCategories, setExpandedCategories] = React.useState<Set<string>>(new Set());
 
   // selectedProject가 null인 경우 처리
   if (!selectedProject) {
@@ -37,63 +39,118 @@ const Sidebar: React.FC<SidebarProps> = ({
     );
   }
 
-  // LNB 구성에서 메뉴 생성
-  type MenuItem = { id: string; label: string; icon: React.ComponentType<any>; category: string };
-
-  // const getIconComponent = (iconName?: string): React.ComponentType<any> => {
-  //   const iconMap: Record<string, React.ComponentType<any>> = {
-  //     'BarChart3': BarChart3,
-  //     'Building2': Building2,
-  //     'Database': Database,
-  //     'Image': Image,
-  //     'Anchor': Anchor,
-  //   };
-  //   return iconMap[iconName || ''] || BarChart3;
-  // };
-
-  // 기본 메뉴 구성
-  const menuItems: MenuItem[] = [
-    { id: 'dashboard', label: '대시보드', icon: BarChart3, category: 'MAIN' },
-    { id: 'bridge-specs', label: '교량제원', icon: Building2, category: 'BRIDGE_STATUS' },
-    { id: 'structure-status', label: '구조물 현황', icon: Building2, category: 'BRIDGE_STATUS' },
-    { id: 'bearing-status', label: '교량받침 현황', icon: Anchor, category: 'BRIDGE_STATUS' },
-    { id: 'section', label: '단면', icon: Image, category: 'MODELING' },
-    { id: 'project-settings', label: '프로젝트 설정', icon: Settings, category: 'SETTINGS' },
-  ];
-
-  const toggleCategory = (category: string) => {
-    const newExpanded = new Set(expandedCategories);
-    if (newExpanded.has(category)) {
-      newExpanded.delete(category);
-    } else {
-      newExpanded.add(category);
-    }
-    setExpandedCategories(newExpanded);
+  // 아이콘 매핑 함수
+  const getIconComponent = (iconName?: string): React.ComponentType<any> => {
+    const iconMap: Record<string, React.ComponentType<any>> = {
+      'BarChart3': BarChart3,
+      'Building2': Building2,
+      'Database': Database,
+      'Image': Image,
+      'Anchor': Anchor,
+      'Settings': Settings,
+      'Table': Table,
+      'Variable': Variable,
+    };
+    return iconMap[iconName || ''] || BarChart3;
   };
 
-  const groupedMenus = menuItems.reduce((acc, item) => {
-    if (!acc[item.category]) {
-      acc[item.category] = [];
-    }
-    acc[item.category].push(item);
-    return acc;
-  }, {} as Record<string, MenuItem[]>);
+  // LNBConfig를 메뉴 아이템으로 변환
+  const convertLNBConfigToMenuItems = React.useCallback((configs: LNBConfig[]): LNBConfig[] => {
+    console.log('Converting LNB configs:', configs);
+    const filtered = configs
+      .filter(config => config.isActive)
+      .sort((a, b) => a.order - b.order);
+    console.log('Filtered menu items:', filtered);
+    return filtered;
+  }, []);
 
-  const categoryLabels: Record<string, string> = {
-    'MAIN': '',
-    'BRIDGE_STATUS': '교량현황',
-    'MODELING': '모델링',
-    'SETTINGS': '설정',
-  };
+  console.log('Sidebar received lnbConfigs prop:', lnbConfigs);
+  console.log('Sidebar lnbConfigs type:', typeof lnbConfigs);
+  console.log('Sidebar lnbConfigs length:', lnbConfigs?.length);
+  
+  const menuItems = React.useMemo(() => convertLNBConfigToMenuItems(lnbConfigs), [lnbConfigs, convertLNBConfigToMenuItems]);
+  console.log('Sidebar - lnbConfigs:', lnbConfigs);
+  console.log('Sidebar - menuItems:', menuItems);
+
+  // LNB 메뉴가 로드된 후 상위 메뉴들을 자동으로 Expand (초기 로드 시에만)
+  React.useEffect(() => {
+    if (menuItems.length > 0 && expandedCategories.size === 0) {
+      const parentMenuIds = menuItems
+        .filter(item => item.children && item.children.length > 0)
+        .map(item => item.id);
+      
+      if (parentMenuIds.length > 0) {
+        setExpandedCategories(new Set(parentMenuIds));
+        console.log('Auto-expanding parent menus:', parentMenuIds);
+      }
+    }
+  }, [menuItems, expandedCategories.size]);
+
+  // 메뉴가 없을 때 기본 메뉴 표시
+  if (menuItems.length === 0) {
+    return (
+      <div className="w-64 bg-gray-50 border-r border-gray-200 h-full flex flex-col shadow-sm">
+        <div className="p-4 border-b border-gray-200 bg-white">
+          <div className="text-center text-gray-500">
+            <p>LNB 메뉴를 로드하는 중...</p>
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center text-gray-500">
+            <p>메뉴를 구성해주세요</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const toggleCategory = React.useCallback((category: string) => {
+    setExpandedCategories(prev => {
+      const newExpanded = new Set(prev);
+      if (newExpanded.has(category)) {
+        newExpanded.delete(category);
+      } else {
+        newExpanded.add(category);
+      }
+      return newExpanded;
+    });
+  }, []);
+
+  // LNBConfig를 그룹화 (부모-자식 관계 처리)
+  const groupedMenus = React.useMemo(() => {
+    return menuItems.reduce((acc, item) => {
+      console.log('Processing menu item:', item);
+      if (item.children && item.children.length > 0) {
+        // 부모 메뉴 (자식이 있는 경우)
+        console.log('Parent menu with children:', item.displayName, item.children);
+        acc[item.id] = {
+          parent: item,
+          children: item.children
+            .filter(child => child.isActive)
+            .sort((a, b) => a.order - b.order)
+        };
+      } else {
+        // 독립 메뉴 (자식이 없는 경우)
+        console.log('Independent menu:', item.displayName);
+        if (!acc['INDEPENDENT']) {
+          acc['INDEPENDENT'] = { parent: null, children: [] };
+        }
+        acc['INDEPENDENT'].children.push(item);
+      }
+      return acc;
+    }, {} as Record<string, { parent: LNBConfig | null, children: LNBConfig[] }>);
+  }, [menuItems]);
+  
+  console.log('Grouped menus:', groupedMenus);
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 h-full flex flex-col">
+    <div className="w-64 bg-gray-50 border-r border-gray-200 h-full flex flex-col shadow-sm">
       {/* 프로젝트 선택 */}
-      <div className="p-4 border-b border-gray-200">
+      <div className="px-4 py-3 border-b border-gray-200 bg-white">
         <div className="relative">
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="w-full flex items-center justify-between p-2 text-left bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
+            className="w-full flex items-center justify-between p-2 text-left bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors border border-blue-200"
           >
             <div>
               <div className="font-medium text-gray-900">{selectedProject.name}</div>
@@ -129,52 +186,100 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* 메뉴 목록 */}
       <div className="flex-1 overflow-y-auto">
         <nav className="p-4 space-y-1">
-          {Object.entries(groupedMenus).map(([category, items]) => (
-            <div key={category}>
-              {category !== 'MAIN' && (
-                <button
-                  onClick={() => toggleCategory(category)}
-                  className="w-full flex items-center justify-between px-2 py-1 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-md transition-colors"
-                >
-                  <span>{categoryLabels[category]}</span>
-                  <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${
-                    expandedCategories.has(category) ? 'rotate-180' : ''
-                  }`} />
-                </button>
-              )}
+          {(() => {
+            // menuItems를 직접 사용하여 order 순서대로 렌더링
+            console.log('Rendering menuItems in order:', menuItems.map(m => ({ 
+              name: m.displayName, 
+              order: m.order 
+            })));
+            
+            return menuItems.map((item) => {
+              // 독립 메뉴인지 확인
+              const isIndependent = !item.children || item.children.length === 0;
               
-              {(category === 'MAIN' || expandedCategories.has(category)) && (
-                <div className="ml-2 space-y-1">
-                  {items.map((item) => {
-                    const IconComponent = item.icon;
-                    const isActive = activeMenu === item.id;
+              if (isIndependent) {
+                // 독립 메뉴 렌더링
+                const IconComponent = getIconComponent(item.icon);
+                const isActive = activeMenu === item.name || activeMenu === item.id;
+                
+                return (
+                  <div key={item.id}>
+                    <button
+                      onClick={() => {
+                        onMenuSelect(item.id);
+                        onLNBMenuClick?.(item.id);
+                      }}
+                      className={`w-full flex items-center px-3 py-2.5 text-sm rounded-lg transition-colors ${
+                        isActive
+                          ? 'bg-transparent text-gray-900 font-semibold border-2 border-black'
+                          : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+                      }`}
+                    >
+                      <IconComponent className="h-4 w-4 mr-3" />
+                      {item.displayName}
+                    </button>
+                  </div>
+                );
+              } else {
+                // 부모 메뉴 렌더링
+                const isExpanded = expandedCategories.has(item.id);
+                
+                return (
+                  <div key={item.id}>
+                    <button
+                      onClick={() => toggleCategory(item.id)}
+                      className="w-full flex items-center justify-between px-3 py-2 text-sm font-semibold text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <div className="flex items-center">
+                        {(() => {
+                          const ParentIconComponent = getIconComponent(item.icon);
+                          return <ParentIconComponent className="h-4 w-4 mr-3" />;
+                        })()}
+                        <span>{item.displayName}</span>
+                      </div>
+                      <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${
+                        isExpanded ? 'rotate-180' : ''
+                      }`} />
+                    </button>
                     
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => {
-                          onMenuSelect(item.id);
-                          onLNBMenuClick?.(item.id);
-                        }}
-                        className={`w-full flex items-center px-2 py-2 text-sm rounded-md transition-colors ${
-                          isActive
-                            ? 'bg-blue-100 text-blue-700 font-medium'
-                            : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
-                        }`}
-                      >
-                        <IconComponent className="h-4 w-4 mr-3" />
-                        {item.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ))}
+                    {isExpanded && (
+                      <div className="ml-2 space-y-1">
+                        {item.children
+                          .filter(child => child.isActive)
+                          .sort((a, b) => a.order - b.order)
+                          .map((child) => {
+                            const ChildIconComponent = getIconComponent(child.icon);
+                            const isChildActive = activeMenu === child.name || activeMenu === child.id;
+                            
+                            return (
+                              <button
+                                key={child.id}
+                                onClick={() => {
+                                  onMenuSelect(child.id);
+                                  onLNBMenuClick?.(child.id);
+                                }}
+                                className={`w-full flex items-center px-3 py-2.5 text-sm rounded-lg transition-colors ${
+                                  isChildActive
+                                    ? 'bg-transparent text-gray-900 font-semibold border-2 border-black'
+                                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+                                }`}
+                              >
+                                <ChildIconComponent className="h-4 w-4 mr-3" />
+                                {child.displayName}
+                              </button>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+            });
+          })()}
         </nav>
       </div>
     </div>
   );
-};
+});
 
 export default Sidebar;
