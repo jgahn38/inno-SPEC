@@ -19,11 +19,15 @@ export default defineConfig({
     assetsDir: 'assets',
   },
   publicDir: 'public',
+  css: {
+    postcss: './postcss.config.js',
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@inno-spec/shared': path.resolve(__dirname, '../shared/src'),
       '@inno-spec/database-app': path.resolve(__dirname, '../database-app/src'),
+      '@inno-spec/ui-lib': path.resolve(__dirname, '../ui-lib/src'),
     },
   },
 });

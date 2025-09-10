@@ -2,7 +2,13 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@inno-spec/shared": ["../shared/src"],
+      "@inno-spec/database-app": ["../database-app/src"],
+      "@inno-spec/ui-lib": ["../ui-lib/src"]
+    }
   },
   "include": ["src/**/*", "index.html"],
   "exclude": ["node_modules", "dist"]

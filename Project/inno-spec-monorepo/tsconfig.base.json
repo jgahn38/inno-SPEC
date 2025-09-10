@@ -6,10 +6,10 @@
     "module": "ESNext",
     "skipLibCheck": true,
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
+    "allowImportingTsExtensions": false,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true,
+    "noEmit": false,
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -21,10 +21,13 @@
       "path": "./packages/shared"
     },
     {
-      "path": "./packages/database-lib"
+      "path": "./packages/database-app"
     },
     {
-      "path": "./packages/main-app"
+      "path": "./packages/designer-app"
+    },
+    {
+      "path": "./packages/ui-lib"
     }
   ]
 }

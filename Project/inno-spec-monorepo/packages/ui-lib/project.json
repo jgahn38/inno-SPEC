@@ -1,0 +1,17 @@
+{
+  "name": "ui-lib",
+  "sourceRoot": "packages/ui-lib/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "packages/ui-lib/dist",
+        "main": "packages/ui-lib/src/index.ts",
+        "tsConfig": "packages/ui-lib/tsconfig.json"
+      }
+    }
+  },
+  "tags": []
+}

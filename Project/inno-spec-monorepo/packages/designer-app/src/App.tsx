@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Header from './components/Header';
+import { Header, AppType } from '@inno-spec/ui-lib';
 import ProjectList from './components/ProjectList';
 import Dashboard from './components/Dashboard';
 import { TableManager, DatabaseManager } from '@inno-spec/database-app';
@@ -75,7 +75,6 @@ const UserScreenView: React.FC<{
   );
 };
 
-type AppType = 'DESIGNER' | 'MODELER' | 'VIEWER' | 'DATABASE';
 
 function AppContent() {
   const { currentTenant, currentUser, isAuthenticated, logout } = useTenant();
@@ -259,6 +258,7 @@ function AppContent() {
         selectedApp={selectedApp}
         onAppChange={handleAppChange}
       />
+      
       
       <main className="flex-1" style={{ height: 'calc(100vh - 64px)' }}>
         {(() => { console.log('Current view:', currentView); return null; })()}

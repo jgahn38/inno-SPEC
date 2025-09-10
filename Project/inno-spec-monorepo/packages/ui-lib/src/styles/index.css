@@ -5,22 +5,7 @@
 /* 공통 스타일 정의 */
 @layer base {
   html {
-    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'system-ui', 'Roboto', 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif !important;
-  }
-  
-  body {
-    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'system-ui', 'Roboto', 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif !important;
-  }
-  
-  * {
-    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'system-ui', 'Roboto', 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif !important;
-  }
-}
-
-/* Tailwind CDN과 호환성을 위한 추가 스타일 */
-@layer utilities {
-  .font-pretendard {
-    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'system-ui', 'Roboto', 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif !important;
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'system-ui', 'Roboto', 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
   }
 }
 
