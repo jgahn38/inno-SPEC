@@ -1,31 +1,31 @@
 {
-  "name": "main-app",
-  "sourceRoot": "packages/main-app/src",
+  "name": "designer-app",
+  "sourceRoot": "packages/designer-app/src",
   "projectType": "application",
   "targets": {
     "dev": {
       "executor": "@nx/vite:dev-server",
       "options": {
-        "buildTarget": "main-app:build",
-        "configFile": "packages/main-app/vite.config.ts",
+        "buildTarget": "designer-app:build",
+        "configFile": "packages/designer-app/vite.config.ts",
         "port": 5173,
         "host": "localhost",
-        "root": "packages/main-app"
+        "root": "packages/designer-app"
       }
     },
     "build": {
       "executor": "@nx/vite:build",
       "outputs": ["{options.outputPath}"],
       "options": {
-        "outputPath": "packages/main-app/dist",
-        "configFile": "packages/main-app/vite.config.ts",
-        "root": "packages/main-app"
+        "outputPath": "packages/designer-app/dist",
+        "configFile": "packages/designer-app/vite.config.ts",
+        "root": "packages/designer-app"
       }
     },
     "preview": {
       "executor": "@nx/vite:preview-server",
       "options": {
-        "buildTarget": "main-app:build"
+        "buildTarget": "designer-app:build"
       }
     }
   },

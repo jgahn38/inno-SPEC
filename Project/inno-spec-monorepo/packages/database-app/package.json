@@ -1,13 +1,13 @@
 {
-  "name": "@inno-spec/database-lib",
+  "name": "@inno-spec/database-app",
   "version": "0.0.1",
   "type": "module",
-  "main": "./src/index.js",
-  "types": "./src/index.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./src/index.js",
-      "types": "./src/index.d.ts"
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
     }
   },
   "dependencies": {

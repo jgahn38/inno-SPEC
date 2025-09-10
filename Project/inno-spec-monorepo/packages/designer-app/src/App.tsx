@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import ProjectList from './components/ProjectList';
 import Dashboard from './components/Dashboard';
-import { TableManager, DatabaseManager } from '@inno-spec/database-lib';
+import { TableManager, DatabaseManager } from '@inno-spec/database-app';
 import FunctionsManager from './components/FunctionsManager';
 import DataSyncManager from './components/DataSyncManager';
 import ScreenManager from './components/ScreenManager';
@@ -75,8 +75,11 @@ const UserScreenView: React.FC<{
   );
 };
 
+type AppType = 'DESIGNER' | 'MODELER' | 'VIEWER' | 'DATABASE';
+
 function AppContent() {
   const { currentTenant, currentUser, isAuthenticated, logout } = useTenant();
+  const [selectedApp, setSelectedApp] = useState<AppType>('DESIGNER');
   const [currentView, setCurrentView] = useState<'projects' | 'evaluation' | 'tables' | 'databases' | 'sync' | 'functions' | 'screens' | 'settings' | 'user-screen' | 'illustration' | 'project-settings' | 'no-screen' | 'dashboard'>('projects');
   const [currentUserScreen, setCurrentUserScreen] = useState<string | null>(null);
   const [currentLNBMenu, setCurrentLNBMenu] = useState<any>(null);
@@ -103,6 +106,17 @@ function AppContent() {
       setCurrentUserScreen(null);
     }
     setCurrentView(view);
+  };
+
+  const handleAppChange = (app: AppType) => {
+    setSelectedApp(app);
+    // 앱 변경 시 기본 뷰로 초기화
+    if (app === 'DESIGNER') {
+      setCurrentView('projects');
+    } else if (app === 'DATABASE') {
+      setCurrentView('databases');
+    }
+    // MODELER, VIEWER는 별도 화면이므로 currentView는 그대로 유지
   };
 
   const handleLNBMenuClick = (menuId: string) => {
@@ -242,11 +256,34 @@ function AppContent() {
         currentTenant={currentTenant}
         currentUser={currentUser}
         onLogout={handleLogout}
+        selectedApp={selectedApp}
+        onAppChange={handleAppChange}
       />
       
       <main className="flex-1" style={{ height: 'calc(100vh - 64px)' }}>
         {(() => { console.log('Current view:', currentView); return null; })()}
-        {currentView === 'projects' ? (
+        
+        {/* MODELER 앱 선택 시 */}
+        {selectedApp === 'MODELER' ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="text-6xl mb-4">🏗️</div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">MODELER</h2>
+              <p className="text-gray-600 mb-4">3D 모델링 및 설계 도구</p>
+              <p className="text-sm text-gray-500">현재 개발 중입니다. 곧 만나보실 수 있습니다.</p>
+            </div>
+          </div>
+        ) : selectedApp === 'VIEWER' ? (
+          /* VIEWER 앱 선택 시 */
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="text-6xl mb-4">👁️</div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">VIEWER</h2>
+              <p className="text-gray-600 mb-4">3D 뷰어 및 시각화 도구</p>
+              <p className="text-sm text-gray-500">현재 개발 중입니다. 곧 만나보실 수 있습니다.</p>
+            </div>
+          </div>
+        ) : currentView === 'projects' ? (
           <ProjectList 
             onProjectSelect={handleProjectSelect}
             tenantId={currentTenant.id}

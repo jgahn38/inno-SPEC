@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { TableSchema, TableField, FieldType, DatabaseCategory, BridgeDatabase } from '@inno-spec/shared';
 import { TableSchemaService } from '../services/TableSchemaService';
-import { DatabaseService } from '@inno-spec/database-lib';
+import { DatabaseService } from '@inno-spec/database-app';
 import { Plus, Save, X, Columns, Search, Table, GripVertical, FileSpreadsheet } from 'lucide-react';
 import ExcelFieldImporter from './ExcelFieldImporter';
 

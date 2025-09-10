@@ -6,7 +6,7 @@ import path from 'path';
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: 'localhost',
+    host: '0.0.0.0',
     port: 5173,
     strictPort: true,
     open: true,
@@ -22,6 +22,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@inno-spec/shared': path.resolve(__dirname, '../shared/src'),
+      '@inno-spec/database-app': path.resolve(__dirname, '../database-app/src'),
     },
   },
 });

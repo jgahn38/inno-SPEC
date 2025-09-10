@@ -3,9 +3,9 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "dev": "nx run main-app:dev",
+    "dev": "nx run designer-app:dev",
     "build": "nx run-many --target=build --all",
-    "build:main-app": "nx run main-app:build",
+    "build:designer-app": "nx run designer-app:build",
     "build:shared": "nx run shared:build",
     "build:database-lib": "nx run database-lib:build"
   },
