@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { TableSchema, TableField, FieldType, DatabaseCategory, BridgeDatabase } from '@inno-spec/shared';
-import { TableSchemaService } from '@inno-spec/database-app';
-import { DatabaseService } from '@inno-spec/database-app';
-import { Plus, Save, X, Columns, Search, Table, GripVertical, FileSpreadsheet } from 'lucide-react';
+import { TableSchemaService } from '@inno-spec/admin-app';
+import { DatabaseService } from '@inno-spec/admin-app';
+import { Plus, Save, X, Search, GripVertical, FileSpreadsheet } from 'lucide-react';
 import ExcelFieldImporter from './ExcelFieldImporter';
 
-const TableManager: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'tables' | 'fields'>('tables');
+interface TableManagerProps {
+  showOnly?: 'tables' | 'fields';
+}
+
+const TableManager: React.FC<TableManagerProps> = ({ showOnly }) => {
   const [schemas, setSchemas] = useState<TableSchema[]>([]);
   const [fields, setFields] = useState<TableField[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -368,36 +371,8 @@ const TableManager: React.FC = () => {
           </p>
         </div>
         
-        {/* 탭 네비게이션 */}
-        <div className="border-b border-gray-200 mb-6">
-          <nav className="-mb-px flex space-x-8">
-              <button
-                onClick={() => setActiveTab('tables')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'tables'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-              <Table className="inline-block w-4 h-4 mr-2" />
-                테이블 정의
-              </button>
-              <button
-                onClick={() => setActiveTab('fields')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'fields'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-              <Columns className="inline-block w-4 h-4 mr-2" />
-                필드 정의
-              </button>
-            </nav>
-        </div>
-        
-        {/* 테이블 정의 탭 */}
-        {activeTab === 'tables' && (
+        {/* 테이블 정의 */}
+        {(!showOnly || showOnly === 'tables') && (
                          <div>
             {/* 테이블 검색 및 추가 */}
             <div className="flex justify-between items-center mb-6">
@@ -511,8 +486,8 @@ const TableManager: React.FC = () => {
                   </div>
                 )}
 
-        {/* 필드 정의 탭 */}
-        {activeTab === 'fields' && (
+        {/* 필드 정의 */}
+        {(!showOnly || showOnly === 'fields') && (
                 <div>
             {/* 필드 검색 및 추가 */}
             <div className="flex justify-between items-center mb-6">

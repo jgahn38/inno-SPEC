@@ -8,12 +8,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@inno-spec/database-app": "*",
+    "@inno-spec/admin-app": "*",
     "@inno-spec/shared": "*",
     "@inno-spec/ui-lib": "*",
+    "@types/react-router-dom": "^5.3.3",
     "lucide-react": "^0.263.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-router-dom": "^7.9.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

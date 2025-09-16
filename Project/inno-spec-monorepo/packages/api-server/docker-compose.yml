@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  mariadb:
+    image: mariadb:10.11
+    container_name: inno-spec-mariadb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: inno-spec-root
+      MYSQL_DATABASE: inno_spec
+      MYSQL_USER: inno-spec-user
+      MYSQL_PASSWORD: inno-spec-password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: inno-spec-phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mariadb
+      PMA_PORT: 3306
+      PMA_USER: inno-spec-user
+      PMA_PASSWORD: inno-spec-password
+    ports:
+      - "8080:80"
+    depends_on:
+      - mariadb
+
+volumes:
+  mariadb_data:

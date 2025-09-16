@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Save, X, Variable, Calculator, Search, GripVertical } from 'lucide-react';
+import { Plus, Save, X, Search, GripVertical } from 'lucide-react';
 import { variableService } from '../services/VariableService';
 import { VariableDefinition } from '../types';
 
@@ -26,8 +26,11 @@ interface FunctionDefinition {
 
 
 
-const FunctionsManager: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'functions' | 'variables'>('functions');
+interface FunctionsManagerProps {
+  showOnly?: 'functions' | 'variables';
+}
+
+const FunctionsManager: React.FC<FunctionsManagerProps> = ({ showOnly }) => {
   const [functions, setFunctions] = useState<FunctionDefinition[]>([]);
   const [variables, setVariables] = useState<VariableDefinition[]>([]);
   const [showFunctionModal, setShowFunctionModal] = useState(false);
@@ -254,35 +257,6 @@ const FunctionsManager: React.FC = () => {
           </p>
         </div>
 
-        {/* 탭 네비게이션 */}
-        <div className="mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
-              <button
-                onClick={() => setActiveTab('functions')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'functions'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                                 <Calculator className="inline-block w-4 h-4 mr-2" />
-                 함수 정의
-              </button>
-              <button
-                onClick={() => setActiveTab('variables')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'variables'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <Variable className="inline-block w-4 h-4 mr-2" />
-                변수 정의
-              </button>
-            </nav>
-          </div>
-        </div>
 
         {/* 검색 및 필터 */}
         <div className="mb-6 flex flex-col sm:flex-row gap-4">
@@ -312,17 +286,17 @@ const FunctionsManager: React.FC = () => {
               <option value="custom">사용자정의</option>
             </select>
             <button
-              onClick={() => activeTab === 'functions' ? setShowFunctionModal(true) : setShowVariableModal(true)}
+              onClick={() => showOnly === 'variables' ? setShowVariableModal(true) : setShowFunctionModal(true)}
               className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
               <Plus className="h-4 w-4" />
-              <span>{activeTab === 'functions' ? '함수 추가' : '변수 추가'}</span>
+              <span>{showOnly === 'variables' ? '변수 추가' : '함수 추가'}</span>
             </button>
           </div>
         </div>
 
-        {/* 함수 탭 */}
-        {activeTab === 'functions' && (
+        {/* 함수 정의 */}
+        {(!showOnly || showOnly === 'functions') && (
           <div className="bg-white shadow overflow-hidden sm:rounded-md">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
@@ -405,8 +379,8 @@ const FunctionsManager: React.FC = () => {
           </div>
         )}
 
-        {/* 변수 탭 */}
-        {activeTab === 'variables' && (
+        {/* 변수 정의 */}
+        {(!showOnly || showOnly === 'variables') && (
           <div className="bg-white shadow overflow-hidden sm:rounded-md">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">

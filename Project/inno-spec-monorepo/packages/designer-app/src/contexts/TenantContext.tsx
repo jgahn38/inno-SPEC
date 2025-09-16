@@ -65,7 +65,7 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
       tenantId: 'tenant-1',
       username: 'admin',
       email: 'admin@test.com',
-      firstName: '테스트',
+      firstName: '관리자',
       lastName: '사용자',
       role: 'tenant_admin',
       status: 'active',

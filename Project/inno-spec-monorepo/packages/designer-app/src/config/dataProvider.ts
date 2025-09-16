@@ -1,4 +1,4 @@
-import { IProjectDataProvider } from '../types';
+import { IProjectDataProvider } from '@inno-spec/shared';
 import { LocalStorageProjectProvider } from '../services/dataProviders/LocalStorageProjectProvider';
 
 /**

@@ -333,20 +333,9 @@ class ScreenService {
    */
   getSystemScreenComponent(systemScreenType: SystemScreenType): React.ComponentType<any> {
     // 동적 import를 사용하여 컴포넌트를 로드
-    switch (systemScreenType) {
-      case 'dashboard':
-        return React.lazy(() => import('../components/Dashboard'));
-      case 'project-settings':
-        return React.lazy(() => import('../components/ProjectSettings'));
-      case 'section-library':
-        return React.lazy(() => import('../components/IllustrationView'));
-      case 'user-profile':
-        return React.lazy(() => import('../components/ProjectSettings'));
-      case 'system-settings':
-        return React.lazy(() => import('../components/ProjectSettings'));
-      default:
-        throw new Error(`Unknown system screen type: ${systemScreenType}`);
-    }
+    // admin-app에서는 시스템 화면 컴포넌트들을 제공하지 않음
+    // 이 기능은 designer-app에서 처리됨
+    throw new Error(`System screen components are not available in admin-app: ${systemScreenType}`);
   }
 
   /**

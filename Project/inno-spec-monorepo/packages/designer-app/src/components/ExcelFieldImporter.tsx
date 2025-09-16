@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
-import { TableField, FieldType } from '../types';
+import { TableField, FieldType } from '@inno-spec/shared';
 import { Download, Upload, FileSpreadsheet, AlertCircle, CheckCircle, X } from 'lucide-react';
 
 interface ExcelFieldImporterProps {
