@@ -1,0 +1,66 @@
+{
+  "id": "section.solid.rectangle.v1",
+  "name": "Solid Rectangle",
+  "version": "1.0.0",
+  "category": "basic",
+  "tags": ["rectangle", "solid", "basic"],
+  "units": { "length": "mm", "angle": "deg" },
+
+  "parameters": [
+    { "key": "B", "label": "폭(B)", "type": "number", "unit": "mm", "default": 200, "min": 50, "max": 1000, "ui": { "control": "number", "order": 1 } },
+    { "key": "H", "label": "높이(H)", "type": "number", "unit": "mm", "default": 300, "min": 50, "max": 1000, "ui": { "control": "number", "order": 2 } }
+  ],
+
+  "derived": [
+    { "key": "halfB", "label": "반폭", "unit": "mm", "expr": "B/2" },
+    { "key": "halfH", "label": "반높이", "unit": "mm", "expr": "H/2" }
+  ],
+
+  "constraints": [
+    { "expr": "B > 0", "message": "폭(B)은 0보다 커야 합니다.", "severity": "error" },
+    { "expr": "H > 0", "message": "높이(H)는 0보다 커야 합니다.", "severity": "error" }
+  ],
+
+  "geometry": {
+    "local_cs": { "origin": [0, 0], "axes": "right-handed", "symmetry": "both" },
+
+    "draw_ops": [
+      { "op": "moveTo", "args": { "x": "halfB", "y": "halfH" } },
+      { "op": "lineTo", "args": { "x": "-halfB", "y": "halfH" } },
+      { "op": "lineTo", "args": { "x": "-halfB", "y": "-halfH" } },
+      { "op": "lineTo", "args": { "x": "halfB", "y": "-halfH" } },
+      { "op": "closePath", "save_as": "rectangle" }
+    ],
+
+    "profiles": [
+      { "name": "main", "path_ref": "rectangle", "solid": true }
+    ]
+  },
+
+  "keypoints": [
+    { "name": "centroid", "x": 0, "y": 0, "usage": ["snap", "annotation"] },
+    { "name": "top_center", "x": 0, "y": "halfH", "usage": ["dimension"] },
+    { "name": "bot_center", "x": 0, "y": "-halfH", "usage": ["dimension"] },
+    { "name": "left_center", "x": "-halfB", "y": 0, "usage": ["dimension"] },
+    { "name": "right_center", "x": "halfB", "y": 0, "usage": ["dimension"] }
+  ],
+
+  "annotations": [
+    { "type": "dimension", "style": "V", "from": "top_center", "to": "bot_center", "text": "H = {H} mm" },
+    { "type": "dimension", "style": "H", "from": "left_center", "to": "right_center", "text": "B = {B} mm" }
+  ],
+
+  "layers": [
+    { "name": "MAIN", "targets": ["geometry.profiles.main"], "dxflayer": "G_MAIN" }
+  ],
+
+  "render": { "stroke": 1.0, "fill": true, "fillColor": "#e0e0e0" },
+  "io": { "export": ["dxf", "svg"] },
+
+  "meta": {
+    "author": "YourTeam",
+    "source": "internal",
+    "revision": "2025-08-15",
+    "notes": "기본 실체 직사각형 단면. 테스트용으로 간단하게 구성."
+  }
+}

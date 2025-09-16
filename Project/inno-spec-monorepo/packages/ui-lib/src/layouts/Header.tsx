@@ -52,17 +52,15 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentTenant,
               <div 
                 className="w-6 h-6 rounded-lg flex items-center justify-center relative overflow-hidden"
                 style={{
-                  background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 50%, #1a1a1a 100%)',
-                  boxShadow: '0 0 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+                  background: 'linear-gradient(135deg, #1a1a1a 0%, #000000 50%, #1a1a1a 100%)'
                 }}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/20 to-blue-500/20 rounded-lg"></div>
-                <Zap className="w-4 h-4 text-cyan-300 stroke-2 relative z-10" style={{ filter: 'drop-shadow(0 0 4px rgba(34, 211, 238, 0.5))' }} />
+                <Zap className="w-4 h-4 text-cyan-300 stroke-2 relative z-10" />
               </div>
               <span 
                 className="text-2xl font-bold bg-gradient-to-r from-gray-900 via-black to-gray-900 bg-clip-text text-transparent"
                 style={{
-                  textShadow: '0 0 10px rgba(0, 0, 0, 0.3)',
                   letterSpacing: '0.05em'
                 }}
               >

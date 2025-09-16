@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, startTransition } from 'react';
 import { Header, AppType } from '@inno-spec/ui-lib';
 import ProjectList from './components/ProjectList';
 import Dashboard from './components/Dashboard';
@@ -151,7 +151,7 @@ function AppContent() {
     // MODELER, VIEWER는 별도 화면이므로 currentView는 그대로 유지
   };
 
-  const handleLNBMenuClick = (menuId: string) => {
+  const handleLNBMenuClick = React.useCallback((menuId: string) => {
     console.log('LNB Menu clicked:', menuId);
     
     // Sidebar에서 변환된 메뉴 이름을 원래 이름으로 복원
@@ -189,77 +189,93 @@ function AppContent() {
       // 시스템 화면인 경우
       if (targetLNB.systemScreenType) {
         console.log('System screen type:', targetLNB.systemScreenType);
-        // 사용자 생성 화면 상태 초기화
-        setCurrentUserScreen(null);
-        // 시스템 화면인 경우에도 currentLNBMenu 설정 (하위 메뉴 활성화를 위해)
-        setCurrentLNBMenu(targetLNB);
         
-        // 시스템 화면 타입에 따라 적절한 view로 이동
-        switch (targetLNB.systemScreenType) {
-          case 'dashboard':
-            console.log('Setting view to dashboard');
-            setCurrentView('dashboard'); // 대시보드는 대시보드 화면으로
-            break;
-          case 'project-settings':
-            console.log('Setting view to project-settings');
-            setCurrentView('project-settings'); // 프로젝트 설정은 프로젝트 설정 화면으로
-            break;
-          case 'section-library':
-            console.log('Setting view to illustration');
-            setCurrentView('illustration'); // 단면 라이브러리는 단면 라이브러리 화면으로
-            break;
-          case 'user-profile':
-            console.log('Setting view to settings');
-            setCurrentView('settings'); // 사용자 프로필은 설정으로
-            break;
-          case 'system-settings':
-            console.log('Setting view to settings');
-            setCurrentView('settings'); // 시스템 설정은 설정으로
-            break;
-          default:
-            console.log('Unknown system screen type:', targetLNB.systemScreenType);
-            // 알 수 없는 시스템 화면 타입인 경우 기본 화면으로
-            setCurrentView('projects');
-        }
+        // 상태 업데이트를 배치 처리하여 깜박거림 방지
+        startTransition(() => {
+          // 사용자 생성 화면 상태 초기화
+          setCurrentUserScreen(null);
+          // 시스템 화면인 경우에도 currentLNBMenu 설정 (하위 메뉴 활성화를 위해)
+          setCurrentLNBMenu(targetLNB);
+          
+          // 시스템 화면 타입에 따라 적절한 view로 이동
+          switch (targetLNB.systemScreenType) {
+            case 'dashboard':
+              console.log('Setting view to dashboard');
+              setCurrentView('dashboard'); // 대시보드는 대시보드 화면으로
+              break;
+            case 'project-settings':
+              console.log('Setting view to project-settings');
+              setCurrentView('project-settings'); // 프로젝트 설정은 프로젝트 설정 화면으로
+              break;
+            case 'section-library':
+              console.log('Setting view to illustration');
+              setCurrentView('illustration'); // 단면 라이브러리는 단면 라이브러리 화면으로
+              break;
+            case 'user-profile':
+              console.log('Setting view to settings');
+              setCurrentView('settings'); // 사용자 프로필은 설정으로
+              break;
+            case 'system-settings':
+              console.log('Setting view to settings');
+              setCurrentView('settings'); // 시스템 설정은 설정으로
+              break;
+            default:
+              console.log('Unknown system screen type:', targetLNB.systemScreenType);
+              // 알 수 없는 시스템 화면 타입인 경우 기본 화면으로
+              setCurrentView('projects');
+          }
+        });
       }
       // 사용자 생성 화면인 경우
       else if (targetLNB.screenId) {
         console.log('User screen ID:', targetLNB.screenId);
-        // LNB 메뉴 정보 저장
-        setCurrentLNBMenu(targetLNB);
-        // 사용자 생성 화면으로 이동
-        setCurrentUserScreen(targetLNB.screenId);
         
-        // 프로젝트가 선택되어 있지 않다면 첫 번째 프로젝트 선택
-        if (!selectedProject && projects.length > 0) {
-          setSelectedProject(projects[0]);
-          // 프로젝트의 첫 번째 교량도 선택
-          if (projects[0].bridges && projects[0].bridges.length > 0) {
-            setSelectedBridge(projects[0].bridges[0]);
+        // 상태 업데이트를 배치 처리하여 깜박거림 방지
+        startTransition(() => {
+          // LNB 메뉴 정보 저장
+          setCurrentLNBMenu(targetLNB);
+          // 사용자 생성 화면으로 이동
+          setCurrentUserScreen(targetLNB.screenId);
+          
+          // 프로젝트가 선택되어 있지 않다면 첫 번째 프로젝트 선택
+          if (!selectedProject && projects.length > 0) {
+            setSelectedProject(projects[0]);
+            // 프로젝트의 첫 번째 교량도 선택
+            if (projects[0].bridges && projects[0].bridges.length > 0) {
+              setSelectedBridge(projects[0].bridges[0]);
+            }
           }
-        }
-        
-        setCurrentView('user-screen');
+          
+          setCurrentView('user-screen');
+        });
       }
       // 화면이 연결되지 않은 경우
       else {
         console.log('No screen connected to this LNB menu - showing no screen message');
-        // 사용자 생성 화면 상태 초기화
-        setCurrentUserScreen(null);
-        // 화면 연결이 없는 메뉴도 활성화를 위해 currentLNBMenu 설정
-        setCurrentLNBMenu(targetLNB);
-        // "화면 연결 없음" 메시지를 표시하는 특별한 뷰로 이동
-        setCurrentView('no-screen');
+        
+        // 상태 업데이트를 배치 처리하여 깜박거림 방지
+        startTransition(() => {
+          // 사용자 생성 화면 상태 초기화
+          setCurrentUserScreen(null);
+          // 화면 연결이 없는 메뉴도 활성화를 위해 currentLNBMenu 설정
+          setCurrentLNBMenu(targetLNB);
+          // "화면 연결 없음" 메시지를 표시하는 특별한 뷰로 이동
+          setCurrentView('no-screen');
+        });
       }
     } else {
       console.log('LNB menu not found:', menuId);
       console.log('Available LNB configs for debugging:', lnbConfigs);
-      // 사용자 생성 화면 상태 초기화
-      setCurrentUserScreen(null);
-      // LNB 메뉴를 찾지 못한 경우에만 기본 화면으로 이동
-      setCurrentView('projects');
+      
+      // 상태 업데이트를 배치 처리하여 깜박거림 방지
+      startTransition(() => {
+        // 사용자 생성 화면 상태 초기화
+        setCurrentUserScreen(null);
+        // LNB 메뉴를 찾지 못한 경우에만 기본 화면으로 이동
+        setCurrentView('projects');
+      });
     }
-  };
+  }, [selectedProject, selectedBridge, projects]);
 
   // 프로젝트 목록 로드
   useEffect(() => {

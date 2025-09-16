@@ -3,11 +3,11 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "dev": "nx run designer-app:dev",
-    "build": "nx run-many --target=build --all",
-    "build:designer-app": "nx run designer-app:build",
-    "build:shared": "nx run shared:build",
-    "build:database-lib": "nx run database-lib:build"
+    "dev": "npx nx run designer-app:dev",
+    "build": "npx nx run-many --target=build --all",
+    "build:designer-app": "npx nx run designer-app:build",
+    "build:shared": "npx nx run shared:build",
+    "build:database-lib": "npx nx run database-lib:build"
   },
   "private": true,
   "workspaces": [
