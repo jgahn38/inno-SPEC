@@ -17,6 +17,7 @@ export interface Project {
 }
 
 export interface CreateProjectRequest {
+  id: string;
   name: string;
   description: string;
   category: string;

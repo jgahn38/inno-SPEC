@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { Settings, Search, Bell, HelpCircle, User, LogOut, ChevronDown, ChevronUp, Zap } from 'lucide-react';
 import { Tenant, User as UserType } from '@inno-spec/shared';
 
-export type AppType = 'DESIGNER' | 'MODELER' | 'VIEWER' | 'DATABASE';
+export type AppType = 'DESIGNER' | 'MODELER' | 'VIEWER' | 'ADMIN';
 
 export interface HeaderProps {
-  currentView: 'projects' | 'evaluation' | 'tables' | 'databases' | 'sync' | 'functions' | 'screens' | 'settings' | 'dashboard' | 'project-settings' | 'user-screen' | 'illustration' | 'no-screen';
-  onNavigate: (view: 'projects' | 'evaluation' | 'tables' | 'databases' | 'sync' | 'functions' | 'screens' | 'settings' | 'dashboard' | 'project-settings' | 'user-screen' | 'illustration' | 'no-screen') => void;
+  currentView: string;
+  onNavigate: (view: string) => void;
   currentTenant: Tenant;
   currentUser: UserType;
   onLogout: () => void;
@@ -16,31 +16,13 @@ export interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentTenant, currentUser, onLogout, selectedApp, onAppChange }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showAppMenu, setShowAppMenu] = useState(false);
 
   const apps: { value: AppType; label: string }[] = [
     { value: 'DESIGNER', label: 'DESIGNER' },
     { value: 'MODELER', label: 'MODELER' },
     { value: 'VIEWER', label: 'VIEWER' },
-    { value: 'DATABASE', label: 'DATABASE' }
+    { value: 'ADMIN', label: 'ADMIN' }
   ];
-
-  const getNavigationMenus = (app: AppType) => {
-    switch (app) {
-      case 'DESIGNER':
-        return ['projects', 'tables', 'functions', 'screens', 'sync'];
-      case 'MODELER':
-        return [];
-      case 'VIEWER':
-        return [];
-      case 'DATABASE':
-        return ['databases'];
-      default:
-        return [];
-    }
-  };
-
-  const navigationMenus = getNavigationMenus(selectedApp);
 
   return (
     <header className="bg-white border-b border-gray-200 shadow-sm">
@@ -56,7 +38,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentTenant,
                 }}
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/20 to-blue-500/20 rounded-lg"></div>
-                <Zap className="w-4 h-4 text-cyan-300 stroke-2 relative z-10" />
+                <img src="/logo.svg" alt="inno-DEX" className="w-6 h-6 relative z-10" />
               </div>
               <span 
                 className="text-2xl font-bold bg-gradient-to-r from-gray-900 via-black to-gray-900 bg-clip-text text-transparent"
@@ -68,78 +50,23 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentTenant,
               </span>
             </div>
 
-            {/* 앱 선택 콤보박스 - LNB 오른쪽 구분선 위치에 배치 */}
-            <div className="relative" style={{ marginLeft: '0px' }}>
-              <button
-                onClick={() => setShowAppMenu(!showAppMenu)}
-                className="flex items-center justify-between space-x-2 px-3 py-1.5 text-sm font-semibold text-white rounded-lg transition-colors duration-200 w-32"
-                style={{ 
-                  backgroundColor: '#1f2937', 
-                  border: '1px solid #374151',
-                  color: 'white'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#111827';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#1f2937';
-                }}
-              >
-                <span>{selectedApp}</span>
-                {showAppMenu ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </button>
-
-              {showAppMenu && (
-                <div className="absolute top-full left-0 mt-2 w-36 bg-white rounded-lg border border-gray-200 z-50 overflow-hidden">
-                  <div className="py-1">
-                    {apps.map((app) => (
-                      <button
-                        key={app.value}
-                        onClick={() => {
-                          onAppChange(app.value);
-                          setShowAppMenu(false);
-                        }}
-                        className={`w-full text-left px-4 py-3 text-sm font-medium transition-colors duration-150 ${
-                          selectedApp === app.value 
-                            ? 'bg-gray-100 text-gray-900 border-l-4 border-gray-400' 
-                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
-                        }`}
-                      >
-                        {app.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+            {/* 앱 선택 버튼들 */}
+            <div className="flex items-center space-x-1">
+              {apps.map((app) => (
+                <button
+                  key={app.value}
+                  onClick={() => onAppChange(app.value)}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    selectedApp === app.value
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  {app.label}
+                </button>
+              ))}
             </div>
             
-            {/* Navigation */}
-            <nav className="flex items-center space-x-0 ml-6">
-              {navigationMenus.map((menu) => {
-                const menuLabels: { [key: string]: string } = {
-                  'projects': '프로젝트',
-                  'tables': '테이블',
-                  'functions': '함수',
-                  'screens': '화면',
-                  'databases': 'DB',
-                  'sync': '동기화'
-                };
-                
-                return (
-                  <button
-                    key={menu}
-                    onClick={() => onNavigate(menu as any)}
-                    className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
-                      currentView === menu 
-                        ? 'text-blue-600 border-blue-600 font-semibold' 
-                        : 'text-gray-600 hover:text-gray-900 border-transparent hover:border-gray-300 font-semibold'
-                    }`}
-                  >
-                    {menuLabels[menu] || menu}
-                  </button>
-                );
-              })}
-            </nav>
           </div>
           
           <div className="flex items-center space-x-4">
@@ -198,7 +125,11 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentTenant,
                     <div className="px-4 py-2 text-sm text-gray-700 border-b border-gray-100">
                       <div className="font-medium">{currentUser.firstName} {currentUser.lastName}</div>
                       <div className="text-gray-500">{currentUser.email}</div>
-                      <div className="text-xs text-gray-400 mt-1">{currentUser.role}</div>
+                      <div className="text-xs text-gray-400 mt-1">
+                        {currentUser.role === 'tenant_admin' ? '테넌트 관리자' : 
+                         currentUser.role === 'project_admin' ? '프로젝트 관리자' :
+                         currentUser.role === 'user' ? '사용자' : currentUser.role}
+                      </div>
                     </div>
                     <button
                       onClick={onLogout}

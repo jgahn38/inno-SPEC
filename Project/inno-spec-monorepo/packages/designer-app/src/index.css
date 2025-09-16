@@ -68,4 +68,41 @@
   .nav-link-active {
     @apply px-3 py-2 text-sm font-medium text-primary-600 bg-primary-50 border-b-2 border-primary-600;
   }
+  
+  /* 모듈 선택 콤보박스 스타일 */
+  .module-select {
+    @apply h-10 px-3 py-2 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500;
+    min-height: 2.5rem !important;
+    height: 2.5rem !important;
+  }
+  
+  /* GNB 탭 스타일 */
+  .gnb-tab {
+    @apply px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors;
+  }
+  
+  .gnb-tab-active {
+    @apply px-4 py-2 text-sm font-medium text-primary-600 bg-primary-50 border-b-2 border-primary-600;
+  }
+  
+  /* LNB 메뉴 스타일 */
+  .lnb-menu-item {
+    @apply w-full flex items-center px-3 py-2 text-sm rounded-lg transition-colors;
+  }
+  
+  .lnb-menu-item .icon {
+    @apply mr-5;
+  }
+  
+  .lnb-menu-item-active {
+    @apply bg-gray-200 text-gray-900 font-semibold;
+  }
+  
+  .lnb-menu-item-inactive {
+    @apply text-gray-600 hover:text-gray-900 hover:bg-gray-100;
+  }
+  
+  .lnb-submenu {
+    @apply ml-2 space-y-0.5;
+  }
 }

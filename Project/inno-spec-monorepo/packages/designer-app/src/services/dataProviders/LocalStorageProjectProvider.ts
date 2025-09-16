@@ -48,10 +48,16 @@ export class LocalStorageProjectProvider implements IProjectDataProvider {
     const projects = this.getProjectsFromStorage();
     console.log('Current projects in storage:', projects);
     
+    // ID 중복 검사
+    const existingProject = projects.find(p => p.id === request.id);
+    if (existingProject) {
+      throw new Error(`프로젝트 ID '${request.id}'가 이미 존재합니다. 다른 ID를 사용해주세요.`);
+    }
+    
     const now = new Date().toISOString();
     
     const newProject: any = {
-      id: this.generateId(),
+      id: request.id,
       name: request.name,
       description: request.description,
       createdAt: now,

@@ -6,7 +6,7 @@
     "baseUrl": ".",
     "paths": {
       "@inno-spec/shared": ["../shared/src"],
-      "@inno-spec/database-app": ["../database-app/src"],
+      "@inno-spec/admin-app": ["../admin-app/src"],
       "@inno-spec/ui-lib": ["../ui-lib/src"]
     }
   },

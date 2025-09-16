@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Settings, Save, X, GripVertical, BarChart3, Building2, Image, Anchor, Database, Variable, Table } from 'lucide-react';
-import { screenService } from '../services/ScreenService';
-import { variableService } from '../services/VariableService';
+import { screenService } from '@inno-spec/admin-app';
+import { variableService } from '@inno-spec/admin-app';
 import { ScreenConfig, ScreenComponent, LNBConfig, SystemScreenType, UserScreenDataStructure } from '@inno-spec/shared';
-import { TableSchemaService } from '@inno-spec/database-app';
-import ScreenCanvas from './ScreenCanvas';
+import { TableSchemaService } from '@inno-spec/admin-app';
+import { ScreenCanvas } from '@inno-spec/admin-app';
 
-const ScreenManager: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'lnb' | 'screens'>('lnb');
+interface ScreenManagerProps {
+  showOnly?: 'lnb' | 'screens';
+}
+
+const ScreenManager: React.FC<ScreenManagerProps> = ({ showOnly }) => {
   const [lnbConfigs, setLnbConfigs] = useState<LNBConfig[]>([]);
   const [screens, setScreens] = useState<ScreenConfig[]>([]);
 
@@ -444,35 +447,8 @@ const ScreenManager: React.FC = () => {
           </p>
         </div>
 
-        {/* 탭 네비게이션 */}
-        <div className="border-b border-gray-200 mb-6">
-          <nav className="-mb-px flex space-x-8">
-            <button
-              onClick={() => setActiveTab('lnb')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'lnb'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              LNB 메뉴 구성
-            </button>
-            <button
-              onClick={() => setActiveTab('screens')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'screens'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              화면 구성
-            </button>
-
-          </nav>
-        </div>
-
-        {/* LNB 메뉴 구성 탭 */}
-        {activeTab === 'lnb' && (
+        {/* LNB 메뉴 구성 */}
+        {(!showOnly || showOnly === 'lnb') && (
           <div>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-gray-900">LNB 메뉴 구성</h2>
@@ -653,8 +629,8 @@ const ScreenManager: React.FC = () => {
           </div>
         )}
 
-        {/* 화면 구성 탭 */}
-        {activeTab === 'screens' && (
+        {/* 화면 구성 */}
+        {(!showOnly || showOnly === 'screens') && (
           <div>
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-gray-900">화면 구성</h2>

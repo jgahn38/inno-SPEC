@@ -94,7 +94,14 @@ export type SystemScreenType =
   | 'project-settings' // 프로젝트 설정
   | 'section-library'  // 단면 라이브러리
   | 'user-profile'     // 사용자 프로필
-  | 'system-settings'; // 시스템 설정
+  | 'system-settings'  // 시스템 설정
+  | 'admin-db'         // 관리자 DB 관리
+  | 'admin-fields'     // 관리자 필드 정의
+  | 'admin-tables'     // 관리자 테이블 정의
+  | 'admin-variables'  // 관리자 변수 정의
+  | 'admin-functions'  // 관리자 함수 정의
+  | 'admin-screenconfig' // 관리자 화면 구성
+  | 'admin-lnbconfig';   // 관리자 LNB 구성
 
 export type UserScreenDataStructure = 
   | 'project'         // 프로젝트 (모든 구조물에 공통 적용)

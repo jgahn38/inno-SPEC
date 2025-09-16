@@ -16,7 +16,7 @@ import {
   CreateDatabaseRequest,
   UpdateDatabaseRequest 
 } from '@inno-spec/shared';
-import { DatabaseService } from '@inno-spec/database-app';
+import { DatabaseService } from '@inno-spec/admin-app';
 import ExcelDataImporter from './ExcelDataImporter';
 
 interface DatabaseManagerProps {

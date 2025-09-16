@@ -35,7 +35,7 @@ const Sidebar: React.FC<SidebarProps> = React.memo(({
   }, [onMenuSelect, onLNBMenuClick]);
 
   // selectedProject가 null인 경우 처리
-  if (!selectedProject) {
+  if (!selectedProject && projects.length > 0) {
     return (
       <div className="w-64 bg-white border-r border-gray-200 h-full flex items-center justify-center">
         <div className="text-center text-gray-500">
@@ -56,6 +56,9 @@ const Sidebar: React.FC<SidebarProps> = React.memo(({
       'Settings': Settings,
       'Table': Table,
       'Variable': Variable,
+      'screen': Image, // 화면 아이콘
+      'menu': Settings, // 메뉴 아이콘
+      'function': Variable, // 함수 아이콘
     };
     return iconMap[iconName || ''] || BarChart3;
   };
@@ -151,8 +154,9 @@ const Sidebar: React.FC<SidebarProps> = React.memo(({
 
   return (
     <div className="w-64 bg-gray-50 border-r border-gray-200 h-full flex flex-col shadow-sm">
-      {/* 프로젝트 선택 */}
-      <div className="px-4 py-3 border-b border-gray-200 bg-white">
+      {/* 프로젝트 선택 (프로젝트가 있을 때만 표시) */}
+      {selectedProject && projects.length > 0 && (
+        <div className="px-4 py-3 border-b border-gray-200 bg-white">
         <div className="relative">
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -203,11 +207,12 @@ const Sidebar: React.FC<SidebarProps> = React.memo(({
             </div>
           )}
         </div>
-      </div>
+        </div>
+      )}
 
       {/* 메뉴 목록 */}
       <div className="flex-1 overflow-y-auto">
-        <nav className="p-4 space-y-1">
+        <nav className="p-4 space-y-2">
           {(() => {
             // menuItems를 직접 사용하여 order 순서대로 렌더링
             console.log('Rendering menuItems in order:', menuItems.map(m => ({ 
@@ -228,13 +233,13 @@ const Sidebar: React.FC<SidebarProps> = React.memo(({
                   <div key={item.id}>
                     <button
                       onClick={() => handleMenuClick(item.id)}
-                      className={`w-full flex items-center px-3 py-2.5 text-sm rounded-lg transition-colors ${
+                      className={`w-full flex items-center px-3 py-2 text-sm rounded-lg transition-colors ${
                         isActive
                           ? 'bg-gray-200 text-gray-900 font-semibold'
                           : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
                       }`}
                     >
-                      <IconComponent className="h-4 w-4 mr-3" />
+                      <IconComponent className="h-4 w-4 mr-5" />
                       {item.displayName}
                     </button>
                   </div>
@@ -252,7 +257,7 @@ const Sidebar: React.FC<SidebarProps> = React.memo(({
                       <div className="flex items-center">
                         {(() => {
                           const ParentIconComponent = getIconComponent(item.icon);
-                          return <ParentIconComponent className="h-4 w-4 mr-3" />;
+                          return <ParentIconComponent className="h-4 w-4 mr-5" />;
                         })()}
                         <span>{item.displayName}</span>
                       </div>
@@ -262,7 +267,7 @@ const Sidebar: React.FC<SidebarProps> = React.memo(({
                     </button>
                     
                     {isExpanded && (
-                      <div className="ml-2 space-y-1">
+                      <div className="ml-2 space-y-0.5">
                         {item.children
                           .filter(child => child.isActive)
                           .sort((a, b) => a.order - b.order)
@@ -274,13 +279,13 @@ const Sidebar: React.FC<SidebarProps> = React.memo(({
                               <button
                                 key={child.id}
                                 onClick={() => handleMenuClick(child.id)}
-                                className={`w-full flex items-center px-3 py-2.5 text-sm rounded-lg transition-colors ${
+                                className={`w-full flex items-center px-3 py-2 text-sm rounded-lg transition-colors ${
                                   isChildActive
                                     ? 'bg-gray-200 text-gray-900 font-semibold'
                                     : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
                                 }`}
                               >
-                                <ChildIconComponent className="h-4 w-4 mr-3" />
+                                <ChildIconComponent className="h-4 w-4 mr-5" />
                                 {child.displayName}
                               </button>
                             );

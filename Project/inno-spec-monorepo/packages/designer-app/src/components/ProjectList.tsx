@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Building2, Calendar, Trash2, Filter } from 'lucide-react';
-import { Project, CreateProjectRequest } from '../types';
+import { Project, CreateProjectRequest } from '@inno-spec/shared';
 import { projectService } from '../services';
 
 interface ProjectListProps {
@@ -13,6 +13,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect }) => {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newProject, setNewProject] = useState({
+    id: '',
     name: '',
     description: '',
     category: 'general'
@@ -38,10 +39,11 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect }) => {
   const handleCreateProject = async () => {
     console.log('handleCreateProject called with:', newProject);
     
-    if (newProject.name.trim() && newProject.description.trim()) {
+    if (newProject.id.trim() && newProject.name.trim() && newProject.description.trim()) {
       try {
         console.log('Creating project request...');
         const createRequest: CreateProjectRequest = {
+          id: newProject.id.trim(),
           name: newProject.name.trim(),
           description: newProject.description.trim(),
           category: newProject.category
@@ -56,7 +58,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect }) => {
         await loadProjects();
         
         // 모달 닫기 및 폼 초기화
-        setNewProject({ name: '', description: '', category: 'general' });
+        setNewProject({ id: '', name: '', description: '', category: 'general' });
         setShowCreateModal(false);
         
         // 새로 생성된 프로젝트 선택
@@ -64,11 +66,12 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect }) => {
         onProjectSelect(createdProject);
       } catch (error) {
         console.error('Failed to create project:', error);
-        alert('프로젝트 생성에 실패했습니다.');
+        const errorMessage = error instanceof Error ? error.message : '프로젝트 생성에 실패했습니다.';
+        alert(errorMessage);
       }
     } else {
-      console.log('Validation failed:', { name: newProject.name.trim(), description: newProject.description.trim() });
-      alert('프로젝트명과 설명을 모두 입력해주세요.');
+      console.log('Validation failed:', { id: newProject.id.trim(), name: newProject.name.trim(), description: newProject.description.trim() });
+      alert('프로젝트 ID, 프로젝트명, 설명을 모두 입력해주세요.');
     }
   };
 
@@ -135,7 +138,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect }) => {
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
                 <Plus className="h-4 w-4" />
-                <span>프로젝트 만들기</span>
+                <span>프로젝트 추가</span>
               </button>
             </div>
           </div>
@@ -160,7 +163,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect }) => {
             className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
           >
             <Plus className="h-4 w-4" />
-            <span>프로젝트 만들기</span>
+            <span>프로젝트 추가</span>
           </button>
         </div>
       ) : (
@@ -193,6 +196,9 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect }) => {
                     <h3 className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors text-sm">
                       {project.name}
                     </h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      ID: {project.id}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -220,9 +226,22 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect }) => {
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 w-full max-w-lg">
-            <h2 className="text-lg font-semibold mb-4">프로젝트 만들기</h2>
+            <h2 className="text-lg font-semibold mb-4">프로젝트 추가</h2>
             
             <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  프로젝트 ID *
+                </label>
+                <input
+                  type="text"
+                  value={newProject.id}
+                  onChange={(e) => setNewProject({ ...newProject, id: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  placeholder="프로젝트 ID를 입력하세요 (예: project-001)"
+                />
+              </div>
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   프로젝트명 *
@@ -276,10 +295,11 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect }) => {
               </button>
               <button
                 onClick={handleCreateProject}
-                disabled={!newProject.name.trim()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                disabled={!newProject.id.trim() || !newProject.name.trim()}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                만들기
+                <Plus className="h-4 w-4" />
+                <span>추가</span>
               </button>
             </div>
           </div>

@@ -1,15 +1,12 @@
 {
-  "name": "@inno-spec/database-app",
+  "name": "@inno-spec/admin-app",
   "version": "0.0.1",
   "type": "module",
+  "scripts": {
+    "build": "tsc"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    }
-  },
   "dependencies": {
     "@inno-spec/shared": "*",
     "lucide-react": "^0.263.1",

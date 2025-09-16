@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ScreenConfig, ScreenComponent, Bridge, Project } from '@inno-spec/shared';
-import { TableSchemaService } from '@inno-spec/database-app';
-import { variableService } from '../services/VariableService';
+import { TableSchemaService } from '@inno-spec/admin-app';
+import { variableService } from '@inno-spec/admin-app';
 import { ChevronDown, Building2 } from 'lucide-react';
 
 interface ScreenRuntimeViewProps {
