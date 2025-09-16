@@ -23,20 +23,10 @@ const UserScreenView: React.FC<{
   screenId: string; 
   lnbMenu: any;
   selectedProject: Project | null;
-  selectedBridge: Bridge | null;
-  projects: Project[];
-  onProjectChange: (project: Project) => void;
-  onBridgeChange: (bridge: Bridge) => void;
-  onLNBMenuClick: (menuId: string) => void;
 }> = ({ 
   screenId, 
   lnbMenu,
-  selectedProject, 
-  selectedBridge, 
-  projects, 
-  onProjectChange, 
-  onBridgeChange, 
-  onLNBMenuClick 
+  selectedProject
 }) => {
   const screen = screenService.getScreenById(screenId);
   
@@ -57,21 +47,8 @@ const UserScreenView: React.FC<{
   }
 
   return (
-    <div className="flex h-full">
-      <Sidebar 
-        activeMenu="user-screen" 
-        onMenuSelect={() => {}}
-        selectedProject={selectedProject}
-        selectedBridge={selectedBridge}
-        projects={projects}
-        onProjectChange={onProjectChange}
-        onBridgeChange={onBridgeChange}
-        onLNBMenuClick={onLNBMenuClick}
-        lnbConfigs={lnbConfigs}
-      />
-      <div className="flex-1 bg-gray-50 overflow-auto">
-        <ScreenRuntimeView screen={screen} lnbMenu={lnbMenu} selectedProject={selectedProject} />
-      </div>
+    <div className="flex-1 bg-gray-50 overflow-auto">
+      <ScreenRuntimeView screen={screen} lnbMenu={lnbMenu} selectedProject={selectedProject} />
     </div>
   );
 };
@@ -440,14 +417,6 @@ function AppContent() {
                 screenId={currentUserScreen}
                 lnbMenu={currentLNBMenu}
                 selectedProject={selectedProject}
-                selectedBridge={selectedBridge}
-                projects={projects}
-                onProjectChange={setSelectedProject}
-                onBridgeChange={(bridge) => {
-                  setSelectedBridge(bridge);
-                  console.log('Selected bridge:', bridge);
-                }}
-                onLNBMenuClick={handleLNBMenuClick}
               />
             </div>
           </div>

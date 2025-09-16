@@ -179,7 +179,7 @@ const ScreenManager: React.FC = () => {
       parentId: '',
       isParent: false,
       type: lnb.type || (lnb.children && lnb.children.length > 0 ? 'parent' : 'independent'),
-      screenId: lnb.screenId || '',
+      screenId: lnb.screenId ? (lnb.screenId || 'placeholder') : '',
       systemScreenType: lnb.systemScreenType
     });
     setShowLNBModal(true);
@@ -237,7 +237,7 @@ const ScreenManager: React.FC = () => {
       parentId: parentId,
       isParent: false,
       type: 'child',
-      screenId: child.screenId || '',
+      screenId: child.screenId ? (child.screenId || 'placeholder') : '',
       systemScreenType: child.systemScreenType
     });
     setShowLNBModal(true);
@@ -858,7 +858,7 @@ const ScreenManager: React.FC = () => {
                                 name="screenType"
                                 value="user"
                                 checked={newLNB.screenId !== '' && newLNB.systemScreenType === undefined}
-                                onChange={() => setNewLNB({ ...newLNB, screenId: '', systemScreenType: undefined })}
+                                onChange={() => setNewLNB({ ...newLNB, screenId: 'placeholder', systemScreenType: undefined })}
                               />
                               <span>사용자 생성 화면</span>
                             </label>
@@ -886,7 +886,7 @@ const ScreenManager: React.FC = () => {
                         </div>
 
                         {/* 사용자 생성 화면 선택 */}
-                        {newLNB.screenId !== '' && newLNB.systemScreenType === undefined && (
+                        {(newLNB.screenId === 'placeholder' || (newLNB.screenId !== '' && newLNB.systemScreenType === undefined)) && (
                           <select
                             value={newLNB.screenId === 'placeholder' ? '' : newLNB.screenId}
                             onChange={(e) => setNewLNB({ ...newLNB, screenId: e.target.value })}
