@@ -12,6 +12,5 @@ export { ProjectService } from './ProjectService';
 export { LocalStorageProjectProvider } from './dataProviders/LocalStorageProjectProvider';
 export { MEngineService } from './MEngineService';
 export { MParser } from './MParser';
-// DatabaseService는 이제 @inno-spec/database-app에서 import
 export { BridgeDataService } from './BridgeDataService';
 export { CADParserService } from './CADParserService';

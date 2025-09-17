@@ -27,7 +27,13 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-id']
 }));
 app.use(compression());
-app.use(morgan('combined'));
+// Only log errors and important requests
+app.use(morgan('combined', {
+  skip: function (req, res) {
+    // Skip successful GET requests to reduce log noise
+    return res.statusCode < 400 && req.method === 'GET';
+  }
+}));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 

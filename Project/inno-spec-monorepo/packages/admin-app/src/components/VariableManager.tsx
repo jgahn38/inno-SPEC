@@ -1,0 +1,413 @@
+import React, { useState, useEffect } from 'react';
+import { Plus, Save, X, Search, GripVertical } from 'lucide-react';
+import { variableService } from '../services/VariableService';
+import { VariableDefinition } from '../types';
+
+const VariableManager: React.FC = () => {
+  const [variables, setVariables] = useState<VariableDefinition[]>([]);
+  const [showVariableModal, setShowVariableModal] = useState(false);
+  const [editingVariable, setEditingVariable] = useState<VariableDefinition | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [draggedItem, setDraggedItem] = useState<string | null>(null);
+
+  // 새 변수 폼 상태
+  const [newVariable, setNewVariable] = useState<Partial<VariableDefinition>>({
+    name: '',
+    displayName: '',
+    description: '',
+    type: 'number',
+    category: 'input',
+    scope: 'global',
+    tags: []
+  });
+
+  useEffect(() => {
+    // VariableService 구독
+    const unsubscribe = variableService.subscribe((variables) => {
+      setVariables(variables);
+    });
+    return unsubscribe;
+  }, []);
+
+  const handleAddVariable = () => {
+    if (!newVariable.name || !newVariable.displayName || !newVariable.type) {
+      alert('변수명, 표시명, 타입은 필수 입력 항목입니다.');
+      return;
+    }
+
+    const variableDef: VariableDefinition = {
+      ...newVariable,
+      id: `var-${Date.now()}`,
+      tags: newVariable.tags || [],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    } as VariableDefinition;
+
+    variableService.addVariable(variableDef);
+    resetVariableForm();
+    setShowVariableModal(false);
+  };
+
+  const handleEditVariable = (variable: VariableDefinition) => {
+    setEditingVariable(variable);
+    setNewVariable(variable);
+    setShowVariableModal(true);
+  };
+
+  const handleUpdateVariable = () => {
+    if (!editingVariable || !newVariable.name || !newVariable.displayName || !newVariable.type) {
+      alert('변수명, 표시명, 타입은 필수 입력 항목입니다.');
+      return;
+    }
+
+    variableService.updateVariable(editingVariable.id, {
+      ...newVariable,
+      updatedAt: new Date()
+    });
+    
+    resetVariableForm();
+    setEditingVariable(null);
+    setShowVariableModal(false);
+  };
+
+  const handleDeleteVariable = (variableId: string) => {
+    if (confirm('정말로 이 변수를 삭제하시겠습니까?')) {
+      variableService.deleteVariable(variableId);
+    }
+  };
+
+  const resetVariableForm = () => {
+    setNewVariable({
+      name: '',
+      displayName: '',
+      description: '',
+      type: 'number',
+      category: 'input',
+      scope: 'global',
+      tags: []
+    });
+  };
+
+  const getVariableCategoryLabel = (category: string) => {
+    switch (category) {
+      case 'input': return '입력';
+      case 'output': return '출력';
+      case 'intermediate': return '중간';
+      case 'constant': return '상수';
+      default: return category;
+    }
+  };
+
+  const getScopeLabel = (scope: string) => {
+    switch (scope) {
+      case 'global': return '전역';
+      case 'project': return '프로젝트';
+      case 'bridge': return '교량';
+      default: return scope;
+    }
+  };
+
+  const filteredVariables = variables.filter(variable => 
+    (selectedCategory === 'all' || variable.category === selectedCategory) &&
+    (searchTerm === '' || 
+     variable.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     variable.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     (variable.tags || []).some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* 헤더 */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">변수 정의</h1>
+          <p className="text-gray-600">
+            내진성능평가에 필요한 변수를 정의하고 관리하세요. 
+            모든 프로젝트에서 공통으로 사용할 수 있습니다.
+          </p>
+        </div>
+
+        {/* 검색 및 필터 */}
+        <div className="mb-6 flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="변수명, 설명, 태그로 검색..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">모든 카테고리</option>
+              <option value="input">입력</option>
+              <option value="output">출력</option>
+              <option value="intermediate">중간</option>
+              <option value="constant">상수</option>
+            </select>
+            <button
+              onClick={() => setShowVariableModal(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              <span>변수 추가</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 변수 목록 */}
+        <div className="bg-white shadow overflow-hidden sm:rounded-md">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10"></th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">변수명</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">표시명</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">설명</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">타입</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">카테고리</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">범위</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-20"></th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredVariables.map((variable, index) => (
+                <tr
+                  key={variable.id}
+                  className={`hover:bg-gray-50 cursor-pointer ${draggedItem === variable.id ? 'opacity-50' : ''}`}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('text/plain', variable.id);
+                    setDraggedItem(variable.id);
+                  }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const draggedVariableId = e.dataTransfer.getData('text/plain');
+                    const draggedIndex = variables.findIndex(v => v.id === draggedVariableId);
+                    const dropIndex = index;
+                    
+                    if (draggedIndex !== -1 && draggedIndex !== dropIndex) {
+                      const newOrder = [...variables];
+                      const [draggedItem] = newOrder.splice(draggedIndex, 1);
+                      newOrder.splice(dropIndex, 0, draggedItem);
+                      setVariables(newOrder);
+                    }
+                    setDraggedItem(null);
+                  }}
+                  onDragEnd={() => setDraggedItem(null)}
+                  onClick={() => handleEditVariable(variable)}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 cursor-move">
+                    <GripVertical className="h-4 w-4" />
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {variable.name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {variable.displayName || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {variable.description || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {variable.type} {variable.unit && `(${variable.unit})`}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      {getVariableCategoryLabel(variable.category)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                      {getScopeLabel(variable.scope)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium w-20">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteVariable(variable.id);
+                      }}
+                      className="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-50 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 변수 추가/수정 모달 */}
+        {showVariableModal && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+              <div className="mt-3">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">
+                    {editingVariable ? '변수 수정' : '변수 추가'}
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setShowVariableModal(false);
+                      resetVariableForm();
+                      setEditingVariable(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">변수명 (영문) *</label>
+                    <input
+                      type="text"
+                      value={newVariable.name}
+                      onChange={(e) => setNewVariable({ ...newVariable, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="변수명을 입력하세요 (영문)"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">표시명 *</label>
+                    <input
+                      type="text"
+                      value={newVariable.displayName}
+                      onChange={(e) => setNewVariable({ ...newVariable, displayName: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="표시명을 입력하세요 (한글)"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">설명</label>
+                    <textarea
+                      value={newVariable.description}
+                      onChange={(e) => setNewVariable({ ...newVariable, description: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      rows={2}
+                      placeholder="변수에 대한 설명을 입력하세요"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">타입 *</label>
+                      <select
+                        value={newVariable.type}
+                        onChange={(e) => setNewVariable({ ...newVariable, type: e.target.value as any })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="number">숫자</option>
+                        <option value="string">문자열</option>
+                        <option value="boolean">불린</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">단위</label>
+                      <input
+                        type="text"
+                        value={newVariable.unit || ''}
+                        onChange={(e) => setNewVariable({ ...newVariable, unit: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="단위 (예: MPa, mm)"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">카테고리</label>
+                      <select
+                        value={newVariable.category}
+                        onChange={(e) => setNewVariable({ ...newVariable, category: e.target.value as any })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="input">입력</option>
+                        <option value="output">출력</option>
+                        <option value="intermediate">중간</option>
+                        <option value="constant">상수</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">범위</label>
+                      <select
+                        value={newVariable.scope}
+                        onChange={(e) => setNewVariable({ ...newVariable, scope: e.target.value as any })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="global">전역</option>
+                        <option value="project">프로젝트</option>
+                        <option value="bridge">교량</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">기본값</label>
+                    <input
+                      type="text"
+                      value={newVariable.defaultValue || ''}
+                      onChange={(e) => setNewVariable({ ...newVariable, defaultValue: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="기본값을 입력하세요"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">태그</label>
+                    <input
+                      type="text"
+                      value={newVariable.tags?.join(', ') || ''}
+                      onChange={(e) => setNewVariable({ ...newVariable, tags: e.target.value.split(',').map(t => t.trim()) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="태그를 쉼표로 구분하여 입력하세요"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-3 mt-6">
+                  <button
+                    onClick={() => {
+                      setShowVariableModal(false);
+                      resetVariableForm();
+                      setEditingVariable(null);
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={editingVariable ? handleUpdateVariable : handleAddVariable}
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    <Save className="h-4 w-4" />
+                    <span>{editingVariable ? '저장' : '추가'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default VariableManager;

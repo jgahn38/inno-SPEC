@@ -15,7 +15,10 @@ const mimeTypes = {
 };
 
 const server = http.createServer((req, res) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  // Only log errors and non-GET requests to reduce log noise
+  if (req.method !== 'GET') {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  }
   
   let filePath = '.' + req.url;
   if (filePath === './') {

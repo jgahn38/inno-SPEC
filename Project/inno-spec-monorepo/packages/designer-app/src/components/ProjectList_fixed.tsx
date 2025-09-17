@@ -131,90 +131,64 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId }) 
 
   return (
     <div className="p-6">
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-3xl font-bold text-gray-900">프로젝트 목록</h1>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            <span>새 프로젝트 생성</span>
-          </button>
-        </div>
-        <div className="text-sm text-gray-600">
-          총 {projects.length}개의 프로젝트가 있습니다.
-        </div>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-gray-900">프로젝트 목록</h1>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+        >
+          새 프로젝트 생성
+        </button>
       </div>
 
       {projects.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="h-10 w-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
+        <div className="text-center py-12">
+          <div className="text-6xl mb-4">📁</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">프로젝트가 없습니다</h2>
-          <p className="text-gray-600 mb-6 max-w-md mx-auto">새 프로젝트를 생성하여 시작하세요. 교량, 터널, 도로 등 다양한 인프라 프로젝트를 관리할 수 있습니다.</p>
+          <p className="text-gray-600 mb-4">새 프로젝트를 생성하여 시작하세요.</p>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm"
+            className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
           >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            <span>첫 프로젝트 생성하기</span>
+            첫 프로젝트 생성하기
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {projects.map((project) => (
             <div
               key={project.id}
-              className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer group relative"
+              className="bg-white rounded-lg shadow-md border border-gray-200 p-6 hover:shadow-lg transition-shadow cursor-pointer"
               onClick={() => onProjectSelect(project)}
             >
-              {/* 삭제 버튼 */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteProject(project.id, project.name);
-                }}
-                className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-white rounded-full shadow-sm hover:shadow-md z-10"
-                title="프로젝트 삭제"
-              >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-
-              <div className="p-4">
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="text-lg font-semibold text-gray-900 truncate pr-2">
-                    {project.name}
-                  </h3>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${getStatusBadgeClass(project.status)}`}>
-                    {getStatusText(project.status)}
-                  </span>
-                </div>
-                
-                <p className="text-gray-600 mb-3 text-sm line-clamp-2">
-                  {project.description}
-                </p>
-                
-                <div className="flex justify-between items-center text-xs text-gray-500 mb-3">
-                  <span className="bg-gray-100 px-2 py-1 rounded">
-                    {project.category}
-                  </span>
-                  <span className="flex items-center">
-                    <svg className="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    {new Date(project.createdAt).toLocaleDateString()}
-                  </span>
-                </div>
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-xl font-semibold text-gray-900 truncate">
+                  {project.name}
+                </h3>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(project.status)}`}>
+                  {getStatusText(project.status)}
+                </span>
+              </div>
+              
+              <p className="text-gray-600 mb-4 line-clamp-3">
+                {project.description}
+              </p>
+              
+              <div className="flex justify-between items-center text-sm text-gray-500">
+                <span>카테고리: {project.category}</span>
+                <span>{new Date(project.createdAt).toLocaleDateString()}</span>
+              </div>
+              
+              <div className="mt-4 flex justify-end space-x-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteProject(project.id, project.name);
+                  }}
+                  className="px-3 py-1 text-red-600 hover:text-red-800 text-sm"
+                >
+                  삭제
+                </button>
               </div>
             </div>
           ))}

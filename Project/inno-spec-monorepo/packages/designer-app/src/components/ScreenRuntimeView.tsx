@@ -338,7 +338,6 @@ const ScreenRuntimeView: React.FC<ScreenRuntimeViewProps> = ({ screen, lnbMenu, 
       const dataKey = getDataKey(componentId, selectedBridgeId);
       const storageKey = `table_data_${dataKey}`;
       localStorage.setItem(storageKey, JSON.stringify(data));
-      console.log(`테이블 데이터 저장됨: ${dataKey}`, data);
     } catch (error) {
       console.error('테이블 데이터 저장 실패:', error);
     }

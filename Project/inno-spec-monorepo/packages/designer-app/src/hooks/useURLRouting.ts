@@ -1,9 +1,9 @@
-import { useCallback } from 'react';
+﻿import { useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTenant } from '../contexts/TenantContext';
 
 export interface ScreenRoute {
-  type: 'projects' | 'dashboard' | 'screens' | 'user-screen' | 'lnb-menu' | 'settings' | 'illustration' | 'project-settings' | 'no-screen' | 'tables' | 'sync' | 'functions' | 'modeler' | 'viewer' | 'admin-db' | 'admin-fields' | 'admin-tables' | 'admin-variables' | 'admin-functions' | 'admin-lnbconfig' | 'admin-screenconfig';
+  type: 'projects' | 'dashboard' | 'screens' | 'user-screen' | 'lnb-menu' | 'settings' | 'illustration' | 'project-settings' | 'no-screen' | 'tables' | 'sync' | 'functions' | 'modeler' | 'viewer' | 'admin-db' | 'admin-fields' | 'admin-table-definition' | 'admin-variable-definition' | 'admin-function-definition' | 'admin-lnb-config' | 'admin-screen-config';
   module?: 'designer' | 'modeler' | 'viewer' | 'admin';
   tenantId?: string;
   screenId?: string;
@@ -36,24 +36,16 @@ export const useURLRouting = () => {
           return { type: 'admin-db', module: 'admin' };
         case 'fields':
           return { type: 'admin-fields', module: 'admin' };
-        case 'tables':
-          return { type: 'admin-tables', module: 'admin' };
-        case 'variables':
-          return { type: 'admin-variables', module: 'admin' };
-        case 'functions':
-          return { type: 'admin-functions', module: 'admin' };
-        case 'lnbconfig':
-          return { type: 'admin-lnbconfig', module: 'admin' };
-        case 'screenconfig':
-          return { type: 'admin-screenconfig', module: 'admin' };
-        case 'fields':
-          return { type: 'admin-fields', module: 'admin' };
-        case 'tables':
-          return { type: 'admin-tables', module: 'admin' };
-        case 'variables':
-          return { type: 'admin-variables', module: 'admin' };
-        case 'functions':
-          return { type: 'admin-functions', module: 'admin' };
+        case 'table-definition':
+          return { type: 'admin-table-definition', module: 'admin' };
+        case 'variable-definition':
+          return { type: 'admin-variable-definition', module: 'admin' };
+        case 'function-definition':
+          return { type: 'admin-function-definition', module: 'admin' };
+        case 'lnb-config':
+          return { type: 'admin-lnb-config', module: 'admin' };
+        case 'screen-config':
+          return { type: 'admin-screen-config', module: 'admin' };
         default:
           return { type: 'admin-db', module: 'admin' };
       }
@@ -115,6 +107,8 @@ export const useURLRouting = () => {
               return { type: 'illustration', module: 'designer', tenantId, projectId };
             case 'project-settings':
               return { type: 'project-settings', module: 'designer', tenantId, projectId };
+            case 'no-screen':
+              return { type: 'no-screen', module: 'designer', tenantId, projectId };
             case 'lnb':
               if (segments[4]) {
                 return { type: 'lnb-menu', module: 'designer', tenantId, projectId, menuId: segments[4] };
@@ -250,20 +244,20 @@ export const useURLRouting = () => {
             case 'admin-fields':
               navigate('/admin/fields');
               break;
-            case 'admin-tables':
-              navigate('/admin/tables');
+            case 'admin-table-definition':
+              navigate('/admin/table-definition');
               break;
-            case 'admin-variables':
-              navigate('/admin/variables');
+            case 'admin-variable-definition':
+              navigate('/admin/variable-definition');
               break;
-            case 'admin-functions':
-              navigate('/admin/functions');
+            case 'admin-function-definition':
+              navigate('/admin/function-definition');
               break;
-            case 'admin-lnbconfig':
-              navigate('/admin/lnbconfig');
+            case 'admin-lnb-config':
+              navigate('/admin/lnb-config');
               break;
-            case 'admin-screenconfig':
-              navigate('/admin/screenconfig');
+            case 'admin-screen-config':
+              navigate('/admin/screen-config');
               break;
             default:
               navigate('/admin/db');

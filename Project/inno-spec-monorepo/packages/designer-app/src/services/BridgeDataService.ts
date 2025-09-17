@@ -55,7 +55,6 @@ export class BridgeDataService {
 
       return bridgeData;
     } catch (error) {
-      console.error('Failed to get bridge data:', error);
       throw new Error('교량 데이터를 가져오는데 실패했습니다.');
     }
   }
@@ -103,7 +102,6 @@ export class BridgeDataService {
       this.saveDataToStorage(allData);
       return bridgeData;
     } catch (error) {
-      console.error('Failed to create or update bridge data:', error);
       throw new Error('교량 데이터 생성/업데이트에 실패했습니다.');
     }
   }
@@ -175,7 +173,6 @@ export class BridgeDataService {
       
       this.saveDataToStorage(filteredData);
     } catch (error) {
-      console.error('Failed to delete bridge data:', error);
       throw new Error('교량 데이터 삭제에 실패했습니다.');
     }
   }
@@ -188,7 +185,6 @@ export class BridgeDataService {
       const allData = this.getDataFromStorage();
       return allData.filter(data => data.projectId === projectId);
     } catch (error) {
-      console.error('Failed to get all bridge data by project:', error);
       throw new Error('프로젝트의 교량 데이터를 가져오는데 실패했습니다.');
     }
   }
@@ -203,7 +199,6 @@ export class BridgeDataService {
         data.bridgeId === bridgeId && data.projectId === projectId
       );
     } catch (error) {
-      console.error('Failed to check bridge data existence:', error);
       return false;
     }
   }
@@ -228,7 +223,6 @@ export class BridgeDataService {
         default: return false;
       }
     } catch (error) {
-      console.error('Failed to check data type existence:', error);
       return false;
     }
   }
@@ -293,7 +287,6 @@ export class BridgeDataService {
         } : null,
       }));
     } catch (error) {
-      console.error('Failed to parse bridge data from localStorage:', error);
       return [];
     }
   }
@@ -305,7 +298,7 @@ export class BridgeDataService {
     try {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
     } catch (error) {
-      console.error('Failed to save bridge data to localStorage:', error);
+      // Silently fail - localStorage operations should not throw errors to user
     }
   }
 
@@ -324,7 +317,6 @@ export class BridgeDataService {
       const backupString = JSON.stringify(backup, null, 2);
       return backupString;
     } catch (error) {
-      console.error('Failed to create backup:', error);
       throw new Error('백업 생성에 실패했습니다.');
     }
   }
@@ -341,7 +333,6 @@ export class BridgeDataService {
         throw new Error('잘못된 백업 형식입니다.');
       }
     } catch (error) {
-      console.error('Failed to restore from backup:', error);
       throw new Error('백업 복원에 실패했습니다.');
     }
   }

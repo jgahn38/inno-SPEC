@@ -43,10 +43,7 @@ export class LocalStorageProjectProvider implements IProjectDataProvider {
   }
   
   async createProject(request: CreateProjectRequest): Promise<Project> {
-    console.log('LocalStorageProjectProvider.createProject called with:', request);
-    
     const projects = this.getProjectsFromStorage();
-    console.log('Current projects in storage:', projects);
     
     // ID 중복 검사
     const existingProject = projects.find(p => p.id === request.id);
@@ -87,13 +84,8 @@ export class LocalStorageProjectProvider implements IProjectDataProvider {
       ]
     };
     
-    console.log('New project object created:', newProject);
-    
     projects.push(newProject);
-    console.log('Project added to array, total projects:', projects.length);
-    
     this.saveProjectsToStorage(projects);
-    console.log('Projects saved to localStorage');
     
     return newProject;
   }

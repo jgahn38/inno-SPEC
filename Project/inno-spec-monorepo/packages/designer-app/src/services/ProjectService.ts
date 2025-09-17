@@ -32,18 +32,12 @@ export class ProjectService {
    */
   async createProject(request: CreateProjectRequest): Promise<Project> {
     try {
-      console.log('ProjectService.createProject called with:', request);
-      
       // 유효성 검사
-      console.log('Validating create project request...');
       this.validateCreateProjectRequest(request);
-      console.log('Validation passed');
       
       // 프로젝트 생성
-      console.log('Calling dataProvider.createProject...');
       const project = await this.dataProvider.createProject(request);
       
-      console.log('Project created successfully:', project);
       return project;
     } catch (error) {
       console.error('Failed to create project:', error);
@@ -68,7 +62,6 @@ export class ProjectService {
       // 프로젝트 업데이트
       const updatedProject = await this.dataProvider.updateProject(request);
       
-      console.log('Project updated successfully:', updatedProject);
       return updatedProject;
     } catch (error) {
       console.error('Failed to update project:', error);
@@ -89,8 +82,6 @@ export class ProjectService {
       
       // 프로젝트 삭제
       await this.dataProvider.deleteProject(id);
-      
-      console.log(`Project ${id} deleted successfully`);
     } catch (error) {
       console.error(`Failed to delete project ${id}:`, error);
       throw new Error('프로젝트 삭제에 실패했습니다.');
@@ -103,7 +94,6 @@ export class ProjectService {
   async restoreProject(id: string): Promise<void> {
     try {
       await this.dataProvider.restoreProject(id);
-      console.log(`Project ${id} restored successfully`);
     } catch (error) {
       console.error(`Failed to restore project ${id}:`, error);
       throw new Error('프로젝트 복원에 실패했습니다.');
@@ -116,7 +106,6 @@ export class ProjectService {
   async hardDeleteProject(id: string): Promise<void> {
     try {
       await this.dataProvider.hardDeleteProject(id);
-      console.log(`Project ${id} hard deleted successfully`);
     } catch (error) {
       console.error(`Failed to hard delete project ${id}:`, error);
       throw new Error('프로젝트 완전 삭제에 실패했습니다.');

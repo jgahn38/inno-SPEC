@@ -1,12 +1,12 @@
-// LibreDWG 라이브러리 타입 정의
+// LibreDWG ?�이브러�??�???�의
 interface LibreDwg {
   dwg_read_data(data: ArrayBuffer): Promise<any>;
   dwg_getall_entities_in_model_space(data: any): any[];
-  dwg_get_layers(data: any): any[]; // 레이어 테이블 정보
-  dwg_get_layer_table(data: any): any; // 레이어 테이블
+  dwg_get_layers(data: any): any[]; // ?�이???�이�??�보
+  dwg_get_layer_table(data: any): any; // ?�이???�이�?
 }
 
-// @mlightcad/libredwg-web 라이브러리 타입 정의
+// @mlightcad/libredwg-web ?�이브러�??�???�의
 interface LibreDwgWeb {
   dwg_read_data(data: ArrayBuffer, fileType: number): any;
   convert(dwgData: any): any;
@@ -98,14 +98,14 @@ export class CADParserService {
   }
 
   /**
-   * LibreDWG 라이브러리 초기화
+   * LibreDWG ?�이브러�?초기??
    */
   public async initialize(): Promise<boolean> {
     if (this.isInitialized) {
       return true;
     }
 
-    // 이미 초기화 중인 경우 기존 Promise 반환
+    // ?��? 초기??중인 경우 기존 Promise 반환
     if (this.initializationPromise) {
       return this.initializationPromise;
     }
@@ -116,74 +116,70 @@ export class CADParserService {
 
   private async performInitialization(): Promise<boolean> {
     try {
-      // 브라우저 환경 확인
+      // 브라?��? ?�경 ?�인
       if (typeof window === 'undefined') {
-        console.warn('브라우저 환경이 아닙니다. 테스트 모드로 실행됩니다.');
+        console.warn('브라?��? ?�경???�닙?�다. ?�스??모드�??�행?�니??');
         this.isInitialized = true;
         this.libreDwg = null;
         return true;
       }
 
-      // 1. @mlightcad/libredwg-web 라이브러리 로드 시도 (현재 비활성화)
-      // TODO: 필요시 @mlightcad/libredwg-web 패키지 설치 후 활성화
+      // 1. @mlightcad/libredwg-web ?�이브러�?로드 ?�도 (?�재 비활?�화)
+      // TODO: ?�요??@mlightcad/libredwg-web ?�키지 ?�치 ???�성??
       /*
       try {
-        console.log('@mlightcad/libredwg-web 라이브러리 로드 시도...');
         const { LibreDwg } = await import('@mlightcad/libredwg-web');
         
         if (LibreDwg) {
           this.libreDwgWeb = await LibreDwg.create();
-          console.log('@mlightcad/libredwg-web 라이브러리가 성공적으로 로드되었습니다.');
           this.isInitialized = true;
           return true;
         }
       } catch (libredwgWebError) {
-        console.warn('@mlightcad/libredwg-web 로드 실패:', libredwgWebError);
+        console.warn('@mlightcad/libredwg-web 로드 ?�패:', libredwgWebError);
       }
       */
 
-      // 2. 기존 LibreDwg WASM 모듈 확인 (fallback)
+      // 2. 기존 LibreDwg WASM 모듈 ?�인 (fallback)
       if (!(window as any).LibreDwg) {
-        console.warn('모든 LibreDwg 라이브러리 로드에 실패했습니다. 테스트 모드로 실행됩니다.');
-        console.info('DWG 파일 처리를 위해서는 @mlightcad/libredwg-web 패키지가 필요합니다.');
+        console.warn('모든 LibreDwg ?�이브러�?로드???�패?�습?�다. ?�스??모드�??�행?�니??');
+        console.info('DWG ?�일 처리�??�해?�는 @mlightcad/libredwg-web ?�키지가 ?�요?�니??');
         this.isInitialized = true;
         this.libreDwg = null;
         this.libreDwgWeb = null;
         return true;
       }
 
-      // WASM 모듈 로딩 대기 (더 긴 시간 대기)
+      // WASM 모듈 로딩 ?��?(??�??�간 ?��?
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      // LibreDwg 라이브러리 인스턴스 생성 시도
+      // LibreDwg ?�이브러�??�스?�스 ?�성 ?�도
       try {
         this.libreDwg = new (window as any).LibreDwg();
-        console.log('LibreDwg 인스턴스 생성 성공');
       } catch (instanceError) {
-        console.warn('LibreDwg 인스턴스 생성 실패:', instanceError);
-        throw new Error(`LibreDwg 인스턴스 생성에 실패했습니다: ${instanceError}`);
+        console.warn('LibreDwg ?�스?�스 ?�성 ?�패:', instanceError);
+        throw new Error(`LibreDwg ?�스?�스 ?�성???�패?�습?�다: ${instanceError}`);
       }
       
-      // 초기화 성공 확인
+      // 초기???�공 ?�인
       if (!this.libreDwg) {
-        throw new Error('LibreDwg 인스턴스가 null입니다.');
+        throw new Error('LibreDwg ?�스?�스가 null?�니??');
       }
 
       this.isInitialized = true;
-      console.log('CAD Parser Service initialized successfully with LibreDwg');
       return true;
     } catch (error) {
-      console.warn('LibreDwg 초기화 실패, 테스트 모드로 실행됩니다:', error);
-      this.isInitialized = true; // 테스트 모드로 계속 진행
+      console.warn('LibreDwg 초기???�패, ?�스??모드�??�행?�니??', error);
+      this.isInitialized = true; // ?�스??모드�?계속 진행
       this.libreDwg = null;
-      return true; // 테스트 모드에서는 성공으로 처리
+      return true; // ?�스??모드?�서???�공?�로 처리
     } finally {
       this.initializationPromise = null;
     }
   }
 
   /**
-   * DWG 파일에서 레이어 정보 추출
+   * DWG ?�일?�서 ?�이???�보 추출
    */
   public async extractLayerInfo(file: File): Promise<LayerSelectionResult> {
     try {
@@ -193,41 +189,35 @@ export class CADParserService {
           return {
             success: false,
             layers: [],
-            error: 'CAD Parser Service가 초기화되지 않았습니다.'
+            error: 'CAD Parser Service가 초기?�되지 ?�았?�니??'
           };
         }
       }
 
-      // 파일을 ArrayBuffer로 읽기
+      // ?�일??ArrayBuffer�??�기
       const arrayBuffer = await file.arrayBuffer();
-      console.log('레이어 정보 추출 시작, 파일 크기:', arrayBuffer.byteLength);
 
       if (this.libreDwgWeb) {
         try {
-          console.log('@mlightcad/libredwg-web을 사용하여 레이어 정보 추출...');
-          // DWG 파일 타입 상수 (Dwg_File_Type.DWG = 0)
+          // DWG ?�일 ?�???�수 (Dwg_File_Type.DWG = 0)
           const dwgData = this.libreDwgWeb.dwg_read_data(arrayBuffer, 0);
-          console.log('DWG 데이터 구조:', dwgData);
           
           if (dwgData.error !== 0) {
-            throw new Error(`DWG 파일 읽기 실패: 오류 코드 ${dwgData.error}`);
+            throw new Error(`DWG ?�일 ?�기 ?�패: ?�류 코드 ${dwgData.error}`);
           }
           
-          // DwgDatabase로 변환
+          // DwgDatabase�?변??
           const db = this.libreDwgWeb.convert(dwgData);
-          console.log('DwgDatabase 구조:', db);
           
-          // 레이어 정보 추출
+          // ?�이???�보 추출
           const layers = db.layers || [];
           const entities = db.entities || [];
           
-          console.log('추출된 레이어 수:', layers.length);
-          console.log('추출된 엔티티 수:', entities.length);
           
-          // 레이어별 엔티티 정보 수집
+          // ?�이?�별 ?�티???�보 ?�집
           const layerMap = new Map<string, LayerInfo>();
           
-          // 1. 레이어 테이블에서 기본 레이어 정보 설정
+          // 1. ?�이???�이블에??기본 ?�이???�보 ?�정
           layers.forEach((layer: any) => {
             const layerName = layer.name || '0';
             layerMap.set(layerName, {
@@ -240,13 +230,12 @@ export class CADParserService {
             });
           });
           
-          // 2. 엔티티에서 레이어 정보 보완
+          // 2. ?�티?�에???�이???�보 보완
           entities.forEach((entity: any, index: number) => {
             const layerName = entity.layer || '0';
             
-            // 상세한 엔티티 정보 로깅 (처음 5개만)
+            // ?�세???�티???�보 로깅 (처음 5개만)
             if (index < 5) {
-              console.log(`엔티티 ${index}:`, {
                 type: entity.type,
                 layer: entity.layer,
                 color: entity.color,
@@ -270,7 +259,7 @@ export class CADParserService {
             layerInfo.entityCount++;
             layerInfo.entityTypes[entity.type] = (layerInfo.entityTypes[entity.type] || 0) + 1;
             
-            // 엔티티에서 더 정확한 레이어 속성 정보 업데이트
+            // ?�티?�에?????�확???�이???�성 ?�보 ?�데?�트
             if (entity.color !== undefined && layerInfo.color === undefined) {
               layerInfo.color = entity.color;
             }
@@ -281,13 +270,12 @@ export class CADParserService {
           
           const finalLayers = Array.from(layerMap.values()).sort((a, b) => a.name.localeCompare(b.name));
           
-          console.log('최종 추출된 레이어 정보:', {
             totalLayers: finalLayers.length,
             layerNames: finalLayers.map(l => l.name),
             layerDetails: finalLayers
           });
           
-          // 메모리 해제
+          // 메모�??�제
           this.libreDwgWeb.dwg_free(dwgData);
           
           return {
@@ -295,7 +283,7 @@ export class CADParserService {
             layers: finalLayers
           };
         } catch (libredwgWebError) {
-          console.warn('@mlightcad/libredwg-web 레이어 추출 실패:', libredwgWebError);
+          console.warn('@mlightcad/libredwg-web ?�이??추출 ?�패:', libredwgWebError);
           // fallback to test data
         }
       }
@@ -303,27 +291,24 @@ export class CADParserService {
       if (this.libreDwg) {
         try {
           const dwgData = await this.libreDwg.dwg_read_data(arrayBuffer);
-          console.log('DWG 데이터 구조:', dwgData);
           
-          // 1. 먼저 레이어 테이블에서 실제 레이어 정보 추출 시도
+          // 1. 먼�? ?�이???�이블에???�제 ?�이???�보 추출 ?�도
           let layerTableInfo: any[] = [];
           try {
             if (this.libreDwg.dwg_get_layers) {
               layerTableInfo = this.libreDwg.dwg_get_layers(dwgData) || [];
-              console.log('레이어 테이블 정보:', layerTableInfo);
             }
           } catch (layerError) {
-            console.warn('레이어 테이블 추출 실패:', layerError);
+            console.warn('?�이???�이�?추출 ?�패:', layerError);
           }
           
-          // 2. 모델스페이스 엔티티에서 레이어 정보 추출
+          // 2. 모델?�페?�스 ?�티?�에???�이???�보 추출
           const modelSpaceEntities = this.libreDwg.dwg_getall_entities_in_model_space(dwgData);
-          console.log('모델스페이스 엔티티 수:', modelSpaceEntities?.length || 0);
           
-          // 레이어별 엔티티 정보 수집
+          // ?�이?�별 ?�티???�보 ?�집
           const layerMap = new Map<string, LayerInfo>();
           
-          // 3. 레이어 테이블 정보가 있으면 우선 사용
+          // 3. ?�이???�이�??�보가 ?�으�??�선 ?�용
           if (layerTableInfo && layerTableInfo.length > 0) {
             layerTableInfo.forEach((layer: any) => {
               const layerName = layer.name || layer.layer_name || '0';
@@ -338,14 +323,13 @@ export class CADParserService {
             });
           }
           
-          // 4. 엔티티에서 레이어 정보 수집 및 보완
+          // 4. ?�티?�에???�이???�보 ?�집 �?보완
           if (modelSpaceEntities && Array.isArray(modelSpaceEntities)) {
             modelSpaceEntities.forEach((entity: any, index: number) => {
               const layerName = entity.layer || entity.layer_name || '0';
               
-              // 상세한 엔티티 정보 로깅 (처음 5개만)
+              // ?�세???�티???�보 로깅 (처음 5개만)
               if (index < 5) {
-                console.log(`엔티티 ${index}:`, {
                   type: entity.type,
                   layer: entity.layer,
                   layer_name: entity.layer_name,
@@ -371,7 +355,7 @@ export class CADParserService {
               layerInfo.entityCount++;
               layerInfo.entityTypes[entity.type] = (layerInfo.entityTypes[entity.type] || 0) + 1;
               
-              // 엔티티에서 더 정확한 레이어 속성 정보 업데이트
+              // ?�티?�에?????�확???�이???�성 ?�보 ?�데?�트
               if (entity.color !== undefined && layerInfo.color === undefined) {
                 layerInfo.color = entity.color;
               }
@@ -383,7 +367,6 @@ export class CADParserService {
           
           const layers = Array.from(layerMap.values()).sort((a, b) => a.name.localeCompare(b.name));
           
-          console.log('최종 추출된 레이어 정보:', {
             totalLayers: layers.length,
             layerNames: layers.map(l => l.name),
             layerDetails: layers
@@ -394,9 +377,9 @@ export class CADParserService {
             layers
           };
         } catch (libreDwgError) {
-          console.warn('LibreDwg 레이어 추출 실패, 테스트 레이어 반환:', libreDwgError);
+          console.warn('LibreDwg ?�이??추출 ?�패, ?�스???�이??반환:', libreDwgError);
           
-          // 테스트용 레이어 정보 반환
+          // ?�스?�용 ?�이???�보 반환
           const testLayers: LayerInfo[] = [
             {
               name: 'outline',
@@ -438,8 +421,8 @@ export class CADParserService {
           };
         }
       } else {
-        // LibreDwg가 없는 경우 테스트 레이어 반환
-        console.warn('LibreDwg 라이브러리가 없습니다. 테스트 레이어를 반환합니다.');
+        // LibreDwg가 ?�는 경우 ?�스???�이??반환
+        console.warn('LibreDwg ?�이브러리�? ?�습?�다. ?�스???�이?��? 반환?�니??');
         
         const testLayers: LayerInfo[] = [
           {
@@ -482,17 +465,17 @@ export class CADParserService {
         };
       }
     } catch (error) {
-      console.error('레이어 정보 추출 실패:', error);
+      console.error('?�이???�보 추출 ?�패:', error);
       return {
         success: false,
         layers: [],
-        error: `레이어 정보 추출에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`
+        error: `?�이???�보 추출???�패?�습?�다: ${error instanceof Error ? error.message : '?????�는 ?�류'}`
       };
     }
   }
 
   /**
-   * DWG 파일 파싱 (레이어 필터링 포함)
+   * DWG ?�일 ?�싱 (?�이???�터�??�함)
    */
   public async parseDWGFile(file: File, selectedLayers?: string[]): Promise<CADParseResult> {
     try {
@@ -501,36 +484,33 @@ export class CADParserService {
         if (!initialized) {
           return {
             success: false,
-            error: 'CAD Parser Service가 초기화되지 않았습니다.'
+            error: 'CAD Parser Service가 초기?�되지 ?�았?�니??'
           };
         }
       }
 
-      // 파일을 ArrayBuffer로 읽기
+      // ?�일??ArrayBuffer�??�기
       const arrayBuffer = await file.arrayBuffer();
       
-      console.log('DWG 파일 읽기 시작, 크기:', arrayBuffer.byteLength);
       
-      // @mlightcad/libredwg-web으로 DWG 파일 파싱 시도
+      // @mlightcad/libredwg-web?�로 DWG ?�일 ?�싱 ?�도
       if (this.libreDwgWeb) {
         try {
-          console.log('@mlightcad/libredwg-web을 사용하여 DWG 파일 파싱...');
           
-          // DWG 파일 타입 상수 (Dwg_File_Type.DWG = 0)
+          // DWG ?�일 ?�???�수 (Dwg_File_Type.DWG = 0)
           const dwgData = this.libreDwgWeb.dwg_read_data(arrayBuffer, 0);
-          console.log('LibreDwg Web 파싱 결과:', dwgData);
           
           if (dwgData.error !== 0) {
-            throw new Error(`DWG 파일 읽기 실패: 오류 코드 ${dwgData.error}`);
+            throw new Error(`DWG ?�일 ?�기 ?�패: ?�류 코드 ${dwgData.error}`);
           }
           
-          // DwgDatabase로 변환
+          // DwgDatabase�?변??
           const db = this.libreDwgWeb.convert(dwgData);
           
-          // 파싱된 데이터를 표준 형식으로 변환 (레이어 필터링 포함)
+          // ?�싱???�이?��? ?��? ?�식?�로 변??(?�이???�터�??�함)
           const cadData = this.convertLibreDwgWebToCAD(db, file.name, selectedLayers);
           
-          // 메모리 해제
+          // 메모�??�제
           this.libreDwgWeb.dwg_free(dwgData);
           
           return {
@@ -538,22 +518,21 @@ export class CADParserService {
             data: cadData
           };
         } catch (libredwgWebError) {
-          console.warn('@mlightcad/libredwg-web 파싱 실패, 테스트 데이터로 대체:', libredwgWebError);
+          console.warn('@mlightcad/libredwg-web ?�싱 ?�패, ?�스???�이?�로 ?��?', libredwgWebError);
           
-          // 테스트를 위한 샘플 데이터 반환 (레이어 필터링 포함)
+          // ?�스?��? ?�한 ?�플 ?�이??반환 (?�이???�터�??�함)
           const testData = this.createTestCADData(file.name, selectedLayers);
           return {
             success: true,
             data: testData,
-            warnings: ['@mlightcad/libredwg-web 파싱에 실패하여 테스트 데이터를 반환합니다.']
+            warnings: ['@mlightcad/libredwg-web ?�싱???�패?�여 ?�스???�이?��? 반환?�니??']
           };
         }
       } else if (this.libreDwg) {
         try {
           const dwgData = await this.libreDwg.dwg_read_data(arrayBuffer);
-          console.log('LibreDwg 파싱 결과:', dwgData);
           
-          // 파싱된 데이터를 표준 형식으로 변환 (레이어 필터링 포함)
+          // ?�싱???�이?��? ?��? ?�식?�로 변??(?�이???�터�??�함)
           const cadData = this.convertDWGToCAD(dwgData, file.name, selectedLayers);
           
           return {
@@ -561,39 +540,39 @@ export class CADParserService {
             data: cadData
           };
         } catch (libreDwgError) {
-          console.warn('LibreDwg 파싱 실패, 테스트 데이터로 대체:', libreDwgError);
+          console.warn('LibreDwg ?�싱 ?�패, ?�스???�이?�로 ?��?', libreDwgError);
           
-          // 테스트를 위한 샘플 데이터 반환 (레이어 필터링 포함)
+          // ?�스?��? ?�한 ?�플 ?�이??반환 (?�이???�터�??�함)
           const testData = this.createTestCADData(file.name, selectedLayers);
           return {
             success: true,
             data: testData,
-            warnings: ['LibreDwg 파싱에 실패하여 테스트 데이터를 반환합니다.']
+            warnings: ['LibreDwg ?�싱???�패?�여 ?�스???�이?��? 반환?�니??']
           };
         }
       } else {
-        // LibreDwg가 없는 경우 테스트 모드로 동작
-        console.warn('LibreDwg 라이브러리가 없습니다. 테스트 모드로 실행합니다.');
+        // LibreDwg가 ?�는 경우 ?�스??모드�??�작
+        console.warn('LibreDwg ?�이브러리�? ?�습?�다. ?�스??모드�??�행?�니??');
         
-        // 테스트를 위한 샘플 데이터 반환 (레이어 필터링 포함)
+        // ?�스?��? ?�한 ?�플 ?�이??반환 (?�이???�터�??�함)
         const testData = this.createTestCADData(file.name, selectedLayers);
         return {
           success: true,
           data: testData,
-          warnings: ['LibreDwg 라이브러리가 없어 테스트 데이터를 반환합니다.']
+          warnings: ['LibreDwg ?�이브러리�? ?�어 ?�스???�이?��? 반환?�니??']
         };
       }
     } catch (error) {
-      console.error('DWG 파일 처리 실패:', error);
+      console.error('DWG ?�일 처리 ?�패:', error);
       return {
         success: false,
-        error: `DWG 파일 처리에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`
+        error: `DWG ?�일 처리???�패?�습?�다: ${error instanceof Error ? error.message : '?????�는 ?�류'}`
       };
     }
   }
 
   /**
-   * DXF 파일 파싱 (대안)
+   * DXF ?�일 ?�싱 (?�??
    */
   public async parseDXFFile(file: File): Promise<CADParseResult> {
     if (!this.isInitialized) {
@@ -601,55 +580,50 @@ export class CADParserService {
       if (!initialized) {
         return {
           success: false,
-          error: 'CAD Parser Service가 초기화되지 않았습니다.'
+          error: 'CAD Parser Service가 초기?�되지 ?�았?�니??'
         };
       }
     }
 
     try {
-      // DXF 파일은 현재 LibreDwg에서 직접 지원하지 않음
-      // DWG로 변환 후 처리하거나 다른 방법 사용
-      console.warn(`DXF 파일 파싱 요청: ${file.name} (현재 지원하지 않음)`);
-      throw new Error('DXF 파일은 현재 지원하지 않습니다. DWG 파일을 사용해주세요.');
+      // DXF ?�일?� ?�재 LibreDwg?�서 직접 지?�하지 ?�음
+      // DWG�?변????처리?�거???�른 방법 ?�용
+      console.warn(`DXF ?�일 ?�싱 ?�청: ${file.name} (?�재 지?�하지 ?�음)`);
+      throw new Error('DXF ?�일?� ?�재 지?�하지 ?�습?�다. DWG ?�일???�용?�주?�요.');
     } catch (error) {
-      console.error('DXF 파일 파싱 실패:', error);
+      console.error('DXF ?�일 ?�싱 ?�패:', error);
       return {
         success: false,
-        error: `DXF 파일 파싱에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`
+        error: `DXF ?�일 ?�싱???�패?�습?�다: ${error instanceof Error ? error.message : '?????�는 ?�류'}`
       };
     }
   }
 
   /**
-   * @mlightcad/libredwg-web 데이터를 표준 CAD 형식으로 변환 (레이어 필터링 포함)
+   * @mlightcad/libredwg-web ?�이?��? ?��? CAD ?�식?�로 변??(?�이???�터�??�함)
    */
   private convertLibreDwgWebToCAD(db: any, fileName: string, selectedLayers?: string[]): CADData {
-    console.log('LibreDwg Web 데이터를 CAD 형식으로 변환 시작...');
     
-    // 엔티티 추출
+    // ?�티??추출
     const entities = db.entities || [];
     const layers = db.layers || [];
     
-    console.log('추출된 엔티티 수:', entities.length);
-    console.log('추출된 레이어 수:', layers.length);
     
-    // 레이어 필터링 적용
+    // ?�이???�터�??�용
     let filteredEntities = entities;
     if (selectedLayers && selectedLayers.length > 0) {
       filteredEntities = entities.filter((entity: any) => {
         const entityLayer = entity.layer || entity.layer_name || '0';
         return selectedLayers.includes(entityLayer);
       });
-      console.log(`레이어 필터링 적용: ${entities.length} -> ${filteredEntities.length} 엔티티`);
     }
     
-    // 엔티티 변환
+    // ?�티??변??
     const cadEntities: CADEntity[] = filteredEntities.map((entity: any, index: number) => {
       const layerName = entity.layer || entity.layer_name || '0';
       
-      // 상세한 엔티티 정보 로깅 (처음 5개만)
+      // ?�세???�티???�보 로깅 (처음 5개만)
       if (index < 5) {
-        console.log(`변환 중인 엔티티 ${index}:`, {
           type: entity.type,
           layer: layerName,
           properties: Object.keys(entity)
@@ -664,7 +638,7 @@ export class CADParserService {
         linetype: entity.linetype
       };
       
-      // 엔티티 타입별 속성 매핑
+      // ?�티???�?�별 ?�성 매핑
       switch (entity.type?.toLowerCase()) {
         case 'line':
           return {
@@ -705,7 +679,7 @@ export class CADParserService {
       }
     });
     
-    // 레이어 목록 추출
+    // ?�이??목록 추출
     const layerNames = [...new Set(cadEntities.map(e => e.layer))];
     
     // 경계 계산
@@ -724,7 +698,6 @@ export class CADParserService {
       modifiedDate: new Date()
     };
     
-    console.log('LibreDwg Web CAD 데이터 변환 완료:', {
       entityCount: cadEntities.length,
       layerCount: layerNames.length,
       bounds
@@ -734,7 +707,7 @@ export class CADParserService {
   }
 
   /**
-   * 엔티티 타입을 표준 형식으로 매핑
+   * ?�티???�?�을 ?��? ?�식?�로 매핑
    */
   private mapEntityType(entityType: string): CADEntity['type'] {
     const type = entityType?.toLowerCase() || '';
@@ -754,12 +727,12 @@ export class CADParserService {
       case 'dimension':
         return 'dimension' as const;
       default:
-        return 'line' as const; // 기본값
+        return 'line' as const; // 기본�?
     }
   }
 
   /**
-   * 엔티티들의 경계를 계산
+   * ?�티?�들??경계�?계산
    */
   private calculateBounds(entities: CADEntity[]): { min: [number, number]; max: [number, number] } {
     let minX = Infinity, minY = Infinity;
@@ -811,7 +784,7 @@ export class CADParserService {
       }
     });
 
-    // 기본값 설정
+    // 기본�??�정
     if (minX === Infinity) {
       minX = minY = maxX = maxY = 0;
     }
@@ -823,7 +796,7 @@ export class CADParserService {
   }
 
   /**
-   * LibreDwg 데이터를 표준 CAD 형식으로 변환
+   * LibreDwg ?�이?��? ?��? CAD ?�식?�로 변??
    */
   private convertDWGToCAD(dwgData: any, fileName: string, selectedLayers?: string[]): CADData {
     const entities: CADEntity[] = [];
@@ -832,10 +805,9 @@ export class CADParserService {
     let maxX = -Infinity, maxY = -Infinity;
 
     try {
-      // LibreDwg에서 모델스페이스의 모든 엔티티 가져오기
+      // LibreDwg?�서 모델?�페?�스??모든 ?�티??가?�오�?
       const modelSpaceEntities = this.libreDwg?.dwg_getall_entities_in_model_space(dwgData);
       
-      console.log('LibreDwg 원본 엔티티 데이터:', {
         totalEntities: modelSpaceEntities?.length || 0,
         entityTypes: modelSpaceEntities?.map((e: any) => e.type) || [],
         sampleEntity: modelSpaceEntities?.[0] || null
@@ -846,11 +818,10 @@ export class CADParserService {
         let skippedCount = 0;
         
         modelSpaceEntities.forEach((entity: any, index: number) => {
-          // 레이어 필터링 적용
+          // ?�이???�터�??�용
           const entityLayer = entity.layer || '0';
           if (selectedLayers && selectedLayers.length > 0 && !selectedLayers.includes(entityLayer)) {
             skippedCount++;
-            console.log(`레이어 필터링으로 제외됨 (${entityLayer}):`, entity.type);
             return;
           }
 
@@ -864,7 +835,7 @@ export class CADParserService {
             this.updateBounds(convertedEntity, minX, minY, maxX, maxY);
           } else {
             skippedCount++;
-            console.warn(`엔티티 변환 실패 (인덱스 ${index}):`, {
+            console.warn(`?�티??변???�패 (?�덱??${index}):`, {
               type: entity.type,
               layer: entity.layer,
               data: entity
@@ -872,23 +843,22 @@ export class CADParserService {
           }
         });
         
-        console.log('엔티티 변환 결과:', {
           total: modelSpaceEntities.length,
           converted: convertedCount,
           skipped: skippedCount,
           successRate: `${((convertedCount / modelSpaceEntities.length) * 100).toFixed(1)}%`
         });
       } else {
-        console.warn('모델스페이스 엔티티를 가져올 수 없습니다:', modelSpaceEntities);
+        console.warn('모델?�페?�스 ?�티?��? 가?�올 ???�습?�다:', modelSpaceEntities);
       }
     } catch (error) {
-      console.warn('LibreDwg 엔티티 변환 중 오류:', error);
+      console.warn('LibreDwg ?�티??변??�??�류:', error);
     }
 
     return {
       id: `cad-${Date.now()}`,
       name: fileName,
-      type: '2d', // 기본값, 실제로는 3D 여부를 확인해야 함
+      type: '2d', // 기본�? ?�제로는 3D ?��?�??�인?�야 ??
       entities,
       bounds: {
         min: [minX === Infinity ? 0 : minX, minY === Infinity ? 0 : minY],
@@ -903,11 +873,10 @@ export class CADParserService {
 
 
   /**
-   * 개별 엔티티 변환
+   * 개별 ?�티??변??
    */
   private convertEntity(entity: any, index: number): CADEntity | null {
     try {
-      console.log(`엔티티 변환 시도 (${index}):`, {
         type: entity.type,
         layer: entity.layer,
         handle: entity.handle,
@@ -982,17 +951,17 @@ export class CADParserService {
           };
 
         default:
-          console.warn(`지원하지 않는 엔티티 타입: ${entity.type}`);
+          console.warn(`지?�하지 ?�는 ?�티???�?? ${entity.type}`);
           return null;
       }
     } catch (error) {
-      console.error(`엔티티 변환 실패 (${entity.type}):`, error);
+      console.error(`?�티??변???�패 (${entity.type}):`, error);
       return null;
     }
   }
 
   /**
-   * 경계 계산 업데이트
+   * 경계 계산 ?�데?�트
    */
   private updateBounds(entity: CADEntity, minX: number, minY: number, maxX: number, maxY: number): void {
     switch (entity.type) {
@@ -1034,7 +1003,7 @@ export class CADParserService {
   }
 
   /**
-   * 지원하는 파일 형식 확인
+   * 지?�하???�일 ?�식 ?�인
    */
   public isFileSupported(file: File): boolean {
     const extension = file.name.toLowerCase().split('.').pop();
@@ -1042,7 +1011,7 @@ export class CADParserService {
   }
 
   /**
-   * DWG 파일 상세 분석 (디버깅용)
+   * DWG ?�일 ?�세 분석 (?�버깅용)
    */
   public async analyzeDWGFileDetailed(file: File): Promise<{
     success: boolean;
@@ -1079,7 +1048,6 @@ export class CADParserService {
         type: file.type
       };
 
-      console.log('DWG 파일 상세 분석 시작:', fileInfo);
 
       if (!this.isInitialized) {
         const initialized = await this.initialize();
@@ -1087,7 +1055,7 @@ export class CADParserService {
           return {
             success: false,
             fileInfo,
-            error: 'CAD Parser Service가 초기화되지 않았습니다.'
+            error: 'CAD Parser Service가 초기?�되지 ?�았?�니??'
           };
         }
       }
@@ -1104,7 +1072,7 @@ export class CADParserService {
           const modelSpaceEntities = this.libreDwg.dwg_getall_entities_in_model_space(dwgData);
           const allEntityTypes = [...new Set(modelSpaceEntities?.map((e: any) => e.type) || [])];
           
-          // 레이어 테이블 정보 추출 시도
+          // ?�이???�이�??�보 추출 ?�도
           let layerTableInfo: any[] = [];
           let hasLayerTable = false;
           try {
@@ -1113,10 +1081,10 @@ export class CADParserService {
               hasLayerTable = layerTableInfo.length > 0;
             }
           } catch (layerError) {
-            console.warn('레이어 테이블 추출 실패:', layerError);
+            console.warn('?�이???�이�?추출 ?�패:', layerError);
           }
 
-          // 엔티티에서 레이어 이름 추출
+          // ?�티?�에???�이???�름 추출
           const entityLayerNames = [...new Set(modelSpaceEntities?.map((e: any) => e.layer || e.layer_name || '0') || [])];
           const layerTableNames = layerTableInfo.map((l: any) => l.name || l.layer_name || '0');
 
@@ -1129,7 +1097,7 @@ export class CADParserService {
             layerNames: entityLayerNames
           };
 
-          // 레이어 분석
+          // ?�이??분석
           const layerResult = await this.extractLayerInfo(file);
           if (layerResult.success) {
             layerAnalysis = {
@@ -1147,7 +1115,7 @@ export class CADParserService {
           }
 
         } catch (libreDwgError) {
-          console.warn('LibreDwg 상세 분석 실패:', libreDwgError);
+          console.warn('LibreDwg ?�세 분석 ?�패:', libreDwgError);
           dwgStructure = {
             hasLayerTable: false,
             layerTableInfo: [],
@@ -1159,7 +1127,6 @@ export class CADParserService {
         }
       }
 
-      console.log('DWG 파일 상세 분석 완료:', {
         dwgStructure,
         layerAnalysis
       });
@@ -1172,7 +1139,7 @@ export class CADParserService {
       };
 
     } catch (error) {
-      console.error('DWG 파일 상세 분석 실패:', error);
+      console.error('DWG ?�일 ?�세 분석 ?�패:', error);
       return {
         success: false,
         fileInfo: {
@@ -1181,13 +1148,13 @@ export class CADParserService {
           lastModified: new Date(file.lastModified),
           type: file.type
         },
-        error: `파일 분석 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`
+        error: `?�일 분석 �??�류가 발생?�습?�다: ${error instanceof Error ? error.message : '?????�는 ?�류'}`
       };
     }
   }
 
   /**
-   * DWG 파일 정보 분석 (디버깅용)
+   * DWG ?�일 ?�보 분석 (?�버깅용)
    */
   public async analyzeDWGFile(file: File): Promise<{
     success: boolean;
@@ -1215,9 +1182,8 @@ export class CADParserService {
         type: file.type
       };
 
-      console.log('DWG 파일 분석 시작:', fileInfo);
 
-      // 파일 파싱 시도
+      // ?�일 ?�싱 ?�도
       const parseResult = await this.parseDWGFile(file);
 
       if (parseResult.success && parseResult.data) {
@@ -1236,7 +1202,6 @@ export class CADParserService {
           warnings: parseResult.warnings || []
         };
 
-        console.log('DWG 파일 분석 완료:', analysis);
 
         return {
           success: true,
@@ -1248,11 +1213,11 @@ export class CADParserService {
         return {
           success: false,
           fileInfo,
-          error: parseResult.error || '파일 파싱에 실패했습니다.'
+          error: parseResult.error || '?�일 ?�싱???�패?�습?�다.'
         };
       }
     } catch (error) {
-      console.error('DWG 파일 분석 실패:', error);
+      console.error('DWG ?�일 분석 ?�패:', error);
       return {
         success: false,
         fileInfo: {
@@ -1261,13 +1226,13 @@ export class CADParserService {
           lastModified: new Date(file.lastModified),
           type: file.type
         },
-        error: `파일 분석 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`
+        error: `?�일 분석 �??�류가 발생?�습?�다: ${error instanceof Error ? error.message : '?????�는 ?�류'}`
       };
     }
   }
 
   /**
-   * 서비스 상태 확인
+   * ?�비???�태 ?�인
    */
   public getStatus(): { initialized: boolean; libreDwg: boolean } {
     return {
@@ -1277,14 +1242,14 @@ export class CADParserService {
   }
 
   /**
-   * 테스트용 CAD 데이터 생성
+   * ?�스?�용 CAD ?�이???�성
    */
   private createTestCADData(fileName: string, selectedLayers?: string[]): CADData {
     const timestamp = Date.now();
     
-    // 모든 테스트 엔티티 정의
+    // 모든 ?�스???�티???�의
     const allTestEntities: CADEntity[] = [
-        // 직사각형 단면 예시 (외곽선)
+        // 직사각형 ?�면 ?�시 (?�곽??
         { 
           id: 'line1', 
           type: 'line' as const, 
@@ -1322,7 +1287,7 @@ export class CADParserService {
           linetype: 'CONTINUOUS'
         },
         
-        // 내부 벽
+        // ?��? �?
         { 
           id: 'line5', 
           type: 'line' as const, 
@@ -1360,7 +1325,7 @@ export class CADParserService {
           linetype: 'DASHED'
         },
         
-        // 원형 개구부
+        // ?�형 개구부
         { 
           id: 'circle1', 
           type: 'circle' as const, 
@@ -1380,7 +1345,7 @@ export class CADParserService {
           linetype: 'CONTINUOUS'
         },
         
-        // 호형 개구부
+        // ?�형 개구부
         { 
           id: 'arc1', 
           type: 'arc' as const, 
@@ -1393,7 +1358,7 @@ export class CADParserService {
           linetype: 'CONTINUOUS'
         },
         
-        // 추가 내부 선
+        // 추�? ?��? ??
         { 
           id: 'line9', 
           type: 'line' as const, 
@@ -1413,7 +1378,7 @@ export class CADParserService {
           linetype: 'DASHED'
         },
         
-        // 텍스트 라벨
+        // ?�스???�벨
         { 
           id: 'text1', 
           type: 'text' as const, 
@@ -1436,7 +1401,7 @@ export class CADParserService {
         }
       ];
 
-    // 레이어 필터링 적용
+    // ?�이???�터�??�용
     let filteredEntities = allTestEntities;
     let filteredLayers = ['outline', 'internal', 'opening', 'text'];
     
@@ -1445,7 +1410,6 @@ export class CADParserService {
         selectedLayers.includes(entity.layer)
       );
       filteredLayers = selectedLayers;
-      console.log('테스트 데이터 레이어 필터링 적용:', {
         selectedLayers,
         filteredEntityCount: filteredEntities.length,
         originalEntityCount: allTestEntities.length
@@ -1467,11 +1431,11 @@ export class CADParserService {
   }
 
   /**
-   * 메모리 정리
+   * 메모�??�리
    */
   public cleanup(): void {
     if (this.libreDwg) {
-      // LibreDwg 리소스 정리
+      // LibreDwg 리소???�리
       this.libreDwg = null;
     }
     this.isInitialized = false;

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+﻿import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { Tenant, User } from '@inno-spec/shared';
 
 interface TenantContextType {
@@ -24,7 +24,7 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
     // 개발용 기본 테넌트 정보
     return {
       id: 'tenant-1',
-      name: '테스트 기업',
+      name: '테스트기업',
       code: 'DEV001',
       description: '테스트용 기업 계정',
       status: 'active',
@@ -39,7 +39,7 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
         customFields: [],
         branding: {
           primaryColor: '#3b82f6',
-          companyName: '테스트 기업',
+          companyName: '테스트기업',
           contactEmail: 'contact@test.com'
         },
         security: {
@@ -89,7 +89,7 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 개발 모드: 초기화 로직 제거 (바로 인증된 상태로 시작)
+  // 개발 모드: 초기 로직 제거 (바로 인증된 상태로 시작)
 
 
   const login = async (tenantCode: string, username: string, _password: string): Promise<boolean> => {
@@ -102,7 +102,7 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
       // 임시 로그인 로직 (개발용)
       const mockTenant: Tenant = {
         id: 'tenant-1',
-        name: '테스트 기업',
+        name: '테스트기업',
         code: tenantCode,
         description: '테스트용 기업 계정',
         status: 'active',
@@ -117,7 +117,7 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
           customFields: [],
           branding: {
             primaryColor: '#3b82f6',
-            companyName: '테스트 기업',
+            companyName: '테스트기업',
             contactEmail: 'contact@test.com'
           },
           security: {
@@ -194,7 +194,6 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
       // const tenant = await tenantService.getTenantById(tenantId);
       // setCurrentTenant(tenant);
       
-      console.log('Switching to tenant:', tenantId);
     } catch (error) {
       console.error('Failed to switch tenant:', error);
     }
@@ -206,10 +205,10 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
       const userId = localStorage.getItem('current_user_id');
       
       if (tenantId && userId) {
-        // 개발 단계: mock 데이터 설정
+        // 개발 환경: mock 데이터로 설정
         const mockTenant: Tenant = {
           id: tenantId,
-          name: '테스트 기업',
+          name: '테스트기업',
           code: 'DEV001',
           description: '테스트용 기업 계정',
           status: 'active',
@@ -224,7 +223,7 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
             customFields: [],
             branding: {
               primaryColor: '#3b82f6',
-              companyName: '테스트 기업',
+              companyName: '테스트기업',
               contactEmail: 'contact@test.com'
             },
             security: {
@@ -270,7 +269,6 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
         setCurrentTenant(mockTenant);
         setCurrentUser(mockUser);
         
-        console.log('Refreshing user data for tenant:', tenantId);
       }
     } catch (error) {
       console.error('Failed to refresh user:', error);

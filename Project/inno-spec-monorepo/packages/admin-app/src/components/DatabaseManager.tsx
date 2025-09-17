@@ -625,12 +625,15 @@ const DatabaseManager: React.FC<DatabaseManagerProps> = ({ }) => {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen p-6">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">데이터베이스 관리</h1>
-        <p className="text-gray-600 mb-6">
-          교량 내진성능평가에 필요한 공통 데이터베이스를 관리합니다. 모든 프로젝트에서 공통으로 사용할 수 있습니다.
-        </p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* 헤더 */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">데이터베이스 관리</h1>
+          <p className="text-gray-600">
+            교량 내진성능평가에 필요한 공통 데이터베이스를 관리합니다. 모든 프로젝트에서 공통으로 사용할 수 있습니다.
+          </p>
+        </div>
         
         {/* 저장 상태 및 관리 버튼 */}
         <div className="flex items-center justify-between mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">

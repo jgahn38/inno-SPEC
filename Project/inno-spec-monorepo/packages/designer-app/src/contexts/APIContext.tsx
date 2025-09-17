@@ -175,9 +175,28 @@ export const APIProvider: React.FC<APIProviderProps> = ({ children }) => {
     refreshLNBConfigs();
   }, []);
 
+  // lnbConfigs가 비어있을 때 localStorage의 기본 구성 사용
+  const getEffectiveLNBConfigs = () => {
+    if (lnbConfigs.length > 0) {
+      return lnbConfigs;
+    }
+    
+    // localStorage에서 기본 구성 가져오기
+    try {
+      const storedConfigs = JSON.parse(localStorage.getItem('lnbConfigs') || '[]');
+      if (storedConfigs.length > 0) {
+        return storedConfigs;
+      }
+    } catch (error) {
+      console.error('Failed to parse stored LNB configs:', error);
+    }
+    
+    return lnbConfigs;
+  };
+
   const value: APIContextType = {
     screens,
-    lnbConfigs,
+    lnbConfigs: getEffectiveLNBConfigs(),
     loading,
     error,
     refreshScreens,

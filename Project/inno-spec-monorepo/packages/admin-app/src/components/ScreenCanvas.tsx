@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+﻿import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { X, Settings, Plus, Save } from 'lucide-react';
 import { ScreenComponent, ComponentConfig, ScreenConfig } from '../types';
 
@@ -26,23 +26,22 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
   availableVariables = []
 }) => {
   // 받은 데이터 로그
-  console.log('🎨 ScreenCanvas 받은 데이터:', {
-    hasScreen: !!screen,
-    screenLayout: screen?.layout,
+  // 받은 데이터 로그
+  console.log({
     availableTablesCount: availableTables.length,
     availableVariablesCount: availableVariables.length,
     availableTables: availableTables.map(t => ({ id: t.id, displayName: t.displayName })),
     availableVariables: availableVariables.map(v => ({ id: v.id, displayName: v.displayName }))
   });
 
-  // screen prop이 있으면 screen.components를 사용, 없으면 propComponents 사용
+  // screen props로부터 screen.components 사용, 없으면 propComponents 사용
   const components = screen ? screen.components : (propComponents || []);
   
-  // screen prop이 있으면 screen의 레이아웃 설정을 사용
+  // screen props로부터 screen의 레이아웃 설정 사용
   const screenTabs = screen ? screen.tabs : null;
-  // const screenGridConfig = screen ? screen.gridConfig : null; // 사용하지 않음
+  // const screenGridConfig = screen ? screen.gridConfig : null; // ?�용?��? ?�음
   
-  // 초기 상태 저장
+  // 초기 상태 설정
   useEffect(() => {
     if (screen) {
       const layout = screen.layout || 'single';
@@ -53,11 +52,11 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
         ? [{ name: '단일 그리드', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } }]
         : tabs;
       
-      // setOriginalComponents([...components]); // 사용하지 않음
-      // setOriginalLayout(layout); // 사용하지 않음
-      // setOriginalTabs(finalTabs); // 사용하지 않음
+      // setOriginalComponents([...components]); // ?�용?��? ?�음
+      // setOriginalLayout(layout); // ?�용?��? ?�음
+      // setOriginalTabs(finalTabs); // ?�용?��? ?�음
       
-      // 로컬 상태도 초기화
+      // 로컬 상태를 초기화
       setLocalComponents([...components]);
       setLocalLayout(layout);
       setLocalTabs(finalTabs);
@@ -76,30 +75,30 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [draggedComponentPosition, setDraggedComponentPosition] = useState({ x: 0, y: 0 });
   const draggedComponentPositionRef = useRef({ x: 0, y: 0 });
-  // const [forceRerender, setForceRerender] = useState(0); // 사용하지 않음
+  // const [forceRerender, setForceRerender] = useState(0); // ?�용?��? ?�음
 
   const [tabs, setTabs] = useState<Array<{ name: string; gridConfig: { rows: Array<{ cols: Array<{ width: number }> }> } }>>([
-    { name: '탭 1', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }, { cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }, { cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } },
-    { name: '탭 2', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }, { cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }, { cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } }
+    { name: '탭1', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }, { cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }, { cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } },
+    { name: '탭2', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }, { cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }, { cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } }
   ]);
-  // const [newTabName, setNewTabName] = useState(''); // 사용하지 않음
+  // const [newTabName, setNewTabName] = useState(''); // ?�용?��? ?�음
   const [selectedTabIndex, setSelectedTabIndex] = useState(0);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // 변경사항 추적을 위한 상태
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  // const [originalComponents, setOriginalComponents] = useState<ScreenComponent[]>([]); // 사용하지 않음
-  // const [originalLayout, setOriginalLayout] = useState<'single' | 'grid' | 'tabs'>('single'); // 사용하지 않음
-  // const [originalTabs, setOriginalTabs] = useState<Array<{ name: string; gridConfig: { rows: Array<{ cols: Array<{ width: number }> }> } }>>([]); // 사용하지 않음
+  // const [originalComponents, setOriginalComponents] = useState<ScreenComponent[]>([]); // ?�용?��? ?�음
+  // const [originalLayout, setOriginalLayout] = useState<'single' | 'grid' | 'tabs'>('single'); // ?�용?��? ?�음
+  // const [originalTabs, setOriginalTabs] = useState<Array<{ name: string; gridConfig: { rows: Array<{ cols: Array<{ width: number }> }> } }>>([]); // ?�용?��? ?�음
   
-  // 로컬 편집 상태 (저장 전까지 임시 상태)
+  // 로컬 편집 상태 (저장까지 임시 상태)
   const [localComponents, setLocalComponents] = useState<ScreenComponent[]>([]);
   const [localLayout, setLocalLayout] = useState<'single' | 'grid' | 'tabs'>('single');
   const [localTabs, setLocalTabs] = useState<Array<{ name: string; gridConfig: { rows: Array<{ cols: Array<{ width: number }> }> } }>>([]);
 
 
 
-  // 변경사항 추적 함수들
+  // 변경사항 추적 함수
   const markAsChanged = () => {
     setHasUnsavedChanges(true);
   };
@@ -112,16 +111,16 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
   const handleLayoutChange = (layout: 'single' | 'grid' | 'tabs', _gridConfig?: { rows: number; cols: number }, tabs?: Array<{ name: string; gridConfig: { rows: Array<{ cols: Array<{ width: number }> }> } }>, components?: ScreenComponent[]) => {
     setLocalLayout(layout);
     if (tabs) {
-      // tabs가 이미 객체 배열인 경우 그대로 사용
+      // tabs가 빈 객체 배열인 경우 그대로 사용
       setLocalTabs(tabs);
     } else if (layout === 'single' && localTabs.length === 0) {
       // 단일 레이아웃이고 탭이 없으면 기본 탭 생성
       setLocalTabs([{ name: '단일 그리드', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } }]);
     } else if (layout === 'tabs' && localTabs.length === 0) {
-      // 탭 레이아웃이고 탭이 없으면 기본 탭 2개 생성
+      // 탭 레이아웃이고 빈 경우 기본 탭2개 생성
       setLocalTabs([
-        { name: '탭 1', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } },
-        { name: '탭 2', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } }
+        { name: '탭1', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } },
+        { name: '탭2', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } }
       ]);
     }
     if (components) {
@@ -130,37 +129,36 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
     markAsChanged();
   };
 
-  // 탭 레이아웃인데 탭이 없는 경우 기본 탭 생성
+  // 탭 레이아웃인데 빈 경우 기본 탭 생성
   useEffect(() => {
     if (screen && localLayout === 'tabs' && localTabs.length === 0) {
-      console.log('🚨 탭 레이아웃이지만 탭이 없음 - 기본 탭 생성 필요');
-      // 기본 탭 2개 생성
+      // 기본 탭2개 생성
       const defaultTabs = [
-        { name: '탭 1', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }, { cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }, { cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } },
-        { name: '탭 2', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }, { cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }, { cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } }
+        { name: '탭1', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }, { cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }, { cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } },
+        { name: '탭2', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }, { cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }, { cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } }
       ];
       setLocalTabs(defaultTabs);
       handleLayoutChange('tabs', undefined, defaultTabs, localComponents);
     }
   }, [screen, localLayout, localTabs, localComponents]);
 
-  // handleCancelChanges는 현재 사용되지 않음
+  // handleCancelChanges는 현재 사용하지 않음
 
   const handleSaveChanges = () => {
     if (!hasUnsavedChanges) return;
     
-    // 로컬 상태를 실제로 저장
+    // 로컬 상태를 제거하고
     onComponentsChange([...localComponents]);
     onLayoutChange(localLayout, undefined, localTabs, localComponents);
     
-    // 원래 상태를 현재 로컬 상태로 업데이트
-    // setOriginalComponents([...localComponents]); // 사용하지 않음
-    // setOriginalLayout(localLayout); // 사용하지 않음
-    // setOriginalTabs([...localTabs]); // 사용하지 않음
+    // 이전 상태를 현재 로컬 상태로 업데이트
+    // setOriginalComponents([...localComponents]); // ?�용?��? ?�음
+    // setOriginalLayout(localLayout); // ?�용?��? ?�음
+    // setOriginalTabs([...localTabs]); // ?�용?��? ?�음
     
     setHasUnsavedChanges(false);
     
-    // 로컬 상태 정리
+    // 로컬 ?�태 ?�리
     setShowLayoutSettings(false);
     setTempTabs([]);
   };
@@ -180,7 +178,6 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
     };
 
     if (draggedComponent) {
-      console.log('이벤트 리스너 추가됨');
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
     }
@@ -191,9 +188,9 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
     };
   }, [draggedComponent, dragOffset]);
 
-  // 현재 선택된 탭의 그리드 설정 가져오기 (로컬 상태 사용)
+  // 현재 선택된 탭의 그리드 설정 가져오기(로컬 상태 사용)
   const getCurrentGridConfig = () => {
-    // screen prop이 있으면 로컬 레이아웃 설정 사용
+    // screen props로부터 로컬 레이아웃 설정 사용
     if (screen) {
       if (localLayout === 'tabs' && localTabs.length > 0) {
         const tab = localTabs[selectedTabIndex];
@@ -201,48 +198,48 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
           return (tab as any).gridConfig.rows || [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }];
         }
       } else if (localLayout === 'single' && localTabs.length > 0) {
-        // 단일 레이아웃인 경우 첫 번째 탭의 그리드 설정 사용
+        // 단일 레이아웃인 경우 첫번째 탭의 그리드 설정 사용
         const tab = localTabs[0];
         if (tab && typeof tab === 'object' && 'gridConfig' in tab) {
           return (tab as any).gridConfig.rows || [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }];
         }
       }
-      // 기본값
+      // 기본�?
       return [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }];
     }
     
-    // 기본 로컬 tabs 사용
+    // 기본 로컬 tabs ?�용
     if (tabs.length === 0) {
-      return [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }, { cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }, { cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }]; // 기본값
+      return [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }, { cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }, { cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }]; // 기본�?
     }
     return tabs[selectedTabIndex]?.gridConfig.rows || [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }, { cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }, { cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }];
   };
 
-  // 특정 행의 열 설정 가져오기
+  // 탭의 그리드 설정 가져오기
   const getRowCols = (rowIndex: number) => {
     const gridConfig = getCurrentGridConfig();
     return gridConfig[rowIndex]?.cols || [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }];
   };
 
-  // 특정 행의 열 개수 가져오기
+  // 탭의 행 개수 가져오기
   const getRowColCount = (rowIndex: number) => {
     return getRowCols(rowIndex).length;
   };
 
-  // 특정 행의 특정 열의 폭 비율 가져오기
+  // 탭의 설정된 행의 비율 가져오기
   const getColWidth = (rowIndex: number, colIndex: number) => {
     const rowCols = getRowCols(rowIndex);
     const width = rowCols[colIndex]?.width;
     return typeof width === 'number' ? width : 0.25;
   };
 
-  // 특정 행의 누적 폭 비율 계산 (열 위치 계산용)
+  // 탭의 실제 행 비율 계산 (높이 계산용)
   const getColPosition = (rowIndex: number, colIndex: number) => {
     const rowCols = getRowCols(rowIndex);
     return rowCols.slice(0, colIndex).reduce((sum: number, col: any) => sum + (typeof col.width === 'number' ? col.width : 0.25), 0);
   };
 
-  // 드래그 시작
+  // 이전으로 되돌리기
   const handleDragStart = (e: React.DragEvent, item: DraggedItem) => {
     setDraggedItem(item);
     e.dataTransfer.effectAllowed = 'copy';
@@ -250,11 +247,10 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
 
 
 
-  // 현재 탭의 컴포넌트들만 가져오기 (로컬 상태 사용)
+  // 현재 선택된 컴포넌트만 가져오기(로컬 상태 사용)
   const getCurrentTabComponents = () => {
-    console.log('🔍 getCurrentTabComponents 호출:', {
+    console.log({
       hasScreen: !!screen,
-      localLayout,
       screenId: screen?.id,
       screenName: screen?.name,
       hasLocalTabs: localTabs.length > 0,
@@ -270,16 +266,14 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
     });
     
     if (screen && localLayout === 'tabs' && localTabs.length > 0) {
-      // 탭 레이아웃인 경우 현재 탭의 컴포넌트만 반환
-      // tabIndex가 undefined인 기존 컴포넌트들은 첫 번째 탭(인덱스 0)에 속하도록 처리
+      // 탭 레이아웃인 경우 현재 탭의 컴포넌트 반환
+      // tabIndex가 undefined면 기존 컴포넌트의 첫번째 탭 인덱스(0)로 처리
       const filteredComponents = localComponents.filter(comp => {
         const compTabIndex = comp.tabIndex !== undefined ? comp.tabIndex : 0;
         const isMatch = compTabIndex === selectedTabIndex;
-        console.log(`  📋 컴포넌트 ${comp.id} (${comp.displayName}): tabIndex=${comp.tabIndex} -> compTabIndex=${compTabIndex}, selectedTabIndex=${selectedTabIndex}, match=${isMatch}`);
         return isMatch;
       });
-      
-      console.log('✅ 탭별 필터링 결과:', {
+        console.log({
         selectedTabIndex,
         filteredCount: filteredComponents.length,
         filteredComponents: filteredComponents.map(c => ({ id: c.id, displayName: c.displayName, position: c.position }))
@@ -288,19 +282,18 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
       return filteredComponents;
     }
     // 단일 그리드 레이아웃인 경우 모든 컴포넌트 반환
-    console.log('📄 단일 그리드 레이아웃 - 모든 컴포넌트 반환');
     return localComponents;
   };
 
-  // 컴포넌트 삭제
+  // 컴포넌트 추가
   const handleDeleteComponent = (componentId: string) => {
     const updatedComponents = localComponents.filter(comp => comp.id !== componentId);
     handleComponentsChange(updatedComponents);
     setSelectedComponent(null);
-    // setForceRerender(prev => prev + 1); // 사용하지 않음
+    // setForceRerender(prev => prev + 1); // ?�용?��? ?�음
   };
 
-  // 컴포넌트 설정 변경
+  // 컴포?�트 ?�정 변�?
   const handleComponentConfigChange = (componentId: string, updates: Partial<ComponentConfig>) => {
     const updatedComponents = localComponents.map(comp => 
       comp.id === componentId 
@@ -310,7 +303,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
     handleComponentsChange(updatedComponents);
   };
 
-  // 컴포넌트 위치/크기 변경
+  // 컴포?�트 ?�치/?�기 변�?
   const handleComponentResize = (componentId: string, updates: Partial<{ x: number; y: number; width: number; height: number }>) => {
     const updatedComponents = localComponents.map(comp => 
       comp.id === componentId 
@@ -320,27 +313,27 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
     handleComponentsChange(updatedComponents);
   };
 
-  // 행 추가
-  // handleAddRow는 현재 사용되지 않음
+  // ??추�?
+  // handleAddRow???�재 ?�용?��? ?�음
 
-  // handleDeleteRow는 현재 사용되지 않음
+  // handleDeleteRow???�재 ?�용?��? ?�음
 
-  // handleAddCol는 현재 사용되지 않음
+  // handleAddCol???�재 ?�용?��? ?�음
 
-  // handleDeleteCol는 현재 사용되지 않음
+  // handleDeleteCol???�재 ?�용?��? ?�음
 
-  // handleColWidthChange는 현재 사용되지 않음
+  // handleColWidthChange???�재 ?�용?��? ?�음
 
-  // handleAddTab는 현재 사용되지 않음
+  // handleAddTab???�재 ?�용?��? ?�음
 
-  // handleDeleteTab, handleTabNameChange는 현재 사용되지 않음
+  // handleDeleteTab, handleTabNameChange???�재 ?�용?��? ?�음
 
-  // 레이아웃 설정 대화창 열기
+  // ?�이?�웃 ?�정 ?�?�창 ?�기
   const handleOpenLayoutSettings = () => {
     let tabsToUse;
     
     if (screen) {
-      // screen prop이 있으면 로컬 탭 설정을 사용
+      // screen prop???�으�?로컬 ???�정???�용
       if (localLayout === 'tabs') {
         if (localTabs && localTabs.length > 0) {
           tabsToUse = localTabs.map(tab => ({
@@ -350,16 +343,16 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
               : { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] }
           }));
         } else {
-          // 탭 레이아웃이지만 탭이 없으면 기본 탭 생성
+          // ???�이?�웃?��?�???�� ?�으�?기본 ???�성
           tabsToUse = [
-            { name: '탭 1', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } },
-            { name: '탭 2', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } }
+            { name: '??1', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } },
+            { name: '??2', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } }
           ];
         }
       } else {
-        // 단일 레이아웃인 경우
+        // ?�일 ?�이?�웃??경우
         if (localTabs && localTabs.length > 0) {
-          // 기존 localTabs의 첫 번째 탭 사용
+          // 기존 localTabs??�?번째 ???�용
           tabsToUse = [localTabs[0]];
         } else {
           // 기본 단일 그리드 설정
@@ -369,78 +362,78 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
     } else {
       // screen prop이 없으면 기본 tabs 사용
       tabsToUse = tabs.length > 0 ? tabs : [
-        { name: '탭 1', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } },
-        { name: '탭 2', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } }
+        { name: '탭1', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } },
+        { name: '탭2', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } }
       ];
     }
     
-    setTempTabs(JSON.parse(JSON.stringify(tabsToUse))); // 깊은 복사
+    setTempTabs(JSON.parse(JSON.stringify(tabsToUse))); // 깊�? 복사
     setShowLayoutSettings(true);
   };
 
-  // 레이아웃 설정 저장
+  // ?�이?�웃 ?�정 ?�??
   const handleSaveLayoutSettings = () => {
     if (screen) {
-      // screen prop이 있으면 로컬 탭 설정을 업데이트
+      // screen prop???�으�?로컬 ???�정???�데?�트
       if (localLayout === 'single') {
-        // 단일 레이아웃인 경우 tempTabs의 첫 번째 탭만 사용
+        // ?�일 ?�이?�웃??경우 tempTabs??�?번째 ??�� ?�용
         setLocalTabs(tempTabs.length > 0 ? [tempTabs[0]] : []);
         handleLayoutChange(localLayout, undefined, tempTabs.length > 0 ? [tempTabs[0]] : [], localComponents);
       } else {
-        // 탭 레이아웃인 경우 모든 탭 사용
+        // ???�이?�웃??경우 모든 ???�용
         setLocalTabs(tempTabs);
         handleLayoutChange(localLayout, undefined, tempTabs, localComponents);
       }
     } else {
-      // screen prop이 없으면 기본 tabs 상태 업데이트
+      // screen prop???�으�?기본 tabs ?�태 ?�데?�트
       setTabs(tempTabs);
-      // 탭의 그리드 설정 정보를 포함하여 전달
+      // ??�� 그리???�정 ?�보�??�함?�여 ?�달
       handleLayoutChange('tabs', undefined, tempTabs);
     }
     setShowLayoutSettings(false);
   };
 
-  // 레이아웃 설정 취소
+  // ?�이?�웃 ?�정 취소
   const handleCancelLayoutSettings = () => {
     setTempTabs([]);
     setShowLayoutSettings(false);
   };
 
-  // 임시 탭 관련 함수들
-  // handleTempAddRow는 현재 사용되지 않음
+  // ?�시 ??관???�수??
+  // handleTempAddRow???�재 ?�용?��? ?�음
 
-  // handleTempDeleteRow는 현재 사용되지 않음
+  // handleTempDeleteRow???�재 ?�용?��? ?�음
 
-  // handleTempAddCol는 현재 사용되지 않음
+  // handleTempAddCol???�재 ?�용?��? ?�음
 
-  // handleTempDeleteCol는 현재 사용되지 않음
+  // handleTempDeleteCol???�재 ?�용?��? ?�음
 
-  // handleTempColWidthChange는 현재 사용되지 않음
+  // handleTempColWidthChange???�재 ?�용?��? ?�음
 
-  // handleTempAddTab는 현재 사용되지 않음
+  // handleTempAddTab???�재 ?�용?��? ?�음
 
-  // handleTempDeleteTab, handleTempTabNameChange는 현재 사용되지 않음
+  // handleTempDeleteTab, handleTempTabNameChange???�재 ?�용?��? ?�음
 
-  // 레이어 순서 변경 함수들
+  // ?�이???�서 변�??�수??
   const handleLayerUp = (componentId: string) => {
     const targetComponent = localComponents.find(comp => comp.id === componentId);
     if (!targetComponent) return;
     
-    // 같은 셀에 있는 컴포넌트들 찾기 (현재 탭의 컴포넌트만)
+    // 같�? ?�???�는 컴포?�트??찾기 (?�재 ??�� 컴포?�트�?
     const currentTabComponents = getCurrentTabComponents();
     const cellComponents = currentTabComponents.filter(comp => 
       comp.position.x === targetComponent.position.x && 
       comp.position.y === targetComponent.position.y
     );
     
-    // 현재 레이어보다 높은 레이어의 컴포넌트 찾기
+    // ?�재 ?�이?�보???��? ?�이?�의 컴포?�트 찾기
     const currentLayer = targetComponent.layer || 0;
     const higherLayerComponent = cellComponents.find(comp => 
       comp.id !== componentId && (comp.layer || 0) > currentLayer
     );
     
     if (higherLayerComponent) {
-      // 레이어 교환
+      // ?�이??교환
       const updatedComponents = localComponents.map(comp => {
         if (comp.id === componentId) {
           return { ...comp, layer: higherLayerComponent.layer || 0 };
@@ -451,7 +444,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
       });
       
       handleComponentsChange(updatedComponents);
-      // setForceRerender(prev => prev + 1); // 사용하지 않음
+      // setForceRerender(prev => prev + 1); // ?�용?��? ?�음
     }
   };
 
@@ -459,21 +452,21 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
     const targetComponent = localComponents.find(comp => comp.id === componentId);
     if (!targetComponent) return;
     
-    // 같은 셀에 있는 컴포넌트들 찾기 (현재 탭의 컴포넌트만)
+    // 같�? ?�???�는 컴포?�트??찾기 (?�재 ??�� 컴포?�트�?
     const currentTabComponents = getCurrentTabComponents();
     const cellComponents = currentTabComponents.filter(comp => 
       comp.position.x === targetComponent.position.x && 
       comp.position.y === targetComponent.position.y
     );
     
-    // 현재 레이어보다 낮은 레이어의 컴포넌트 찾기
+    // 현재 탭의 보드에서 해당 탭의 컴포넌트 찾기
     const currentLayer = targetComponent.layer || 0;
     const lowerLayerComponent = cellComponents.find(comp => 
       comp.id !== componentId && (comp.layer || 0) < currentLayer
     );
     
     if (lowerLayerComponent) {
-      // 레이어 교환
+      // ?�이??교환
       const updatedComponents = localComponents.map(comp => {
         if (comp.id === componentId) {
           return { ...comp, layer: lowerLayerComponent.layer || 0 };
@@ -484,36 +477,33 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
       });
       
       handleComponentsChange(updatedComponents);
-      // setForceRerender(prev => prev + 1); // 사용하지 않음
+      // setForceRerender(prev => prev + 1); // ?�용?��? ?�음
     }
   };
 
-  // 동적 행 높이 계산 - useMemo로 최적화
+  // ?�적 ???�이 계산 - useMemo�?최적??
   const rowHeights = useMemo(() => {
-    console.log('useMemo 재계산 시작 - localComponents:', localComponents.map(c => ({ id: c.id, position: c.position })));
     
     const currentGridConfig = getCurrentGridConfig();
     const heights: number[] = [];
     const currentTabComponents = getCurrentTabComponents();
     
     for (let rowIndex = 0; rowIndex < currentGridConfig.length; rowIndex++) {
-      // 해당 행의 모든 컴포넌트들 찾기 (현재 탭의 컴포넌트만)
+      // ?�당 ?�의 모든 컴포?�트??찾기 (?�재 ??�� 컴포?�트�?
       const rowComponents = currentTabComponents.filter(comp => 
         comp.position.y === rowIndex
       );
-
-      console.log(`행 ${rowIndex} 높이 계산:`, {
+        console.log({
         componentsToUse: localComponents.length,
         rowComponents: rowComponents.length,
         components: rowComponents.map(c => ({ id: c.id, position: c.position }))
       });
 
-      // 컴포넌트가 없으면 기본 높이
+      // 컴포?�트가 ?�으�?기본 ?�이
       if (rowComponents.length === 0) {
-        console.log(`행 ${rowIndex}: 컴포넌트 없음, 기본 높이 50px`);
         heights[rowIndex] = 50;
       } else {
-        // 각 셀별로 컴포넌트 개수 계산
+        // �??�별로 컴포?�트 개수 계산
         const cellComponentCounts = new Map<string, number>();
         
         rowComponents.forEach(comp => {
@@ -521,31 +511,28 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
           cellComponentCounts.set(cellKey, (cellComponentCounts.get(cellKey) || 0) + 1);
         });
         
-        // 가장 많은 컴포넌트가 있는 셀의 개수 찾기
+        // 가??많�? 컴포?�트가 ?�는 ?�??개수 찾기
         const maxComponentsInCell = Math.max(...cellComponentCounts.values());
         
-        console.log(`행 ${rowIndex}: 셀별 컴포넌트 개수`, {
+        console.log({
           cellComponentCounts: Object.fromEntries(cellComponentCounts),
           maxComponentsInCell
         });
-        
-        // 컴포넌트 개수에 따른 높이 계산 (기본 50px + 추가 컴포넌트당 50px)
+        // 컴포?�트 개수???�른 ?�이 계산 (기본 50px + 추�? 컴포?�트??50px)
         const baseHeight = 50;
         const additionalHeight = Math.max(0, maxComponentsInCell - 1) * 50;
         const totalHeight = baseHeight + additionalHeight;
         
-        console.log(`행 ${rowIndex}: 높이 계산 완료`, {
           baseHeight,
           additionalHeight,
+        console.log({
           totalHeight,
           maxComponentsInCell
         });
-        
         heights[rowIndex] = totalHeight;
       }
     }
     
-    console.log('useMemo 재계산 완료 - heights:', heights);
     return heights;
   }, [localComponents, selectedTabIndex, localTabs, localLayout, screen]);
 
@@ -561,31 +548,28 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
     return top;
   };
 
-  // 컴포넌트 드래그 핸들러들
+  // 컴포?�트 ?�래�??�들?�들
   const handleComponentDragStart = (e: React.MouseEvent, componentId: string) => {
     e.preventDefault();
     e.stopPropagation();
     
-    console.log('드래그 시작:', componentId);
     
     const component = components.find(c => c.id === componentId);
     if (!component) {
-      console.log('컴포넌트를 찾을 수 없음:', componentId);
       return;
     }
 
-    console.log('컴포넌트 찾음:', component);
     
-    // 드래그 오프셋 계산 (캔버스 기준)
+    // ?�래�??�프??계산 (캔버??기�?)
     const rect = (e.target as HTMLElement).getBoundingClientRect();
     const canvasRect = canvasRef.current?.getBoundingClientRect();
     if (!canvasRect) return;
 
-    // 캔버스 내에서의 컴포넌트 위치
+    // 캔버???�에?�의 컴포?�트 ?�치
     const componentInCanvasX = rect.left - canvasRect.left;
     const componentInCanvasY = rect.top - canvasRect.top;
     
-    // 마우스 클릭 지점의 오프셋
+    // 마우???�릭 지?�의 ?�프??
     const offsetX = e.clientX - canvasRect.left - componentInCanvasX;
     const offsetY = e.clientY - canvasRect.top - componentInCanvasY;
     
@@ -602,14 +586,14 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
 
     const canvasRect = canvasRef.current.getBoundingClientRect();
     
-    // 오프셋을 고려한 마우스 위치 계산
+    // ?�프?�을 고려??마우???�치 계산
     const x = e.clientX - canvasRect.left - dragOffset.x;
     const y = e.clientY - canvasRect.top - dragOffset.y;
 
-    // 그리드 셀 위치로 변환 (동적 높이 사용)
+    // 그리???� ?�치�?변??(?�적 ?�이 ?�용)
     const currentGridConfig = getCurrentGridConfig();
     
-    // 동적 높이를 고려한 행 위치 계산
+    // 실제 높이를 고려한 위치 계산
     let gridY = 0;
     let accumulatedHeight = 0;
     for (let i = 0; i < currentGridConfig.length; i++) {
@@ -622,12 +606,12 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
     }
     gridY = Math.max(0, Math.min(gridY, currentGridConfig.length - 1));
     
-    // 해당 행의 열 수에 따라 셀 너비 계산
+    // ?�당 ?�의 ???�에 ?�라 ?� ?�비 계산
     const rowColCount = getRowColCount(gridY);
     const cellWidth = canvasRect.width / rowColCount;
     const gridX = Math.max(0, Math.min(Math.floor(x / cellWidth), rowColCount - 1));
 
-    // 드래그 중인 컴포넌트의 임시 위치 저장
+    // ?�래�?중인 컴포?�트???�시 ?�치 ?�??
     const newPosition = { x: gridX, y: gridY };
     setDraggedComponentPosition(newPosition);
     draggedComponentPositionRef.current = newPosition;
@@ -637,11 +621,8 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
     if (draggedComponent) {
       const finalPosition = draggedComponentPositionRef.current;
       
-      console.log('드래그 종료 - draggedComponentPosition:', finalPosition);
-      console.log('드래그 종료 - finalPosition (ref):', draggedComponentPositionRef.current);
-      console.log('드래그 종료 - 현재 컴포넌트들:', localComponents.map(c => ({ id: c.id, position: c.position })));
       
-      // 드래그 종료 시에만 실제 위치 업데이트
+      // ?�래�?종료 ?�에�??�제 ?�치 ?�데?�트
       const updatedComponents = localComponents.map(comp => {
         if (comp.id === draggedComponent) {
           return { 
@@ -655,20 +636,18 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
         }
         return comp;
       });
-      
-      console.log('컴포넌트 위치 업데이트:', {
+        console.log({
         from: localComponents.find(c => c.id === draggedComponent)?.position,
         to: finalPosition
       });
-      console.log('업데이트된 컴포넌트들:', updatedComponents.map(c => ({ id: c.id, position: c.position })));
       
-            // 부모 컴포넌트에 변경사항 전달
+            // 부�?컴포?�트??변경사???�달
       handleComponentsChange(updatedComponents);
       
-      // 강제 리렌더링을 위한 상태 업데이트
-      // setForceRerender(prev => prev + 1); // 사용하지 않음
+      // 강제 리렌?�링???�한 ?�태 ?�데?�트
+      // setForceRerender(prev => prev + 1); // ?�용?��? ?�음
       
-      // 드래그 상태 초기화
+      // ?�래�??�태 초기??
       setDraggedComponent(null);
       setDraggedComponentPosition({ x: 0, y: 0 });
       draggedComponentPositionRef.current = { x: 0, y: 0 };
@@ -679,16 +658,16 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
     }
   };
 
-  // 그리드 셀 렌더링
+  // 그리???� ?�더�?
   const renderGridCell = (x: number, y: number) => {
     const currentGridConfig = getCurrentGridConfig();
     
-    // 그리드 범위를 벗어나면 렌더링하지 않음
+    // 그리??범위�?벗어?�면 ?�더링하지 ?�음
     if (y >= currentGridConfig.length || x >= getRowColCount(y)) {
       return null;
     }
 
-    // 이 셀에 있는 모든 컴포넌트 찾기 (현재 탭의 컴포넌트만)
+    // ???�???�는 모든 컴포?�트 찾기 (?�재 ??�� 컴포?�트�?
     const currentTabComponents = getCurrentTabComponents();
     const cellComponents = currentTabComponents.filter(comp => {
       const isInComponent = comp.position.x <= x && 
@@ -701,10 +680,10 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
       return isInComponent;
     });
 
-    // 레이어 순서대로 정렬 (낮은 layer가 먼저, 높은 layer가 나중에)
+    // ?�이???�서?��??�렬 (??? layer가 먼�?, ?��? layer가 ?�중??
     const sortedComponents = cellComponents.sort((a, b) => (a.layer || 0) - (b.layer || 0));
 
-    // 시작 셀인 컴포넌트들 찾기
+    // ?�작 ?�??컴포?�트??찾기
     const startComponents = sortedComponents.filter(comp => comp.position.x === x && comp.position.y === y);
 
         return (
@@ -724,7 +703,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
         }}
         onClick={() => {
           if (startComponents.length > 0) {
-            // 가장 높은 레이어의 컴포넌트를 선택
+            // 가???��? ?�이?�의 컴포?�트�??�택
             const topComponent = startComponents[startComponents.length - 1];
             setSelectedComponent(topComponent.id);
           }
@@ -733,7 +712,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
           e.preventDefault();
           if (!draggedItem) return;
           
-          // 같은 셀에 있는 컴포넌트들의 최대 레이어 찾기 (현재 탭의 컴포넌트만)
+          // 같�? ?�???�는 컴포?�트?�의 최�? ?�이??찾기 (?�재 ??�� 컴포?�트�?
           const currentTabComponents = getCurrentTabComponents();
           const cellComponents = currentTabComponents.filter(comp => 
             comp.position.x === x && comp.position.y === y
@@ -756,11 +735,10 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
               maxRows: 10,
               refreshInterval: 0
             },
-            layer: maxLayer + 1, // 기존 컴포넌트들보다 위에 배치
+            layer: maxLayer + 1, // 기존 컴포?�트?�보???�에 배치
             tabIndex: screen && localLayout === 'tabs' && localTabs.length > 0 ? selectedTabIndex : undefined
           };
-          
-          console.log('🆕 새 컴포넌트 생성:', {
+          console.log({
             component: newComponent,
             currentTabIndex: selectedTabIndex,
             screenLayout: screen?.layout,
@@ -770,7 +748,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
 
           handleComponentsChange([...localComponents, newComponent]);
           setDraggedItem(null);
-          // setForceRerender(prev => prev + 1); // 사용하지 않음
+          // setForceRerender(prev => prev + 1); // ?�용?��? ?�음
         }}
         onDragOver={(e) => {
           e.preventDefault();
@@ -778,7 +756,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
         }}
       >
         {startComponents.map((component, index) => {
-          // 컴포넌트 높이를 고정 (50px)
+          // 컴포?�트 ?�이�?고정 (50px)
           const componentHeight = 50;
           const componentTop = index * componentHeight;
           
@@ -825,10 +803,10 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                             handleLayerUp(component.id);
                           }}
                           className="text-gray-600 hover:text-gray-800 p-1 flex items-center justify-center"
-                          title="위로"
+                          title="?�로"
                           style={{ width: '20px', height: '20px' }}
                         >
-                          <span className="text-xs leading-none">↑</span>
+                          <span className="text-xs leading-none">설정</span>
                         </button>
                         <button
                           onClick={(e) => {
@@ -836,10 +814,10 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                             handleLayerDown(component.id);
                           }}
                           className="text-gray-600 hover:text-gray-800 p-1 flex items-center justify-center"
-                          title="아래로"
+                          title="설정"
                           style={{ width: '20px', height: '20px' }}
                         >
-                          <span className="text-xs leading-none">↓</span>
+                          <span className="text-xs leading-none">설정</span>
                         </button>
                       </>
                     )}
@@ -849,7 +827,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                     setShowComponentSettings(component.id);
                   }}
                   className="text-blue-600 hover:text-blue-800 p-1"
-                  title="설정"
+                  title="?�정"
                 >
                   <Settings className="h-3 w-3" />
                 </button>
@@ -866,7 +844,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
               </div>
             </div>
                 <div className="text-xs text-blue-600 flex-shrink-0">
-              {component.type === 'table' ? '📊 테이블' : '📈 변수'}
+              {component.type === 'table' ? '테이블 데이터' : '일반 변수'}
                 </div>
             </div>
           </div>
@@ -878,15 +856,15 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
 
   return (
     <div className="flex h-full">
-      {/* 좌측: 사용 가능한 컴포넌트 목록 */}
+      {/* 좌측: ?�용 가?�한 컴포?�트 목록 */}
       {(
       <div className="w-64 bg-white border-r border-gray-200 p-4 overflow-y-auto">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">사용 가능한 컴포넌트</h3>
+        <h3 className="text-lg font-medium text-gray-900 mb-4">?�용 가?�한 컴포?�트</h3>
         
-        {/* 테이블 목록 */}
+        {/* ?�이�?목록 */}
         <div className="mb-6">
           <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
-            📊 테이블
+            ?�� ?�이�?
           </h4>
           <div className="space-y-2">
             {availableTables.map(table => (
@@ -907,10 +885,10 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
           </div>
         </div>
 
-        {/* 변수 목록 */}
+        {/* 변??목록 */}
         <div className="mb-6">
           <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
-            📈 변수
+            ?�� 변??
           </h4>
           <div className="space-y-2">
             {availableVariables.map(variable => (
@@ -933,12 +911,12 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
       </div>
       )}
 
-      {/* 우측: 레이아웃 캔버스 */}
+      {/* ?�측: ?�이?�웃 캔버??*/}
       <div className="flex-1 p-4">
-        {/* 레이아웃 설정 UI */}
+        {/* ?�이?�웃 ?�정 UI */}
         <div className="mb-4">
           <div className="flex justify-between items-center mb-2">
-            {/* 레이아웃 타입 선택 */}
+            {/* ?�이?�웃 ?�???�택 */}
             <div className="flex items-center space-x-4">
               <div className="flex space-x-4">
                 <label className="flex items-center">
@@ -953,7 +931,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                     }}
                     className="mr-2"
                   />
-                  <span className="text-sm text-gray-700">단일</span>
+                  <span className="text-sm text-gray-700">?�일</span>
                 </label>
                 <label className="flex items-center">
                   <input
@@ -964,10 +942,10 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                     onChange={(e) => {
                       const newLayout = e.target.value as 'single' | 'tabs';
                       if (newLayout === 'tabs') {
-                        // 탭 레이아웃으로 변경할 때 기본 탭 2개 생성
+                        // ???�이?�웃?�로 변경할 ??기본 ??2�??�성
                         const defaultTabs = [
-                          { name: '탭 1', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } },
-                          { name: '탭 2', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } }
+                          { name: '??1', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } },
+                          { name: '??2', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } }
                         ];
                         handleLayoutChange(newLayout, undefined, defaultTabs, localComponents);
                       } else {
@@ -980,10 +958,10 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                 </label>
               </div>
               
-              {/* 탭 개수 설정 - 탭 레이아웃일 때만 표시 */}
+              {/* ??개수 ?�정 - ???�이?�웃???�만 ?�시 */}
               {(screen && localLayout === 'tabs') && (
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-500">탭 개수:</span>
+                  <span className="text-sm text-gray-500">??개수:</span>
                   <input
                     type="number"
                     min="2"
@@ -992,7 +970,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                     onChange={(e) => {
                       const tabCount = parseInt(e.target.value) || 2;
                       const newTabs = Array.from({ length: tabCount }, (_, i) => ({
-                        name: `탭 ${i + 1}`,
+                        name: `??${i + 1}`,
                         gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] }
                       }));
                       setLocalTabs(newTabs);
@@ -1000,22 +978,22 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                     }}
                     className="w-16 px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   />
-                  <span className="text-sm text-gray-500">개</span>
+                  <span className="text-sm text-gray-500">탭</span>
                 </div>
               )}
             </div>
             
             <div className="flex items-center space-x-2">
-              {/* 그리드 설정 버튼 */}
+              {/* 그리???�정 버튼 */}
               <button
                 onClick={handleOpenLayoutSettings}
                 className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
                 <Settings className="h-4 w-4" />
-                <span>그리드 설정</span>
+                <span>그리???�정</span>
               </button>
               
-              {/* 저장 버튼 */}
+              {/* ?�??버튼 */}
               <button
                 onClick={handleSaveChanges}
                 className={`flex items-center space-x-2 px-3 py-2 rounded-md transition-colors ${
@@ -1038,7 +1016,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
 
 
 
-        {/* 탭 선택 UI - 탭 레이아웃일 때만 표시 */}
+        {/* ???�택 UI - ???�이?�웃???�만 ?�시 */}
         {(screen && localLayout === 'tabs' && localTabs.length > 0) && (
           <div className="mb-4">
             <div className="flex space-x-2 border-b border-gray-200">
@@ -1046,7 +1024,6 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                 <button
                   key={index}
                   onClick={() => {
-                    console.log('🔄 탭 변경:', { from: selectedTabIndex, to: index });
                     setSelectedTabIndex(index);
                   }}
                   className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
@@ -1062,13 +1039,13 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
           </div>
         )}
 
-        {/* 캔버스 */}
+        {/* 캔버??*/}
         <div
           ref={canvasRef}
           className="relative bg-white border-2 border-dashed border-gray-300 rounded-lg"
           style={{ height: '600px' }}
         >
-          {/* 그리드 가이드 */}
+          {/* 그리??가?�드 */}
           <div className="absolute inset-0 pointer-events-none">
             {(() => {
               const currentGridConfig = getCurrentGridConfig();
@@ -1087,14 +1064,14 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
             })()}
           </div>
 
-          {/* 드래그 중인 컴포넌트 미리보기 */}
+          {/* ?�래�?중인 컴포?�트 미리보기 */}
           {draggedComponent && (() => {
-            // 실제 컴포넌트와 동일한 크기 계산 사용
+            // ?�제 컴포?�트?� ?�일???�기 계산 ?�용
             const left = getColPosition(draggedComponentPosition.y, draggedComponentPosition.x) * 100;
             const width = getColWidth(draggedComponentPosition.y, draggedComponentPosition.x) * 100;
-            const top = getRowTopPosition(draggedComponentPosition.y); // 동적 높이 사용
+            const top = getRowTopPosition(draggedComponentPosition.y); // ?�적 ?�이 ?�용
             
-            const height = 50; // 고정 높이 사용
+            const height = 50; // 고정 ?�이 ?�용
             
             return (
               <div 
@@ -1104,7 +1081,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                   left: `${left}%`,
                   top: `${top}px`,
                   width: `${width}%`,
-                  height: `${height}px` // 고정 높이 사용
+                  height: `${height}px` // 고정 ?�이 ?�용
                 }}
               >
                 <div className="bg-blue-100 border-2 border-blue-300 rounded p-2 shadow-lg h-full flex flex-col justify-center">
@@ -1112,14 +1089,14 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                     {components.find(c => c.id === draggedComponent)?.displayName}
               </div>
                   <div className="text-xs text-blue-600 text-center">
-                    {components.find(c => c.id === draggedComponent)?.type === 'table' ? '📊 테이블' : '📈 변수'}
+                    {components.find(c => c.id === draggedComponent)?.type === 'table' ? '테이블 데이터' : '일반 변수'}
                   </div>
                 </div>
               </div>
             );
           })()}
 
-          {/* 컴포넌트들 */}
+          {/* 컴포?�트??*/}
           {(() => {
             const currentGridConfig = getCurrentGridConfig();
             const cells = [];
@@ -1133,21 +1110,21 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
 
 
 
-          {/* 그리드 정보 표시 */}
+          {/* 그리???�보 ?�시 */}
           {((screen && localLayout === 'tabs' && localTabs.length > 0) || tabs.length > 0) && (
             <div className="absolute top-2 right-2 bg-white bg-opacity-90 px-2 py-1 rounded text-xs text-gray-600">
               {screen && localTabs.length > 0
                 ? localTabs[selectedTabIndex]?.name
                 : tabs[selectedTabIndex]?.name
-              }: {getCurrentGridConfig().length}행
+              }: {getCurrentGridConfig().length}??
             </div>
           )}
         </div>
 
-        {/* 선택된 컴포넌트 정보 */}
+        {/* ?�택??컴포?�트 ?�보 */}
         {selectedComponent && (
           <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">선택된 컴포넌트</h4>
+            <h4 className="text-sm font-medium text-gray-700 mb-2">?�택??컴포?�트</h4>
             <div className="text-sm text-gray-600">
               {localComponents.find(comp => comp.id === selectedComponent)?.displayName}
             </div>
@@ -1155,12 +1132,12 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
         )}
       </div>
 
-      {/* 컴포넌트 설정 모달 */}
+      {/* 컴포?�트 ?�정 모달 */}
       {showComponentSettings && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-96 max-h-96 overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">컴포넌트 설정</h3>
+              <h3 className="text-lg font-medium text-gray-900">컴포?�트 ?�정</h3>
               <button
                 onClick={() => setShowComponentSettings(null)}
                 className="text-gray-400 hover:text-gray-600"
@@ -1175,10 +1152,10 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
 
               return (
                 <div className="space-y-4">
-                  {/* 위치 및 크기 */}
+                  {/* ?�치 �??�기 */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">X 위치</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">X ?�치</label>
                       <input
                         type="number"
                         value={component.position.x}
@@ -1189,7 +1166,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Y 위치</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Y ?�치</label>
                       <input
                         type="number"
                         value={component.position.y}
@@ -1200,7 +1177,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">너비</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">?�비</label>
                       <input
                         type="number"
                         value={component.position.width}
@@ -1211,7 +1188,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">높이</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">?�이</label>
                       <input
                         type="number"
                         value={component.position.height}
@@ -1223,10 +1200,10 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                     </div>
                   </div>
 
-                  {/* 테이블 설정 */}
+                  {/* ?�이�??�정 */}
                   {component.type === 'table' && (
                     <div className="border-t pt-4">
-                      <h4 className="text-sm font-medium text-gray-700 mb-3">테이블 설정</h4>
+                      <h4 className="text-sm font-medium text-gray-700 mb-3">?�이�??�정</h4>
                       <div className="grid grid-cols-2 gap-4">
                         <label className="flex items-center">
                           <input
@@ -1235,7 +1212,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                             onChange={(e) => handleComponentConfigChange(component.id, { showHeader: e.target.checked })}
                             className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                           />
-                          <span className="ml-2 text-sm text-gray-700">헤더 표시</span>
+                          <span className="ml-2 text-sm text-gray-700">?�더 ?�시</span>
                         </label>
                         <label className="flex items-center">
                           <input
@@ -1253,7 +1230,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                             onChange={(e) => handleComponentConfigChange(component.id, { showSearch: e.target.checked })}
                             className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                           />
-                          <span className="ml-2 text-sm text-gray-700">검색 기능</span>
+                          <span className="ml-2 text-sm text-gray-700">검??기능</span>
                         </label>
                         <label className="flex items-center">
                           <input
@@ -1266,7 +1243,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                         </label>
                       </div>
                       <div className="mt-3">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">최대 행 수</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">최대 행수</label>
                         <input
                           type="number"
                           value={component.config.maxRows}
@@ -1285,12 +1262,12 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
         </div>
       )}
 
-      {/* 레이아웃 설정 모달 */}
+      {/* ?�이?�웃 ?�정 모달 */}
       {showLayoutSettings && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-6xl max-w-7xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">그리드 설정</h3>
+              <h3 className="text-lg font-medium text-gray-900">그리???�정</h3>
               <button
                 onClick={() => setShowLayoutSettings(false)}
                 className="text-gray-400 hover:text-gray-600"
@@ -1300,13 +1277,13 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
             </div>
 
             <div className="space-y-6">
-              {/* 그리드 설정 */}
+              {/* 그리???�정 */}
               <div>
-                {/* 단일 레이아웃일 때 */}
+                {/* 단일 탭 레이아웃만 */}
                 {((screen && localLayout === 'single') || (!screen && tempTabs.length === 0)) && (
                   <div className="p-4 bg-gray-50 rounded-lg border">
                     
-                    {/* 단일 그리드 설정 */}
+                    {/* ?�일 그리???�정 */}
                     <div className="space-y-4">
                       <div className="flex justify-end">
                         <button
@@ -1327,7 +1304,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                           className="flex items-center space-x-1 px-2 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
                         >
                           <Plus className="h-3 w-3" />
-                          <span>행 추가</span>
+                          <span>??추�?</span>
                         </button>
                       </div>
                       
@@ -1335,7 +1312,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                         {(tempTabs.length > 0 ? tempTabs[0] : { gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } }).gridConfig.rows.map((row: any, rowIndex: number) => (
                           <div key={rowIndex} className="p-3 bg-white rounded border">
                             <div className="flex items-center justify-between mb-3">
-                              <span className="text-sm font-medium text-gray-700">행 {rowIndex + 1}</span>
+                              <span className="text-sm font-medium text-gray-700">??{rowIndex + 1}</span>
                               <button
                                 onClick={() => {
                                   const newTempTabs = tempTabs.length > 0 ? tempTabs : [{ name: '단일 그리드', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } }];
@@ -1352,7 +1329,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                                   setTempTabs(updatedTabs);
                                 }}
                                 className="p-1 text-red-600 hover:text-red-800"
-                                title="행 삭제"
+                                title="삭제"
                               >
                                 <X className="h-4 w-4" />
                               </button>
@@ -1410,7 +1387,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                                         setTempTabs(updatedTabs);
                                       }}
                                       className="p-1 text-red-600 hover:text-red-800"
-                                      title="열 삭제"
+                                      title="삭제"
                                     >
                                       <X className="h-4 w-4" />
                                     </button>
@@ -1421,7 +1398,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                             
                             <div className="mt-3 flex justify-between items-center">
                               <div className="text-sm text-gray-500">
-                                총 비율: {row.cols.reduce((sum: number, col: any) => sum + (typeof col.width === 'number' ? col.width : 0.25), 0).toFixed(2)}
+                                �?비율: {row.cols.reduce((sum: number, col: any) => sum + (typeof col.width === 'number' ? col.width : 0.25), 0).toFixed(2)}
                               </div>
                               <button
                                 onClick={() => {
@@ -1445,7 +1422,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                                 className="flex items-center space-x-1 px-2 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
                               >
                                 <Plus className="h-3 w-3" />
-                                <span>열 추가</span>
+                                <span>??추�?</span>
                               </button>
                             </div>
                           </div>
@@ -1455,10 +1432,10 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                   </div>
                 )}
 
-                {/* 탭 레이아웃일 때 */}
+                {/* 다중 탭 레이아웃만 */}
                 {((screen && localLayout === 'tabs') || (!screen && tempTabs.length > 0)) && (
                 <div>
-                  {/* 탭 선택 UI */}
+                  {/* ???�택 UI */}
                   <div className="mb-6">
                     <div className="flex space-x-2 border-b border-gray-200">
                       {tempTabs.map((tab, index) => (
@@ -1495,7 +1472,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                           className="flex items-center space-x-1 px-2 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
                         >
                           <Plus className="h-3 w-3" />
-                          <span>행 추가</span>
+                          <span>??추�?</span>
                         </button>
                       </div>
                       
@@ -1503,7 +1480,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                         {(tempTabs[selectedTabIndex] || { gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } }).gridConfig.rows.map((row: any, rowIndex: number) => (
                           <div key={rowIndex} className="p-3 bg-white rounded border">
                             <div className="flex items-center justify-between mb-3">
-                              <span className="text-sm font-medium text-gray-700">행 {rowIndex + 1}</span>
+                              <span className="text-sm font-medium text-gray-700">??{rowIndex + 1}</span>
                               <button
                                 onClick={() => {
                                   const newTempTabs = [...tempTabs];
@@ -1514,7 +1491,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                                   }
                                 }}
                                 className="p-1 text-red-600 hover:text-red-800"
-                                title="행 삭제"
+                                title="삭제"
                               >
                                 <X className="h-4 w-4" />
                               </button>
@@ -1552,7 +1529,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                                         }
                                       }}
                                       className="p-1 text-red-600 hover:text-red-800"
-                                      title="열 삭제"
+                                      title="삭제"
                                     >
                                       <X className="h-4 w-4" />
                                     </button>
@@ -1563,7 +1540,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                             
                             <div className="mt-3 flex justify-between items-center">
                               <div className="text-sm text-gray-500">
-                                총 비율: {row.cols.reduce((sum: number, col: any) => sum + (typeof col.width === 'number' ? col.width : 0.25), 0).toFixed(2)}
+                                �?비율: {row.cols.reduce((sum: number, col: any) => sum + (typeof col.width === 'number' ? col.width : 0.25), 0).toFixed(2)}
                               </div>
                               <button
                                 onClick={() => {
@@ -1577,7 +1554,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                                 className="flex items-center space-x-1 px-2 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
                               >
                                 <Plus className="h-3 w-3" />
-                                <span>열 추가</span>
+                                <span>??추�?</span>
                               </button>
                             </div>
                           </div>
