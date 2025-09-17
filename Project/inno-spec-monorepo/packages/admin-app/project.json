@@ -1,15 +1,15 @@
 {
-  "name": "database-app",
-  "sourceRoot": "packages/database-app/src",
+  "name": "admin-app",
+  "sourceRoot": "packages/admin-app/src",
   "projectType": "library",
   "targets": {
     "build": {
       "executor": "@nx/js:tsc",
       "outputs": ["{options.outputPath}"],
       "options": {
-        "outputPath": "packages/database-app/dist",
-        "main": "packages/database-app/src/index.ts",
-        "tsConfig": "packages/database-app/tsconfig.json"
+        "outputPath": "packages/admin-app/dist",
+        "main": "packages/admin-app/src/index.ts",
+        "tsConfig": "packages/admin-app/tsconfig.json"
       }
     }
   },

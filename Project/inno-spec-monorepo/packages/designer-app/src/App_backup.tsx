@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { Header, AppType } from '@inno-spec/ui-lib';
 import ProjectList from './components/ProjectList';
 import Dashboard from './components/Dashboard';
 import { TableManager, FieldManager, DatabaseManager, FunctionManager, VariableManager, ScreenManager, LnbManager } from '@inno-spec/admin-app';
 import DataSyncManager from './components/DataSyncManager';
-// ScreenCanvas는 현재 사용되지 않음
+// ScreenCanvas???�재 ?�용?��? ?�음
 import ScreenRuntimeView from './components/ScreenRuntimeView';
 import { Sidebar } from '@inno-spec/ui-lib';
 import LoginView from './components/LoginView';
@@ -19,7 +19,7 @@ import { LocalStorageProjectProvider } from './services/dataProviders/LocalStora
 import { useURLRouting } from './hooks/useURLRouting';
 import { adminLNBConfig } from './configs/adminLNBConfig';
 
-// 사용자 생성 화면을 표시하는 컴포넌트
+// ?�용???�성 ?�면???�시?�는 컴포?�트
 const UserScreenView: React.FC<{ 
   screenId: string; 
   lnbMenu: any;
@@ -35,7 +35,7 @@ const UserScreenView: React.FC<{
   if (!screen) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-gray-500">화면을 찾을 수 없습니다.</p>
+        <p className="text-gray-500">?�면??찾을 ???�습?�다.</p>
       </div>
     );
   }
@@ -43,7 +43,7 @@ const UserScreenView: React.FC<{
   if (!selectedProject) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-gray-500">프로젝트를 선택해주세요.</p>
+        <p className="text-gray-500">?�로?�트�??�택?�주?�요.</p>
       </div>
     );
   }
@@ -63,19 +63,7 @@ function AppContent() {
   const location = useLocation();
   const params = useParams();
   const [selectedApp, setSelectedApp] = useState<AppType>(() => {
-    // URL 기반으로 selectedApp 자동 설정
-    const pathname = window.location.pathname;
-    if (pathname.startsWith('/admin/')) {
-      return 'ADMIN';
-    } else if (pathname.includes('/modeler')) {
-      return 'MODELER';
-    } else if (pathname.includes('/viewer')) {
-      return 'VIEWER';
-    } else if (pathname.includes('/designer')) {
-      return 'DESIGNER';
-    }
-    
-    // localStorage에서 저장된 앱 타입을 가져오거나 기본값 사용
+    // localStorage?�서 ?�?�된 ???�?�을 가?�오거나 기본�??�용
     const savedApp = localStorage.getItem('selectedApp') as AppType;
     return savedApp || 'DESIGNER';
   });
@@ -85,11 +73,10 @@ function AppContent() {
   const [selectedBridge, setSelectedBridge] = useState<Bridge | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   
-  // URL 변경에 따른 화면 처리
+  // URL 변경에 ?�른 ?�면 처리
   useEffect(() => {
-    console.log('Current route changed:', currentRoute);
     
-    // URL 기반으로 selectedApp 자동 설정
+    // URL 기반?�로 selectedApp ?�동 ?�정
     if (location.pathname.startsWith('/admin/')) {
       if (selectedApp !== 'ADMIN') {
         setSelectedApp('ADMIN');
@@ -112,7 +99,7 @@ function AppContent() {
       }
     }
     
-    // 기본 라우트가 dashboard인 경우 projects로 리다이렉트
+    // 기본 ?�우?��? dashboard??경우 projects�?리다?�렉??
     if (currentRoute.type === 'dashboard' && !selectedProject) {
       navigateToScreen({ type: 'projects', module: 'designer', projectId: selectedProject?.id });
       return;
@@ -122,7 +109,7 @@ function AppContent() {
       case 'user-screen':
         if (currentRoute.screenId) {
           setCurrentUserScreen(currentRoute.screenId);
-          // 해당 화면에 연결된 LNB 메뉴 찾기
+          // ?�당 ?�면???�결??LNB 메뉴 찾기
           const connectedMenu = lnbConfigs.find(lnb => 
             lnb.screenId === currentRoute.screenId || 
             (lnb.children && lnb.children.some((child: any) => child.screenId === currentRoute.screenId))
@@ -132,7 +119,7 @@ function AppContent() {
         break;
       case 'lnb-menu':
         if (currentRoute.menuId) {
-          // LNB 메뉴에서 화면 정보 찾기
+          // LNB 메뉴?�서 ?�면 ?�보 찾기
           const menu = lnbConfigs.find(lnb => 
             lnb.id === currentRoute.menuId || 
             (lnb.children && lnb.children.some((child: any) => child.id === currentRoute.menuId))
@@ -151,13 +138,12 @@ function AppContent() {
     }
   }, [currentRoute, lnbConfigs]);
 
-  // LNB 구성 업데이트 이벤트 수신
+  // LNB 구성 ?�데?�트 ?�벤???�신
   useEffect(() => {
     const handleLNBConfigUpdate = (event: CustomEvent) => {
-      console.log('LNB 구성 업데이트 이벤트 수신:', event.detail);
-      // 이벤트를 통해 받은 LNB 구성을 직접 업데이트할 수는 없으므로
-      // useAPI 훅에서 데이터를 다시 로드하도록 신호를 보내야 합니다.
-      // 현재는 window.location.reload()를 사용하여 전체 페이지를 새로고침합니다.
+      // ?�벤?��? ?�해 받�? LNB 구성??직접 ?�데?�트???�는 ?�으므�?
+      // useAPI ?�에???�이?��? ?�시 로드?�도�??�호�?보내???�니??
+      // ?�재??window.location.reload()�??�용?�여 ?�체 ?�이지�??�로고침?�니??
       window.location.reload();
     };
 
@@ -168,21 +154,14 @@ function AppContent() {
     };
   }, []);
 
-  // LNB 메뉴 name을 가져오는 함수
+  // LNB 메뉴 name??가?�오???�수
   const getActiveMenuName = (): string => {
-    // console.log('=== getActiveMenuName Debug ===');
-    // console.log('currentRoute:', currentRoute);
-    // console.log('currentLNBMenu:', currentLNBMenu);
-    // console.log('selectedApp:', selectedApp);
-    // console.log('lnbConfigs:', lnbConfigs);
-    // console.log('lnbConfigs length:', lnbConfigs?.length);
     
     if (currentLNBMenu) {
-      console.log('getActiveMenuName - returning currentLNBMenu.name:', currentLNBMenu.name);
       return currentLNBMenu.name;
     }
     
-    // ADMIN 앱인 경우 adminLNBConfig에서 메뉴 찾기
+    // ADMIN ?�인 경우 adminLNBConfig?�서 메뉴 찾기
     if (selectedApp === 'ADMIN') {
       for (const top of adminLNBConfig) {
         if (top.systemScreenType === currentRoute.type) {
@@ -198,142 +177,116 @@ function AppContent() {
       }
     }
     
-    // DESIGNER 앱인 경우 lnbConfigs에서 메뉴 찾기
+    // DESIGNER ?�인 경우 lnbConfigs?�서 메뉴 찾기
     if (selectedApp === 'DESIGNER' && lnbConfigs && lnbConfigs.length > 0) {
-      // console.log('Searching in lnbConfigs for DESIGNER app, currentRoute.type:', currentRoute.type);
-      // console.log('Available lnbConfigs:', lnbConfigs.map(c => ({ id: c.id, name: c.name, systemScreenType: c.systemScreenType })));
       
-      // 사용자 생성 화면인 경우
+      // ?�용???�성 ?�면??경우
       if (currentRoute.type === 'user-screen' && currentRoute.screenId) {
         for (const top of lnbConfigs) {
           if (top.children) {
             for (const child of top.children) {
               if (child.screenId === currentRoute.screenId) {
-                console.log('Found user-screen in child:', child.name);
                 return child.name;
               }
             }
           }
           if (top.screenId === currentRoute.screenId) {
-            console.log('Found user-screen in top:', top.name);
             return top.name;
           }
         }
       }
       
-      // LNB 메뉴인 경우
+      // LNB 메뉴??경우
       if (currentRoute.type === 'lnb-menu' && currentRoute.menuId) {
         for (const top of lnbConfigs) {
           if (top.children) {
             for (const child of top.children) {
               if (child.id === currentRoute.menuId || child.name === currentRoute.menuId) {
-                console.log('Found lnb-menu in child:', child.name);
                 return child.name;
               }
             }
           }
           if (top.id === currentRoute.menuId || top.name === currentRoute.menuId) {
-            console.log('Found lnb-menu in top:', top.name);
             return top.name;
           }
         }
       }
       
-      // systemScreenType으로 메뉴 찾기 (dashboard, screens, illustration 등)
+      // systemScreenType?�로 메뉴 찾기 (dashboard, screens, illustration ??
       for (const top of lnbConfigs) {
-        // console.log(`Checking top menu: ${top.id} (${top.name}) with systemScreenType: ${top.systemScreenType}`);
         if (top.systemScreenType === currentRoute.type) {
-          console.log('Found systemScreenType match in top:', top.name);
           return top.name;
         }
         if (top.children) {
           for (const child of top.children) {
-            // console.log(`Checking child menu: ${child.id} (${child.name}) with systemScreenType: ${child.systemScreenType}`);
             if (child.systemScreenType === currentRoute.type) {
-              console.log('Found systemScreenType match in child:', child.name);
               return child.name;
             }
           }
         }
       }
       
-      console.log('No matching menu found in lnbConfigs for type:', currentRoute.type);
     }
     
-    console.log('getActiveMenuName - checking switch for currentRoute.type:', currentRoute.type);
     
     switch (currentRoute.type) {
       case 'dashboard':
-        console.log('getActiveMenuName - returning dashboard');
         return 'dashboard';
       case 'project-settings':
-        console.log('getActiveMenuName - returning project-settings');
         return 'project-settings';
       case 'illustration':
-        console.log('getActiveMenuName - returning illustration');
-        return 'illustration';
+        return 'section';
       case 'screens':
-        console.log('getActiveMenuName - returning screens');
         return 'screens';
       case 'settings':
-        console.log('getActiveMenuName - returning settings');
         return 'settings';
       case 'projects':
-        console.log('getActiveMenuName - projects screen, returning empty string (no LNB selection)');
-        return ''; // projects 화면에서는 LNB 메뉴 선택 상태를 표시하지 않음
+        return 'projects';
       case 'tables':
-        console.log('getActiveMenuName - returning tables');
         return 'tables';
       case 'functions':
-        console.log('getActiveMenuName - returning functions');
         return 'functions';
       case 'sync':
-        console.log('getActiveMenuName - returning sync');
         return 'sync';
       case 'no-screen':
-        console.log('getActiveMenuName - returning no-screen');
         return 'no-screen';
-      // ADMIN 메뉴들
+      // ADMIN 메뉴??
       case 'admin-db':
-        console.log('getActiveMenuName - returning admin-db');
         return 'admin-db';
       case 'admin-fields':
-        console.log('getActiveMenuName - returning admin-fields');
         return 'admin-fields';
-      case 'admin-table-definition':
-        console.log('getActiveMenuName - returning admin-table-definition');
+      case 'admin-tables':
         return 'admin-table-definition';
-      case 'admin-variable-definition':
-        console.log('getActiveMenuName - returning admin-variable-definition');
+      case 'admin-variables':
         return 'admin-variable-definition';
-      case 'admin-function-definition':
-        console.log('getActiveMenuName - returning admin-function-definition');
+      case 'admin-functions':
         return 'admin-function-definition';
-      case 'admin-lnb-config':
-        console.log('getActiveMenuName - returning admin-lnb-config');
+      case 'admin-lnbconfig':
         return 'admin-lnb-config';
-      case 'admin-screen-config':
-        console.log('getActiveMenuName - returning admin-screen-config');
+      case 'admin-screenconfig':
         return 'admin-screen-config';
       default:
-        console.log('getActiveMenuName - returning default dashboard');
         return 'dashboard';
     }
   };
   const [projectService] = useState(() => new ProjectService(new LocalStorageProjectProvider()));
 
-  // 기본 DESIGNER LNB 구성 생성
+  // 기본 DESIGNER LNB 구성 ?�성
   useEffect(() => {
     const initializeDefaultLNBConfig = () => {
       const existingConfigs = JSON.parse(localStorage.getItem('lnbConfigs') || '[]');
       
-      if (existingConfigs.length === 0) {
+      // 기존 ?�정???�거??systemScreenType???�정?��? ?��? 경우 ?�로 ?�성
+      const needsUpdate = existingConfigs.length === 0 || 
+        !existingConfigs.some((config: any) => config.systemScreenType);
+      
+      if (needsUpdate) {
         const defaultLNBConfigs: LNBConfig[] = [
           {
             id: 'dashboard',
             name: 'dashboard',
-            displayName: '대시보드',
-            icon: '📊',
+            displayName: '?�?�보??,
+            icon: '?��',
             order: 1,
             isActive: true,
             parentId: '',
@@ -348,8 +301,8 @@ function AppContent() {
           {
             id: 'screens',
             name: 'screens',
-            displayName: '화면 관리',
-            icon: '🖼️',
+            displayName: '?�면 관�?,
+            icon: '?���?,
             order: 2,
             isActive: true,
             parentId: '',
@@ -364,8 +317,8 @@ function AppContent() {
           {
             id: 'illustration',
             name: 'illustration',
-            displayName: '도면 관리',
-            icon: '📐',
+            displayName: '?�면 관�?,
+            icon: '?��',
             order: 3,
             isActive: true,
             parentId: '',
@@ -380,8 +333,8 @@ function AppContent() {
           {
             id: 'project-settings',
             name: 'project-settings',
-            displayName: '프로젝트 설정',
-            icon: '⚙️',
+            displayName: '?�로?�트 ?�정',
+            icon: '?�️',
             order: 4,
             isActive: true,
             parentId: '',
@@ -396,36 +349,37 @@ function AppContent() {
         ];
         
         localStorage.setItem('lnbConfigs', JSON.stringify(defaultLNBConfigs));
-        console.log('Default DESIGNER LNB configs initialized');
+        
+        // ?�버깅을 ?�해 ?�역 ?�수�??�출
+        (window as any).resetLNBConfigs = () => {
+          localStorage.removeItem('lnbConfigs');
+          window.location.reload();
+        };
       }
     };
 
     initializeDefaultLNBConfig();
   }, []);
 
-  // 프로젝트 목록이 로드된 후 URL 또는 localStorage에서 프로젝트 자동 선택
+  // ?�로?�트 목록??로드????URL ?�는 localStorage?�서 ?�로?�트 ?�동 ?�택
   useEffect(() => {
-    console.log('Project loading effect triggered - projects:', projects.length, 'selectedProject:', selectedProject, 'currentRoute.projectId:', currentRoute.projectId);
     
     if (projects.length > 0) {
-      // 먼저 URL의 projectId를 확인
+      // 먼�? URL??projectId�??�인
       let projectId = currentRoute.projectId;
       
-      // URL에 projectId가 없으면 localStorage에서 가져옴
+      // URL??projectId가 ?�으�?localStorage?�서 가?�옴
       if (!projectId) {
         projectId = localStorage.getItem('selectedProjectId');
       }
       
-      console.log('Looking for project with ID:', projectId);
       
       if (projectId) {
         const project = projects.find(p => p.id === projectId);
-        console.log('Found project:', project);
         
         if (project) {
-          // 프로젝트가 이미 선택되어 있고 같은 프로젝트인지 확인
+          // ?�로?�트가 ?��? ?�택?�어 ?�고 같�? ?�로?�트?��? ?�인
           if (!selectedProject || selectedProject.id !== project.id) {
-            console.log('Auto-selecting project after projects loaded:', project);
             setSelectedProject(project);
             localStorage.setItem('selectedProjectId', project.id);
             if (project.bridges && project.bridges.length > 0) {
@@ -439,34 +393,28 @@ function AppContent() {
     }
   }, [projects, currentRoute.projectId, selectedProject]);
 
-  // 프로젝트가 로드되었는지 확인 (name이나 displayName이 있으면 로드된 것으로 판단)
+  // ?�로?�트가 로드?�었?��? ?�인 (name?�나 displayName???�으�?로드??것으�??�단)
   const isProjectLoaded = selectedProject && (selectedProject.name || selectedProject.displayName);
   
-  // 디버깅 로그 추가
-  console.log('Debug - selectedProject:', selectedProject);
-  console.log('Debug - isProjectLoaded:', isProjectLoaded);
-  console.log('Debug - projects.length:', projects.length);
-  console.log('Debug - currentRoute.projectId:', currentRoute.projectId);
-  console.log('Debug - lnbConfigs:', lnbConfigs);
-  console.log('Debug - lnbConfigs.length:', lnbConfigs?.length);
+  // ?�버�?로그 추�?
 
   const handleProjectSelect = (project: Project) => {
     setSelectedProject(project);
     localStorage.setItem('selectedProjectId', project.id);
-    // 프로젝트의 첫 번째 교량을 기본 선택
+    // ?�로?�트??�?번째 교량??기본 ?�택
     if (project.bridges && project.bridges.length > 0) {
       setSelectedBridge(project.bridges[0]);
     } else {
       setSelectedBridge(null);
     }
-    // 프로젝트 ID를 포함한 대시보드로 이동
+    // ?�로?�트 ID�??�함???�?�보?�로 ?�동
     navigateToScreen({ type: 'dashboard', module: 'designer', projectId: project.id });
   };
 
   const handleAppChange = (app: AppType) => {
     setSelectedApp(app);
     localStorage.setItem('selectedApp', app);
-    // 앱 변경 시 기본 뷰로 초기화
+    // ??변�???기본 뷰로 초기??
     if (app === 'DESIGNER') {
       navigateToScreen({ type: 'projects', module: 'designer', projectId: selectedProject?.id });
     } else if (app === 'MODELER') {
@@ -479,35 +427,25 @@ function AppContent() {
   };
 
   const handleLNBMenuClick = React.useCallback((menuId: string) => {
-    console.log('=== LNB Menu Click Debug ===');
-    console.log('Clicked menuId:', menuId);
-    console.log('Selected app:', selectedApp);
-    console.log('Current pathname:', window.location.pathname);
     
-    // ADMIN 앱인 경우 adminLNBConfig 사용
+    // ADMIN ?�인 경우 adminLNBConfig ?�용
     const currentLNBConfigs = selectedApp === 'ADMIN' ? adminLNBConfig : lnbConfigs;
-    console.log('Using LNB configs:', currentLNBConfigs);
-    console.log('Available menu IDs:', currentLNBConfigs.map(c => ({ id: c.id, name: c.name, systemScreenType: c.systemScreenType })));
     
-    // LNB 설정에서 해당 메뉴 찾기
+    // LNB ?�정?�서 ?�당 메뉴 찾기
     let targetLNB: any = null;
     
-    // 모든 LNB 설정을 순회하며 해당 메뉴 찾기
+    // 모든 LNB ?�정???�회?�며 ?�당 메뉴 찾기
     for (const top of currentLNBConfigs) {
-      console.log(`Checking top menu: ${top.id} (${top.name})`);
-      // 상위 메뉴 자체가 일치하는지 확인 (name 또는 id로 검색)
+      // ?�위 메뉴 ?�체가 ?�치?�는지 ?�인 (name ?�는 id�?검??
       if (top.name === menuId || top.id === menuId) {
         targetLNB = top;
-        console.log('Found match in top menu:', top);
         break;
       }
-      // 하위 메뉴에서 찾기 (name 또는 id로 검색)
+      // ?�위 메뉴?�서 찾기 (name ?�는 id�?검??
       if (top.children) {
         for (const child of top.children) {
-          console.log(`Checking child menu: ${child.id} (${child.name})`);
           if (child.name === menuId || child.id === menuId) {
             targetLNB = child;
-            console.log('Found match in child menu:', child);
             break;
           }
         }
@@ -516,12 +454,9 @@ function AppContent() {
     }
     
     if (targetLNB) {
-      console.log('Found target LNB:', targetLNB);
-      console.log('targetLNB.systemScreenType:', targetLNB.systemScreenType);
       
-      // 시스템 화면인 경우
+      // ?�스???�면??경우
       if (targetLNB.systemScreenType) {
-        console.log('Processing systemScreenType:', targetLNB.systemScreenType);
         switch (targetLNB.systemScreenType) {
           case 'dashboard':
             navigateToScreen({ type: 'dashboard', module: 'designer', projectId: selectedProject?.id });
@@ -529,69 +464,57 @@ function AppContent() {
           case 'project-settings':
             navigateToScreen({ type: 'project-settings', module: 'designer', projectId: selectedProject?.id });
             break;
-          case 'illustration':
+          case 'section-library':
             navigateToScreen({ type: 'illustration', module: 'designer', projectId: selectedProject?.id });
-            break;
-          case 'screens':
-            navigateToScreen({ type: 'screens', module: 'designer', projectId: selectedProject?.id });
             break;
           case 'user-profile':
           case 'system-settings':
             navigateToScreen({ type: 'settings', module: 'designer' });
             break;
-          // ADMIN 시스템 화면들
+          // ADMIN ?�스???�면??
           case 'admin-db':
             navigateToScreen({ type: 'admin-db', module: 'admin' });
             break;
           case 'admin-fields':
             navigateToScreen({ type: 'admin-fields', module: 'admin' });
             break;
-          case 'admin-table-definition':
-            navigateToScreen({ type: 'admin-table-definition', module: 'admin' });
+          case 'admin-tables':
+            navigateToScreen({ type: 'admin-tables', module: 'admin' });
             break;
-          case 'admin-variable-definition':
-            navigateToScreen({ type: 'admin-variable-definition', module: 'admin' });
+          case 'admin-variables':
+            navigateToScreen({ type: 'admin-variables', module: 'admin' });
             break;
-          case 'admin-function-definition':
-            navigateToScreen({ type: 'admin-function-definition', module: 'admin' });
+          case 'admin-functions':
+            navigateToScreen({ type: 'admin-functions', module: 'admin' });
             break;
-          case 'admin-lnb-config':
-            navigateToScreen({ type: 'admin-lnb-config', module: 'admin' });
+          case 'admin-lnbconfig':
+            navigateToScreen({ type: 'admin-lnbconfig', module: 'admin' });
             break;
-          case 'admin-screen-config':
-            navigateToScreen({ type: 'admin-screen-config', module: 'admin' });
+          case 'admin-screenconfig':
+            navigateToScreen({ type: 'admin-screenconfig', module: 'admin' });
             break;
           default:
-            console.log('No matching case found for systemScreenType:', targetLNB.systemScreenType);
             if (selectedApp === 'ADMIN') {
-              console.log('Redirecting to admin-db as fallback');
               navigateToScreen({ type: 'admin-db', module: 'admin' });
             } else {
               navigateToScreen({ type: 'projects', module: 'designer', projectId: selectedProject?.id });
             }
         }
       }
-      // 사용자 생성 화면인 경우
+      // ?�용???�성 ?�면??경우
       else if (targetLNB.screenId) {
         navigateToScreen({ type: 'user-screen', module: 'designer', projectId: selectedProject?.id, screenId: targetLNB.screenId });
       }
-      // 화면이 연결되지 않은 경우
+      // ?�면???�결?��? ?��? 경우
       else {
-        console.log('No systemScreenType or screenId found, redirecting to no-screen');
         navigateToScreen({ type: 'no-screen', module: 'designer', projectId: selectedProject?.id });
       }
     } else {
-      console.log('LNB menu not found:', menuId);
-      // ADMIN 앱인 경우 기본 ADMIN 화면으로, 그 외에는 프로젝트 목록으로
-      if (selectedApp === 'ADMIN') {
-        navigateToScreen({ type: 'admin-db', module: 'admin' });
-      } else {
-        navigateToScreen({ type: 'projects', module: 'designer', projectId: selectedProject?.id });
-      }
+      navigateToScreen({ type: 'projects', module: 'designer', projectId: selectedProject?.id });
     }
-  }, [lnbConfigs, navigateToScreen, selectedProject, selectedApp]);
+  }, [lnbConfigs, navigateToScreen, selectedProject]);
 
-  // 프로젝트 목록 로드
+  // ?�로?�트 목록 로드
   useEffect(() => {
     const loadProjects = async () => {
       try {
@@ -616,46 +539,43 @@ function AppContent() {
     localStorage.removeItem('selectedApp');
   };
 
-  // 인증되지 않은 경우 로그인 화면
+  // ?�증?��? ?��? 경우 로그???�면
   if (!isAuthenticated || !currentTenant || !currentUser) {
     return <LoginView />;
   }
 
-  // 로딩 상태
+  // 로딩 ?�태
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">데이터를 불러오는 중...</p>
+          <p className="text-gray-600">?�이?��? 불러?�는 �?..</p>
         </div>
       </div>
     );
   }
 
-  // 에러 상태
+  // ?�러 ?�태
   if (error) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">오류 발생</h2>
+          <div className="text-red-500 text-6xl mb-4">?�️</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">?�류 발생</h2>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
             onClick={() => window.location.reload()}
             className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
           >
-            새로고침
+            ?�로고침
           </button>
         </div>
       </div>
     );
   }
 
-  // 인증된 경우 메인 애플리케이션
-  console.log('Current route type:', currentRoute.type);
-  console.log('Current location pathname:', location.pathname);
-  console.log('Selected app:', selectedApp);
+  // ?�증??경우 메인 ?�플리�??�션
   return (
     <div className="min-h-screen bg-gray-50">
         <Header 
@@ -669,7 +589,7 @@ function AppContent() {
       />
       
         <main className="flex-1" style={{ height: 'calc(100vh - 64px)' }}>
-          {/* ADMIN 메뉴일 때 LNB 표시 */}
+          {/* ADMIN 메뉴????LNB ?�시 */}
           {selectedApp === 'ADMIN' && (
             <div className="flex h-full">
               <Sidebar
@@ -688,20 +608,20 @@ function AppContent() {
                 <Routes>
                   <Route path="/admin/db" element={<DatabaseManager tenantId={currentTenant?.id || ''} />} />
                   <Route path="/admin/fields" element={<FieldManager />} />
-                  <Route path="/admin/table-definition" element={<TableManager />} />
-                  <Route path="/admin/variable-definition" element={<VariableManager />} />
-                  <Route path="/admin/function-definition" element={<FunctionManager />} />
-                  <Route path="/admin/lnb-config" element={<LnbManager />} />
-                  <Route path="/admin/screen-config" element={<ScreenManager />} />
+                  <Route path="/admin/tables" element={<TableManager />} />
+                  <Route path="/admin/variables" element={<VariableManager />} />
+                  <Route path="/admin/functions" element={<FunctionManager />} />
+                  <Route path="/admin/lnbconfig" element={<LnbManager />} />
+                  <Route path="/admin/screenconfig" element={<ScreenManager />} />
                 </Routes>
               </div>
             </div>
           )}
           
-          {/* 다른 메뉴들 */}
+          {/* ?�른 메뉴??*/}
           {selectedApp !== 'ADMIN' && (
             <Routes>
-              {/* GNB 라우트 (프로젝트 공통) */}
+              {/* GNB ?�우??(?�로?�트 공통) */}
               <Route path="/:tenantId/designer/projects" element={
                 <ProjectList 
                   onProjectSelect={handleProjectSelect}
@@ -715,8 +635,8 @@ function AppContent() {
               <Route path="/:tenantId/designer/settings" element={
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">설정</h2>
-                    <p className="text-gray-600">시스템 설정 페이지입니다.</p>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-4">?�정</h2>
+                    <p className="text-gray-600">?�스???�정 ?�이지?�니??</p>
                   </div>
                 </div>
               } />
@@ -724,10 +644,10 @@ function AppContent() {
               <Route path="/:tenantId/modeler" element={
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <div className="text-6xl mb-4">🏗️</div>
+                <div className="text-6xl mb-4">?���?/div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">MODELER</h2>
-                <p className="text-gray-600 mb-4">3D 모델링 및 설계 도구</p>
-                <p className="text-sm text-gray-500">현재 개발 중입니다. 곧 만나보실 수 있습니다.</p>
+                <p className="text-gray-600 mb-4">3D 모델�?�??�계 ?�구</p>
+                <p className="text-sm text-gray-500">?�재 개발 중입?�다. �?만나보실 ???�습?�다.</p>
               </div>
             </div>
           } />
@@ -735,10 +655,10 @@ function AppContent() {
           <Route path="/:tenantId/viewer" element={
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <div className="text-6xl mb-4">👁️</div>
+                <div className="text-6xl mb-4">?���?/div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">VIEWER</h2>
-                <p className="text-gray-600 mb-4">3D 뷰어 및 시각화 도구</p>
-                <p className="text-sm text-gray-500">현재 개발 중입니다. 곧 만나보실 수 있습니다.</p>
+                <p className="text-gray-600 mb-4">3D 뷰어 �??�각???�구</p>
+                <p className="text-sm text-gray-500">?�재 개발 중입?�다. �?만나보실 ???�습?�다.</p>
               </div>
             </div>
           } />
@@ -746,15 +666,15 @@ function AppContent() {
           <Route path="/:tenantId/project/:projectId/viewer" element={
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <div className="text-6xl mb-4">👁️</div>
+                <div className="text-6xl mb-4">?���?/div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">VIEWER</h2>
-                <p className="text-gray-600 mb-4">3D 뷰어 및 시각화 도구</p>
-                <p className="text-sm text-gray-500">현재 개발 중입니다. 곧 만나보실 수 있습니다.</p>
+                <p className="text-gray-600 mb-4">3D 뷰어 �??�각???�구</p>
+                <p className="text-sm text-gray-500">?�재 개발 중입?�다. �?만나보실 ???�습?�다.</p>
               </div>
             </div>
           } />
           
-          {/* LNB 라우트 (프로젝트별 독립) */}
+          {/* LNB ?�우??(?�로?�트�??�립) */}
           <Route path="/:tenantId/designer/:projectId/dashboard" element={
             isProjectLoaded ? (
               <Dashboard 
@@ -764,7 +684,7 @@ function AppContent() {
                 onProjectChange={setSelectedProject}
                 onBridgeChange={(bridge) => {
                   setSelectedBridge(bridge);
-                  // 브리지 변경 시 프로젝트 업데이트
+                  // 브리지 변�????�로?�트 ?�데?�트
                   if (selectedProject) {
                     const updatedProject = {
                       ...selectedProject,
@@ -780,17 +700,16 @@ function AppContent() {
                     const projectService = new ProjectService(new LocalStorageProjectProvider());
                     await projectService.updateProject(updatedProject);
                     setSelectedProject(updatedProject);
-                    // 브리지가 변경된 경우 선택된 브리지도 업데이트
+                    // 브리지가 변경된 경우 ?�택??브리지???�데?�트
                     if (selectedBridge && !updatedProject.bridges.find(b => b.id === selectedBridge.id)) {
                       setSelectedBridge(updatedProject.bridges[0]);
                     }
-                    // 프로젝트 목록도 업데이트
+                    // ?�로?�트 목록???�데?�트
                     const allProjects = await projectService.getAllProjects();
                     setProjects(allProjects);
-                    console.log('Project updated:', updatedProject);
                   } catch (error) {
                     console.error('Failed to update project:', error);
-                    alert('프로젝트 업데이트에 실패했습니다.');
+                    alert('?�로?�트 ?�데?�트???�패?�습?�다.');
                   }
                 }}
                 onLNBMenuClick={handleLNBMenuClick}
@@ -802,21 +721,21 @@ function AppContent() {
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">프로젝트 로딩 중...</h2>
-                  <p className="text-gray-600">프로젝트 정보를 불러오고 있습니다.</p>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">?�로?�트 로딩 �?..</h2>
+                  <p className="text-gray-600">?�로?�트 ?�보�?불러?�고 ?�습?�다.</p>
                 </div>
               </div>
             ) : (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
-                  <div className="text-6xl mb-4">📊</div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">대시보드</h2>
-                  <p className="text-gray-600 mb-4">프로젝트를 선택하면 대시보드를 확인할 수 있습니다.</p>
+                  <div className="text-6xl mb-4">?��</div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">?�?�보??/h2>
+                  <p className="text-gray-600 mb-4">?�로?�트�??�택?�면 ?�?�보?��? ?�인?????�습?�다.</p>
                   <button
                     onClick={() => navigateToScreen({ type: 'projects', module: 'designer', projectId: selectedProject?.id })}
                     className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                   >
-                    프로젝트 선택하기
+                    ?�로?�트 ?�택?�기
                   </button>
                 </div>
               </div>
@@ -866,13 +785,12 @@ function AppContent() {
                         const projectService = new ProjectService(new LocalStorageProjectProvider());
                         await projectService.updateProject(updatedProject);
                         setSelectedProject(updatedProject);
-                        // 프로젝트 목록도 업데이트
+                        // ?�로?�트 목록???�데?�트
                         const allProjects = await projectService.getAllProjects();
                         setProjects(allProjects);
-                        console.log('Project updated:', updatedProject);
                       } catch (error) {
                         console.error('Failed to update project:', error);
-                        alert('프로젝트 업데이트에 실패했습니다.');
+                        alert('?�로?�트 ?�데?�트???�패?�습?�다.');
                       }
                     }}
                   />
@@ -881,8 +799,8 @@ function AppContent() {
             ) : (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">프로젝트 설정</h2>
-                  <p className="text-gray-600">프로젝트를 선택하면 설정을 확인할 수 있습니다.</p>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">?�로?�트 ?�정</h2>
+                  <p className="text-gray-600">?�로?�트�??�택?�면 ?�정???�인?????�습?�다.</p>
                 </div>
               </div>
             )
@@ -905,34 +823,34 @@ function AppContent() {
               <div className="flex-1 bg-gray-50 overflow-auto">
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
-                    <div className="text-6xl mb-4">📋</div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">화면 연결 없음</h2>
-                    <p className="text-gray-600 mb-4">이 메뉴에는 연결된 화면이 없습니다.</p>
-                    <p className="text-sm text-gray-500">화면 관리에서 화면을 연결하거나 다른 메뉴를 선택해주세요.</p>
+                    <div className="text-6xl mb-4">?��</div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">?�면 ?�결 ?�음</h2>
+                    <p className="text-gray-600 mb-4">??메뉴?�는 ?�결???�면???�습?�다.</p>
+                    <p className="text-sm text-gray-500">?�면 관리에???�면???�결?�거???�른 메뉴�??�택?�주?�요.</p>
                   </div>
                 </div>
               </div>
             </div>
           } />
           
-          {/* 기본 라우트 */}
+          {/* 기본 ?�우??*/}
           <Route path="/" element={
             <Navigate to={`/${currentTenant?.id || 'tenant-1'}/designer/projects`} replace />
           } />
           
-          {/* 테넌트 기본 라우트 */}
+          {/* ?�넌??기본 ?�우??*/}
           <Route path="/:tenantId" element={
             <Navigate to={`/${currentTenant?.id || 'tenant-1'}/designer/projects`} replace />
           } />
           
-          {/* 하위 호환성을 위한 기존 라우트들 */}
+          {/* ?�위 ?�환?�을 ?�한 기존 ?�우?�들 */}
           <Route path="/modeler" element={
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <div className="text-6xl mb-4">🏗️</div>
+                <div className="text-6xl mb-4">?���?/div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">MODELER</h2>
-                <p className="text-gray-600 mb-4">3D 모델링 및 설계 도구</p>
-                <p className="text-sm text-gray-500">현재 개발 중입니다. 곧 만나보실 수 있습니다.</p>
+                <p className="text-gray-600 mb-4">3D 모델�?�??�계 ?�구</p>
+                <p className="text-sm text-gray-500">?�재 개발 중입?�다. �?만나보실 ???�습?�다.</p>
               </div>
             </div>
           } />
@@ -954,7 +872,7 @@ function AppContent() {
                 onProjectChange={setSelectedProject}
                 onBridgeChange={(bridge) => {
                   setSelectedBridge(bridge);
-                  // 브리지 변경 시 프로젝트 업데이트
+                  // 브리지 변�????�로?�트 ?�데?�트
                   if (selectedProject) {
                     const updatedProject = {
                       ...selectedProject,
@@ -970,17 +888,16 @@ function AppContent() {
                     const projectService = new ProjectService(new LocalStorageProjectProvider());
                     await projectService.updateProject(updatedProject);
                     setSelectedProject(updatedProject);
-                    // 브리지가 변경된 경우 선택된 브리지도 업데이트
+                    // 브리지가 변경된 경우 ?�택??브리지???�데?�트
                     if (selectedBridge && !updatedProject.bridges.find(b => b.id === selectedBridge.id)) {
                       setSelectedBridge(updatedProject.bridges[0]);
                     }
-                    // 프로젝트 목록도 업데이트
+                    // ?�로?�트 목록???�데?�트
                     const allProjects = await projectService.getAllProjects();
                     setProjects(allProjects);
-                    console.log('Project updated:', updatedProject);
                   } catch (error) {
                     console.error('Failed to update project:', error);
-                    alert('프로젝트 업데이트에 실패했습니다.');
+                    alert('?�로?�트 ?�데?�트???�패?�습?�다.');
                   }
                 }}
                 onLNBMenuClick={handleLNBMenuClick}
@@ -991,14 +908,14 @@ function AppContent() {
             ) : (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
-                  <div className="text-6xl mb-4">📊</div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">대시보드</h2>
-                  <p className="text-gray-600 mb-4">프로젝트를 선택하면 대시보드를 확인할 수 있습니다.</p>
+                  <div className="text-6xl mb-4">?��</div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">?�?�보??/h2>
+                  <p className="text-gray-600 mb-4">?�로?�트�??�택?�면 ?�?�보?��? ?�인?????�습?�다.</p>
                   <button
                     onClick={() => navigateToScreen({ type: 'projects', module: 'designer' })}
                     className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                   >
-                    프로젝트 선택하기
+                    ?�로?�트 ?�택?�기
                   </button>
                 </div>
               </div>
@@ -1010,30 +927,30 @@ function AppContent() {
           <Route path="/:tenantId/project/:projectId/designer/sync" element={<DataSyncManager />} />
           <Route path="/:tenantId/project/:projectId/designer/functions" element={<FunctionManager />} />
           
-          {/* 하위 호환성을 위한 기존 라우트들 */}
+          {/* ?�위 ?�환?�을 ?�한 기존 ?�우?�들 */}
           <Route path="/modeler" element={
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <div className="text-6xl mb-4">🏗️</div>
+                <div className="text-6xl mb-4">?���?/div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">MODELER</h2>
-                <p className="text-gray-600 mb-4">3D 모델링 및 설계 도구</p>
-                <p className="text-sm text-gray-500">현재 개발 중입니다. 곧 만나보실 수 있습니다.</p>
+                <p className="text-gray-600 mb-4">3D 모델�?�??�계 ?�구</p>
+                <p className="text-sm text-gray-500">?�재 개발 중입?�다. �?만나보실 ???�습?�다.</p>
               </div>
             </div>
           } />
           
           
-          {/* 기본 라우트 - 테넌트 기반으로 리다이렉트 */}
+          {/* 기본 ?�우??- ?�넌??기반?�로 리다?�렉??*/}
           <Route path="/" element={
             <Navigate to={`/${currentTenant?.id || 'tenant-1'}/designer/projects`} replace />
           } />
           
-          {/* 테넌트 기본 라우트 */}
+          {/* ?�넌??기본 ?�우??*/}
           <Route path="/:tenantId" element={
             <Navigate to={`/${currentTenant?.id || 'tenant-1'}/designer/projects`} replace />
           } />
           
-          {/* Designer 모듈 라우트 */}
+          {/* Designer 모듈 ?�우??*/}
           <Route path="/designer/projects" element={
             <ProjectList 
               onProjectSelect={handleProjectSelect}
@@ -1041,7 +958,7 @@ function AppContent() {
             />
           } />
           
-          {/* 대시보드 */}
+          {/* ?�?�보??*/}
           <Route path="/designer/dashboard" element={
             selectedProject ? (
               <Dashboard 
@@ -1051,25 +968,23 @@ function AppContent() {
                 onProjectChange={setSelectedProject}
                 onBridgeChange={(bridge) => {
                   setSelectedBridge(bridge);
-                  console.log('Selected bridge:', bridge);
                 }}
                 onProjectUpdate={async (updatedProject) => {
                   try {
                     await projectService.updateProject(updatedProject);
                     setSelectedProject(updatedProject);
-                    // 새로 추가된 교량이 있다면 첫 번째 교량 선택
+                    // ?�로 추�???교량???�다�?�?번째 교량 ?�택
                     if (updatedProject.bridges && updatedProject.bridges.length > 0) {
                       if (!selectedBridge || !updatedProject.bridges.find(b => b.id === selectedBridge.id)) {
                         setSelectedBridge(updatedProject.bridges[0]);
                       }
                     }
-                    // 프로젝트 목록도 업데이트
+                    // ?�로?�트 목록???�데?�트
                     const allProjects = await projectService.getAllProjects();
                     setProjects(allProjects);
-                    console.log('Project updated:', updatedProject);
                   } catch (error) {
                     console.error('Failed to update project:', error);
-                    alert('프로젝트 업데이트에 실패했습니다.');
+                    alert('?�로?�트 ?�데?�트???�패?�습?�다.');
                   }
                 }}
                 onLNBMenuClick={handleLNBMenuClick}
@@ -1080,35 +995,35 @@ function AppContent() {
             ) : (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
-                  <div className="text-6xl mb-4">📊</div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">대시보드</h2>
-                  <p className="text-gray-600 mb-4">프로젝트를 선택하면 대시보드를 확인할 수 있습니다.</p>
+                  <div className="text-6xl mb-4">?��</div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">?�?�보??/h2>
+                  <p className="text-gray-600 mb-4">?�로?�트�??�택?�면 ?�?�보?��? ?�인?????�습?�다.</p>
                   <button
                     onClick={() => navigateToScreen({ type: 'projects' })}
                     className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
                   >
-                    프로젝트 선택하기
+                    ?�로?�트 ?�택?�기
                   </button>
                 </div>
               </div>
             )
           } />
           
-          {/* 화면 관리 */}
+          {/* ?�면 관�?*/}
           <Route path="/:tenantId/designer/screens" element={<ScreenManager />} />
           
-          {/* 테이블 관리 */}
+          {/* ?�이�?관�?*/}
           <Route path="/:tenantId/designer/tables" element={<TableManager />} />
           
-          {/* 데이터베이스 관리 */}
+          {/* ?�이?�베?�스 관�?*/}
           
-          {/* 동기화 */}
+          {/* ?�기??*/}
           <Route path="/:tenantId/designer/sync" element={<DataSyncManager />} />
           
-          {/* 함수 관리 */}
+          {/* ?�수 관�?*/}
           <Route path="/:tenantId/designer/functions" element={<FunctionManager />} />
           
-          {/* 사용자 생성 화면 */}
+          {/* ?�용???�성 ?�면 */}
           <Route path="/designer/screen/:screenId" element={
             <div className="flex h-full">
               <Sidebar
@@ -1120,7 +1035,6 @@ function AppContent() {
                 onProjectChange={setSelectedProject}
                 onBridgeChange={(bridge) => {
                   setSelectedBridge(bridge);
-                  console.log('Selected bridge:', bridge);
                 }}
                 onLNBMenuClick={handleLNBMenuClick}
                 lnbConfigs={lnbConfigs}
@@ -1148,7 +1062,6 @@ function AppContent() {
                 onProjectChange={setSelectedProject}
                 onBridgeChange={(bridge) => {
                   setSelectedBridge(bridge);
-                  console.log('Selected bridge:', bridge);
                 }}
                 onLNBMenuClick={handleLNBMenuClick}
                 lnbConfigs={lnbConfigs}
@@ -1164,10 +1077,10 @@ function AppContent() {
                 ) : (
                   <div className="flex items-center justify-center h-full">
                     <div className="text-center">
-                      <div className="text-6xl mb-4">📋</div>
-                      <h2 className="text-2xl font-bold text-gray-900 mb-2">화면 연결 없음</h2>
-                      <p className="text-gray-600">이 메뉴에는 연결된 화면이 없습니다.</p>
-                      <p className="text-sm text-gray-500 mt-2">화면 관리에서 화면을 연결하거나 다른 메뉴를 선택해주세요.</p>
+                      <div className="text-6xl mb-4">?��</div>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-2">?�면 ?�결 ?�음</h2>
+                      <p className="text-gray-600">??메뉴?�는 ?�결???�면???�습?�다.</p>
+                      <p className="text-sm text-gray-500 mt-2">?�면 관리에???�면???�결?�거???�른 메뉴�??�택?�주?�요.</p>
                     </div>
                   </div>
                 )}
@@ -1175,12 +1088,12 @@ function AppContent() {
             </div>
           } />
           
-          {/* 기타 화면들 */}
+          {/* 기�? ?�면??*/}
           <Route path="/designer/settings" element={
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">설정</h2>
-                <p className="text-gray-600">시스템 설정 페이지입니다.</p>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">?�정</h2>
+                <p className="text-gray-600">?�스???�정 ?�이지?�니??</p>
               </div>
             </div>
           } />
@@ -1196,7 +1109,6 @@ function AppContent() {
                 onProjectChange={setSelectedProject}
                 onBridgeChange={(bridge) => {
                   setSelectedBridge(bridge);
-                  console.log('Selected bridge:', bridge);
                 }}
                 onLNBMenuClick={handleLNBMenuClick}
                 lnbConfigs={lnbConfigs}
@@ -1220,7 +1132,6 @@ function AppContent() {
                   onProjectChange={setSelectedProject}
                   onBridgeChange={(bridge) => {
                     setSelectedBridge(bridge);
-                    console.log('Selected bridge:', bridge);
                   }}
                   onLNBMenuClick={handleLNBMenuClick}
                   lnbConfigs={lnbConfigs}
@@ -1233,13 +1144,12 @@ function AppContent() {
                       try {
                         await projectService.updateProject(updatedProject);
                         setSelectedProject(updatedProject);
-                        // 프로젝트 목록도 업데이트
+                        // ?�로?�트 목록???�데?�트
                         const allProjects = await projectService.getAllProjects();
                         setProjects(allProjects);
-                        console.log('Project updated:', updatedProject);
                       } catch (error) {
                         console.error('Failed to update project:', error);
-                        alert('프로젝트 업데이트에 실패했습니다.');
+                        alert('?�로?�트 ?�데?�트???�패?�습?�다.');
                       }
                     }}
                   />
@@ -1247,15 +1157,15 @@ function AppContent() {
               </div>
             ) : (
               <div className="flex items-center justify-center h-full">
-                <p className="text-gray-500">프로젝트를 선택해주세요.</p>
+                <p className="text-gray-500">?�로?�트�??�택?�주?�요.</p>
               </div>
             )
           } />
           
-          {/* 기본 라우트 */}
+          {/* 기본 ?�우??*/}
           <Route path="*" element={
             <div className="flex items-center justify-center h-full">
-              <p className="text-gray-500">페이지를 찾을 수 없습니다.</p>
+              <p className="text-gray-500">?�이지�?찾을 ???�습?�다.</p>
             </div>
           } />
             </Routes>

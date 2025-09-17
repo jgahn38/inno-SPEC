@@ -35,13 +35,7 @@ class MariaDBConnection {
       }
     };
 
-    console.log('🔧 Database config:', {
-      host: config.host,
-      port: config.port,
-      user: config.user,
-      password: config.password ? '***' : 'NOT SET',
-      database: config.database
-    });
+    // Database config initialized
 
     this.pool = mysql.createPool(config);
     this.initializeDatabase();

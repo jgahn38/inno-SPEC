@@ -31,6 +31,13 @@ const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const [activeMenu, setActiveMenu] = useState(propActiveMenu);
   
+  // Dashboard 컴포넌트에서는 항상 'dashboard'로 유지
+  useEffect(() => {
+    if (propActiveMenu !== 'dashboard') {
+      setActiveMenu('dashboard');
+    }
+  }, [propActiveMenu]);
+  
   // 메뉴 클릭 처리
   const handleMenuSelect = (menuId: string) => {
     console.log('Dashboard menu selected:', menuId);
