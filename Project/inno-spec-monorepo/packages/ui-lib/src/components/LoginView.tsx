@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { Building2, User, Lock, Eye, EyeOff } from 'lucide-react';
-import { useTenant } from '../contexts/TenantContext';
 
-const LoginView: React.FC = () => {
-  const { login, isLoading } = useTenant();
+export interface LoginViewProps {
+  onLogin: (tenantCode: string, username: string, password: string) => Promise<boolean>;
+  isLoading?: boolean;
+  error?: string;
+}
+
+const LoginView: React.FC<LoginViewProps> = ({ onLogin, isLoading = false, error: externalError }) => {
   const [formData, setFormData] = useState({
     tenantCode: '',
     username: '',
@@ -22,7 +26,7 @@ const LoginView: React.FC = () => {
     }
 
     try {
-      const success = await login(formData.tenantCode, formData.username, formData.password);
+      const success = await onLogin(formData.tenantCode, formData.username, formData.password);
       if (!success) {
         setError('로그인에 실패했습니다. 기업 코드, 사용자명, 비밀번호를 확인해주세요.');
       }
@@ -37,6 +41,8 @@ const LoginView: React.FC = () => {
       [e.target.name]: e.target.value
     });
   };
+
+  const displayError = error || externalError;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -56,9 +62,9 @@ const LoginView: React.FC = () => {
             로그인
           </h2>
 
-          {error && (
+          {displayError && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-600 text-sm">{error}</p>
+              <p className="text-red-600 text-sm">{displayError}</p>
             </div>
           )}
 

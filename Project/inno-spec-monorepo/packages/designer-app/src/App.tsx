@@ -1,14 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { Header, AppType } from '@inno-spec/ui-lib';
+import { Header, AppType, Sidebar, LoginView } from '@inno-spec/ui-lib';
 import { TableManager, FieldManager, DatabaseManager, FunctionManager, VariableManager, ScreenManager, LnbManager } from '@inno-spec/admin-app';
 import { ProjectDashboard, ProjectList as ProjectAppList, ProjectOverview } from '@inno-spec/project-app';
-import DataSyncManager from './components/DataSyncManager';
 // ScreenCanvas는 현재 사용되지 않음
 import ScreenRuntimeView from './components/ScreenRuntimeView';
-import { Sidebar } from '@inno-spec/ui-lib';
-import LoginView from './components/LoginView';
-import IllustrationView from './components/IllustrationView';
 import { Project, Bridge, LNBConfig } from '@inno-spec/shared';
 import { TenantProvider, useTenant } from './contexts/TenantContext';
 import { APIProvider, useAPI } from './contexts/APIContext';
@@ -55,7 +51,7 @@ const UserScreenView: React.FC<{
 
 
 function AppContent() {
-  const { currentTenant, currentUser, isAuthenticated, logout } = useTenant();
+  const { currentTenant, currentUser, isAuthenticated, logout, login, isLoading } = useTenant();
   const { lnbConfigs, loading, error } = useAPI();
   const { currentRoute, navigateToScreen } = useURLRouting();
   const location = useLocation();
@@ -710,7 +706,7 @@ function AppContent() {
 
   // 인증되지 않은 경우 로그인 화면
   if (!isAuthenticated || !currentTenant || !currentUser) {
-    return <LoginView />;
+    return <LoginView onLogin={login} isLoading={isLoading} />;
   }
 
   // 로딩 상태
@@ -890,7 +886,6 @@ function AppContent() {
               
               <Route path="/:tenantId/designer/tables" element={<TableManager />} />
               <Route path="/:tenantId/designer/functions" element={<FunctionManager />} />
-              <Route path="/:tenantId/designer/sync" element={<DataSyncManager />} />
               <Route path="/:tenantId/designer/settings" element={
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
@@ -983,7 +978,14 @@ function AppContent() {
                 onBridgeChange={setSelectedBridge}
               />
               <div className="flex-1 p-6">
-                <IllustrationView />
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <div className="text-6xl mb-4">🚧</div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">도면 관리</h2>
+                    <p className="text-gray-600 mb-4">도면 관리 기능이 재개발 예정입니다.</p>
+                    <p className="text-sm text-gray-500">곧 새로운 기능으로 만나보실 수 있습니다.</p>
+                  </div>
+                </div>
               </div>
             </div>
           } />
@@ -1111,7 +1113,6 @@ function AppContent() {
           
           <Route path="/:tenantId/project/:projectId/designer/screens" element={<ScreenManager />} />
           <Route path="/:tenantId/project/:projectId/designer/tables" element={<TableManager />} />
-          <Route path="/:tenantId/project/:projectId/designer/sync" element={<DataSyncManager />} />
           <Route path="/:tenantId/project/:projectId/designer/functions" element={<FunctionManager />} />
           
           {/* DESIGNER 앱 LNB 라우트들 */}
@@ -1248,8 +1249,7 @@ function AppContent() {
           
           {/* 데이터베이스 관리 */}
           
-          {/* 동기화 */}
-          <Route path="/:tenantId/designer/sync" element={<DataSyncManager />} />
+          {/* 동기화 - 기능 제거됨 */}
           
           {/* 함수 관리 */}
           <Route path="/:tenantId/designer/functions" element={<FunctionManager />} />
@@ -1316,7 +1316,14 @@ function AppContent() {
                 selectedProject={selectedProject}
               />
               <div className="flex-1 bg-gray-50 overflow-auto">
-                <IllustrationView />
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <div className="text-6xl mb-4">🚧</div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">도면 관리</h2>
+                    <p className="text-gray-600 mb-4">도면 관리 기능이 재개발 예정입니다.</p>
+                    <p className="text-sm text-gray-500">곧 새로운 기능으로 만나보실 수 있습니다.</p>
+                  </div>
+                </div>
               </div>
             </div>
           } />

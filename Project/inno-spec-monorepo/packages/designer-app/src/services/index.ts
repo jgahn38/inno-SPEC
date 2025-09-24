@@ -13,4 +13,4 @@ export { LocalStorageProjectProvider } from './dataProviders/LocalStorageProject
 export { MEngineService } from './MEngineService';
 export { MParser } from './MParser';
 export { BridgeDataService } from './BridgeDataService';
-export { CADParserService } from './CADParserService';
+// export { CADParserService } from './CADParserService'; // 파일이 제거됨
