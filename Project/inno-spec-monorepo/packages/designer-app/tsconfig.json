@@ -4,10 +4,14 @@
     "outDir": "./dist",
     "jsx": "react-jsx",
     "baseUrl": ".",
+    "strict": false,
+    "noImplicitAny": false,
+    "skipLibCheck": true,
     "paths": {
       "@inno-spec/shared": ["../shared/src"],
       "@inno-spec/admin-app": ["../admin-app/src"],
-      "@inno-spec/ui-lib": ["../ui-lib/src"]
+      "@inno-spec/ui-lib": ["../ui-lib/src"],
+      "@inno-spec/project-app": ["../project-app/src"]
     }
   },
   "include": ["src/**/*", "index.html"],

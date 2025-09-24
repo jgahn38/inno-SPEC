@@ -4,7 +4,7 @@ import { useTenant } from '../contexts/TenantContext';
 
 export interface ScreenRoute {
   type: 'projects' | 'dashboard' | 'screens' | 'user-screen' | 'lnb-menu' | 'settings' | 'illustration' | 'project-settings' | 'no-screen' | 'tables' | 'sync' | 'functions' | 'modeler' | 'viewer' | 'admin-db' | 'admin-fields' | 'admin-table-definition' | 'admin-variable-definition' | 'admin-function-definition' | 'admin-lnb-config' | 'admin-screen-config';
-  module?: 'designer' | 'modeler' | 'viewer' | 'admin';
+  module?: 'project' | 'designer' | 'modeler' | 'viewer' | 'admin';
   tenantId?: string;
   screenId?: string;
   menuId?: string;
@@ -51,20 +51,25 @@ export const useURLRouting = () => {
       }
     }
     
-    // GNB 라우팅: /{tenantId}/module/GNB화면
-    if (segments.length >= 2 && segments[0] !== 'designer' && segments[0] !== 'modeler' && segments[0] !== 'viewer' && segments[0] !== 'admin') {
+    // GNB 라우팅: /{tenantId}/module/GNB화면 (3개 세그먼트)
+    if (segments.length === 3 && segments[0] !== 'designer' && segments[0] !== 'modeler' && segments[0] !== 'viewer' && segments[0] !== 'admin') {
       const tenantId = segments[0];
       const module = segments[1];
       const page = segments[2];
       console.log('GNB routing - tenantId:', tenantId, 'module:', module, 'page:', page);
       
       // GNB 화면들 (프로젝트 공통)
-      if (module === 'designer' || module === 'modeler' || module === 'viewer') {
+      if (module === 'project' || module === 'designer' || module === 'modeler' || module === 'viewer') {
         switch (module) {
-          case 'designer':
+          case 'project':
             switch (page) {
               case 'projects':
-                return { type: 'projects', module: 'designer', tenantId };
+                return { type: 'projects', module: 'project', tenantId };
+              default:
+                return { type: 'projects', module: 'project', tenantId };
+            }
+          case 'designer':
+            switch (page) {
               case 'screens':
                 console.log('Returning screens type for GNB routing');
                 return { type: 'screens', module: 'designer', tenantId };
@@ -77,26 +82,40 @@ export const useURLRouting = () => {
               case 'settings':
                 return { type: 'settings', module: 'designer', tenantId };
               default:
-                return { type: 'projects', module: 'designer', tenantId };
+                // DESIGNER 모듈의 기본 화면은 LNB 순서 기반으로 결정 (1번, 상위면 1.1)
+                return { type: 'screens', module: 'designer', tenantId };
             }
           case 'modeler':
             return { type: 'modeler', module: 'modeler', tenantId };
           case 'viewer':
             return { type: 'viewer', module: 'viewer', tenantId };
           default:
-            return { type: 'projects', module: 'designer', tenantId };
+            return { type: 'projects', module: 'project', tenantId };
         }
       }
     }
     
-    // LNB 라우팅: /{tenantId}/module/{projectId}/LNB화면
-    if (segments.length >= 4 && segments[0] !== 'designer' && segments[0] !== 'modeler' && segments[0] !== 'viewer' && segments[2] !== 'project') {
+    // LNB 라우팅: /{tenantId}/module/{projectId}/LNB화면 (4개 세그먼트)
+    if (segments.length >= 4) {
       const tenantId = segments[0];
       const module = segments[1];
       const projectId = segments[2];
       const page = segments[3];
       
       switch (module) {
+        case 'project':
+          switch (page) {
+            case 'dashboard':
+              return { type: 'dashboard', module: 'project', tenantId, projectId };
+            case 'overview':
+              return { type: 'dashboard', module: 'project', tenantId, projectId }; // overview는 dashboard와 동일하게 처리
+            case 'project-settings':
+              return { type: 'project-settings', module: 'project', tenantId, projectId };
+            case 'settings':
+              return { type: 'project-settings', module: 'project', tenantId, projectId };
+            default:
+              return { type: 'dashboard', module: 'project', tenantId, projectId };
+          }
         case 'designer':
           switch (page) {
             case 'dashboard':
@@ -123,7 +142,7 @@ export const useURLRouting = () => {
               return { type: 'dashboard', module: 'designer', tenantId, projectId };
           }
         default:
-          return { type: 'dashboard', module: 'designer', tenantId, projectId };
+          return { type: 'dashboard', module: 'project', tenantId, projectId };
       }
     }
     
@@ -297,6 +316,18 @@ export const useURLRouting = () => {
           case 'viewer':
             navigate(buildURL(''));
             break;
+          case 'dashboard':
+            // DESIGNER 모듈의 기본 화면은 LNB 순서 기반으로 결정
+            if (route.module === 'designer' && !route.projectId) {
+              // LNB 순서 기반 기본 화면으로 리다이렉트 (screens로 임시 설정)
+              navigate(buildURL('/screens', false));
+            } else {
+              navigate(buildURL('/dashboard', true));
+            }
+            break;
+          case 'project-settings':
+            navigate(buildURL('/project-settings', true));
+            break;
       
       // LNB 화면들 (프로젝트별 독립)
       case 'user-screen':
@@ -308,9 +339,6 @@ export const useURLRouting = () => {
         if (route.menuId) {
           navigate(buildURL(`/lnb/${route.menuId}`, true));
         }
-        break;
-      case 'dashboard':
-        navigate(buildURL('/dashboard', true));
         break;
       case 'screens':
         if (route.module === 'designer') {

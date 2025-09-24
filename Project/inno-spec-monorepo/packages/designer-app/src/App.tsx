@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Header, AppType } from '@inno-spec/ui-lib';
-import ProjectList from './components/ProjectList';
-import Dashboard from './components/Dashboard';
 import { TableManager, FieldManager, DatabaseManager, FunctionManager, VariableManager, ScreenManager, LnbManager } from '@inno-spec/admin-app';
+import { ProjectDashboard, ProjectList as ProjectAppList, ProjectOverview } from '@inno-spec/project-app';
 import DataSyncManager from './components/DataSyncManager';
 // ScreenCanvas는 현재 사용되지 않음
 import ScreenRuntimeView from './components/ScreenRuntimeView';
 import { Sidebar } from '@inno-spec/ui-lib';
 import LoginView from './components/LoginView';
 import IllustrationView from './components/IllustrationView';
-import ProjectSettings from './components/ProjectSettings';
-import { Project, Bridge } from '@inno-spec/shared';
+import { Project, Bridge, LNBConfig } from '@inno-spec/shared';
 import { TenantProvider, useTenant } from './contexts/TenantContext';
 import { APIProvider, useAPI } from './contexts/APIContext';
 import { ProjectService } from './services/ProjectService';
@@ -61,7 +59,7 @@ function AppContent() {
   const { lnbConfigs, loading, error } = useAPI();
   const { currentRoute, navigateToScreen } = useURLRouting();
   const location = useLocation();
-  const params = useParams();
+  // const params = useParams();
   const [selectedApp, setSelectedApp] = useState<AppType>(() => {
     // URL 기반으로 selectedApp 자동 설정
     const pathname = window.location.pathname;
@@ -73,17 +71,94 @@ function AppContent() {
       return 'VIEWER';
     } else if (pathname.includes('/designer')) {
       return 'DESIGNER';
+    } else if (pathname.includes('/project')) {
+      return 'PROJECT';
     }
     
     // localStorage에서 저장된 앱 타입을 가져오거나 기본값 사용
     const savedApp = localStorage.getItem('selectedApp') as AppType;
-    return savedApp || 'DESIGNER';
+    return savedApp || 'PROJECT';
   });
   const [currentUserScreen, setCurrentUserScreen] = useState<string | null>(null);
   const [currentLNBMenu, setCurrentLNBMenu] = useState<any>(null);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedBridge, setSelectedBridge] = useState<Bridge | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
+
+  // DESIGNER 기본 화면: LNB 순서 기반으로 결정 (1번, 상위면 1.1)
+  const navigateToDesignerDefault = React.useCallback(() => {
+    console.log('=== navigateToDesignerDefault Debug ===');
+    console.log('lnbConfigs:', lnbConfigs);
+    console.log('lnbConfigs.length:', lnbConfigs?.length);
+    console.log('selectedProject:', selectedProject);
+    console.log('projects.length:', projects.length);
+    
+    try {
+      if (!lnbConfigs || lnbConfigs.length === 0) {
+        console.log('No LNB configs found, navigating to screens');
+        // LNB가 없으면 화면 관리로 이동
+        navigateToScreen({ type: 'screens', module: 'designer', tenantId: currentTenant?.id });
+        return;
+      }
+
+      // 프로젝트 필요: 없으면 첫 번째 프로젝트 선택 유도 또는 프로젝트 목록으로
+      let projectId = selectedProject?.id;
+      if (!projectId) {
+        if (projects.length > 0) {
+          projectId = projects[0].id;
+          setSelectedProject(projects[0]);
+          localStorage.setItem('selectedProjectId', projects[0].id);
+        } else {
+          navigateToScreen({ type: 'projects', module: 'project', tenantId: currentTenant?.id });
+          return;
+        }
+      }
+
+      // 최상위에서 order가 가장 낮은 항목
+      const top = [...lnbConfigs].sort((a, b) => (a.order || 0) - (b.order || 0))[0];
+      if (!top) {
+        navigateToScreen({ type: 'screens', module: 'designer', tenantId: currentTenant?.id });
+        return;
+      }
+
+      // 상위 메뉴인 경우 첫 번째 하위(1.1)
+      const isParent = Array.isArray(top.children) && top.children.length > 0;
+      const target = isParent
+        ? [...(top.children || [])].sort((a, b) => (a.order || 0) - (b.order || 0))[0]
+        : top;
+
+      if (!target) {
+        navigateToScreen({ type: 'screens', module: 'designer', tenantId: currentTenant?.id });
+        return;
+      }
+
+      // 사용자 화면 우선
+      if (target.screenId) {
+        navigateToScreen({ type: 'user-screen', module: 'designer', tenantId: currentTenant?.id, projectId, screenId: target.screenId });
+        return;
+      }
+      // 시스템 화면 라우팅
+      if (target.systemScreenType) {
+        switch (target.systemScreenType) {
+          case 'dashboard':
+            // dashboard는 더 이상 사용하지 않음, LNB 순서 기반 화면으로 대체
+            navigateToScreen({ type: 'no-screen', module: 'designer', tenantId: currentTenant?.id, projectId });
+            return;
+          case 'project-settings':
+            navigateToScreen({ type: 'project-settings', module: 'designer', tenantId: currentTenant?.id, projectId });
+            return;
+          default:
+            break;
+        }
+      }
+
+      // 연결된 화면이 없으면 안내 화면
+      navigateToScreen({ type: 'no-screen', module: 'designer', tenantId: currentTenant?.id, projectId });
+    } catch (e) {
+      console.error('Failed to navigate to designer default from LNB:', e);
+      navigateToScreen({ type: 'screens', module: 'designer', tenantId: currentTenant?.id });
+    }
+  }, [lnbConfigs, navigateToScreen, selectedProject, projects, currentTenant, setSelectedProject]);
   
   // URL 변경에 따른 화면 처리
   useEffect(() => {
@@ -110,11 +185,22 @@ function AppContent() {
         setSelectedApp('DESIGNER');
         localStorage.setItem('selectedApp', 'DESIGNER');
       }
+    } else if (location.pathname.includes('/project')) {
+      if (selectedApp !== 'PROJECT') {
+        setSelectedApp('PROJECT');
+        localStorage.setItem('selectedApp', 'PROJECT');
+      }
     }
     
-    // 기본 라우트가 dashboard인 경우 projects로 리다이렉트
-    if (currentRoute.type === 'dashboard' && !selectedProject) {
-      navigateToScreen({ type: 'projects', module: 'designer', projectId: selectedProject?.id });
+    // 기본 라우트가 dashboard인 경우 LNB 순서 기반 기본 화면으로 리다이렉트
+    if (currentRoute.type === 'dashboard' && selectedApp === 'DESIGNER') {
+      navigateToDesignerDefault();
+      return;
+    }
+    
+    // 프로젝트가 없는 경우 PROJECT 앱으로 리다이렉트
+    if (currentRoute.type === 'dashboard' && !selectedProject && projects.length === 0) {
+      navigateToScreen({ type: 'projects', module: 'project', tenantId: currentTenant?.id });
       return;
     }
     
@@ -336,8 +422,6 @@ function AppContent() {
             icon: '📊',
             order: 1,
             isActive: true,
-            parentId: '',
-            isParent: false,
             type: 'independent',
             screenId: '',
             systemScreenType: 'dashboard',
@@ -352,11 +436,9 @@ function AppContent() {
             icon: '🖼️',
             order: 2,
             isActive: true,
-            parentId: '',
-            isParent: false,
             type: 'independent',
             screenId: '',
-            systemScreenType: 'screens',
+            systemScreenType: undefined,
             children: [],
             createdAt: new Date(),
             updatedAt: new Date()
@@ -368,11 +450,9 @@ function AppContent() {
             icon: '📐',
             order: 3,
             isActive: true,
-            parentId: '',
-            isParent: false,
             type: 'independent',
             screenId: '',
-            systemScreenType: 'illustration',
+            systemScreenType: undefined,
             children: [],
             createdAt: new Date(),
             updatedAt: new Date()
@@ -384,8 +464,6 @@ function AppContent() {
             icon: '⚙️',
             order: 4,
             isActive: true,
-            parentId: '',
-            isParent: false,
             type: 'independent',
             screenId: '',
             systemScreenType: 'project-settings',
@@ -413,7 +491,7 @@ function AppContent() {
       
       // URL에 projectId가 없으면 localStorage에서 가져옴
       if (!projectId) {
-        projectId = localStorage.getItem('selectedProjectId');
+        projectId = localStorage.getItem('selectedProjectId') || undefined;
       }
       
       console.log('Looking for project with ID:', projectId);
@@ -440,7 +518,7 @@ function AppContent() {
   }, [projects, currentRoute.projectId, selectedProject]);
 
   // 프로젝트가 로드되었는지 확인 (name이나 displayName이 있으면 로드된 것으로 판단)
-  const isProjectLoaded = selectedProject && (selectedProject.name || selectedProject.displayName);
+  const isProjectLoaded = selectedProject && selectedProject.name;
   
   // 디버깅 로그 추가
   console.log('Debug - selectedProject:', selectedProject);
@@ -459,21 +537,35 @@ function AppContent() {
     } else {
       setSelectedBridge(null);
     }
-    // 프로젝트 ID를 포함한 대시보드로 이동
-    navigateToScreen({ type: 'dashboard', module: 'designer', projectId: project.id });
+    // 프로젝트 ID를 포함한 PROJECT 앱의 대시보드로 이동
+    navigateToScreen({ type: 'dashboard', module: 'project', tenantId: currentTenant?.id, projectId: project.id });
   };
 
   const handleAppChange = (app: AppType) => {
+    console.log('=== handleAppChange Debug ===');
+    console.log('Changing to app:', app);
+    console.log('Current selectedApp:', selectedApp);
+    console.log('Current selectedProject:', selectedProject);
+    console.log('Current lnbConfigs:', lnbConfigs);
+    
     setSelectedApp(app);
     localStorage.setItem('selectedApp', app);
     // 앱 변경 시 기본 뷰로 초기화
-    if (app === 'DESIGNER') {
-      navigateToScreen({ type: 'projects', module: 'designer', projectId: selectedProject?.id });
+    if (app === 'PROJECT') {
+      console.log('Navigating to PROJECT app');
+      navigateToScreen({ type: 'projects', module: 'project', projectId: selectedProject?.id });
+    } else if (app === 'DESIGNER') {
+      console.log('Navigating to DESIGNER app - calling navigateToDesignerDefault');
+      // DESIGNER 앱 선택 시 LNB 순서 기반 기본 화면으로 이동
+      navigateToDesignerDefault();
     } else if (app === 'MODELER') {
+      console.log('Navigating to MODELER app');
       navigateToScreen({ type: 'modeler', module: 'modeler', projectId: selectedProject?.id });
     } else if (app === 'VIEWER') {
+      console.log('Navigating to VIEWER app');
       navigateToScreen({ type: 'viewer', module: 'viewer', projectId: selectedProject?.id });
     } else if (app === 'ADMIN') {
+      console.log('Navigating to ADMIN app');
       navigateToScreen({ type: 'admin-db', module: 'admin' });
     }
   };
@@ -674,13 +766,12 @@ function AppContent() {
             <div className="flex h-full">
               <Sidebar
                 activeMenu={getActiveMenuName()}
-                onMenuSelect={() => {}}
+                onMenuSelect={handleLNBMenuClick}
                 selectedProject={null}
                 projects={[]}
                 onProjectChange={() => {}}
                 onBridgeChange={() => {}}
                 selectedBridge={null}
-                onLNBMenuClick={handleLNBMenuClick}
                 lnbConfigs={adminLNBConfig}
                 showProjectSelector={false}
               />
@@ -701,13 +792,101 @@ function AppContent() {
           {/* 다른 메뉴들 */}
           {selectedApp !== 'ADMIN' && (
             <Routes>
-              {/* GNB 라우트 (프로젝트 공통) */}
-              <Route path="/:tenantId/designer/projects" element={
-                <ProjectList 
+              {/* PROJECT 앱 라우트 */}
+              <Route path="/:tenantId/project/projects" element={
+                <ProjectAppList 
                   onProjectSelect={handleProjectSelect}
                   tenantId={currentTenant.id}
                 />
               } />
+              
+              <Route path="/:tenantId/project/:projectId/dashboard" element={
+                selectedProject ? (
+                  <ProjectDashboard 
+                    project={selectedProject}
+                    selectedBridge={selectedBridge}
+                    projects={projects}
+                    onProjectChange={setSelectedProject}
+                    onBridgeChange={setSelectedBridge}
+                    onProjectUpdate={async (updatedProject: Project) => {
+                      try {
+                        const projectService = new ProjectService(new LocalStorageProjectProvider());
+                        await projectService.updateProject(updatedProject);
+                        setSelectedProject(updatedProject);
+                        const allProjects = await projectService.getAllProjects();
+                        setProjects(allProjects);
+                        console.log('Project updated:', updatedProject);
+                      } catch (error) {
+                        console.error('Failed to update project:', error);
+                        alert('프로젝트 업데이트에 실패했습니다.');
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="text-6xl mb-4">📊</div>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-2">프로젝트 대시보드</h2>
+                      <p className="text-gray-600 mb-4">프로젝트를 선택하면 대시보드를 확인할 수 있습니다.</p>
+                      <button
+                        onClick={() => navigateToScreen({ type: 'projects', module: 'project', projectId: selectedProject?.id || undefined })}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                      >
+                        프로젝트 선택하기
+                      </button>
+                    </div>
+                  </div>
+                )
+              } />
+              
+              <Route path="/:tenantId/project/:projectId/overview" element={
+                selectedProject ? (
+                  <ProjectOverview project={selectedProject} />
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="text-6xl mb-4">📋</div>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-2">프로젝트 개요</h2>
+                      <p className="text-gray-600">프로젝트를 선택하면 개요를 확인할 수 있습니다.</p>
+                    </div>
+                  </div>
+                )
+              } />
+              
+              <Route path="/:tenantId/project/:projectId/project-settings" element={
+                selectedProject ? (
+                  <ProjectDashboard 
+                    project={selectedProject}
+                    selectedBridge={selectedBridge}
+                    projects={projects}
+                    onProjectChange={setSelectedProject}
+                    onBridgeChange={setSelectedBridge}
+                    onProjectUpdate={async (updatedProject: Project) => {
+                      try {
+                        const projectService = new ProjectService(new LocalStorageProjectProvider());
+                        await projectService.updateProject(updatedProject);
+                        setSelectedProject(updatedProject);
+                        const allProjects = await projectService.getAllProjects();
+                        setProjects(allProjects);
+                        console.log('Project updated:', updatedProject);
+                      } catch (error) {
+                        console.error('Failed to update project:', error);
+                        alert('프로젝트 업데이트에 실패했습니다.');
+                      }
+                    }}
+                    activeMenu="project-settings"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <h2 className="text-2xl font-bold text-gray-900 mb-4">프로젝트 설정</h2>
+                      <p className="text-gray-600">프로젝트를 선택하면 설정을 확인할 수 있습니다.</p>
+                    </div>
+                  </div>
+                )
+              } />
+
+              {/* GNB 라우트 (프로젝트 공통) */}
               
               <Route path="/:tenantId/designer/tables" element={<TableManager />} />
               <Route path="/:tenantId/designer/functions" element={<FunctionManager />} />
@@ -757,47 +936,19 @@ function AppContent() {
           {/* LNB 라우트 (프로젝트별 독립) */}
           <Route path="/:tenantId/designer/:projectId/dashboard" element={
             isProjectLoaded ? (
-              <Dashboard 
-                project={selectedProject} 
-                selectedBridge={selectedBridge}
-                projects={projects}
-                onProjectChange={setSelectedProject}
-                onBridgeChange={(bridge) => {
-                  setSelectedBridge(bridge);
-                  // 브리지 변경 시 프로젝트 업데이트
-                  if (selectedProject) {
-                    const updatedProject = {
-                      ...selectedProject,
-                      bridges: selectedProject.bridges.map(b => 
-                        b.id === bridge.id ? bridge : b
-                      )
-                    };
-                    setSelectedProject(updatedProject);
-                  }
-                }}
-                onProjectUpdate={async (updatedProject) => {
-                  try {
-                    const projectService = new ProjectService(new LocalStorageProjectProvider());
-                    await projectService.updateProject(updatedProject);
-                    setSelectedProject(updatedProject);
-                    // 브리지가 변경된 경우 선택된 브리지도 업데이트
-                    if (selectedBridge && !updatedProject.bridges.find(b => b.id === selectedBridge.id)) {
-                      setSelectedBridge(updatedProject.bridges[0]);
-                    }
-                    // 프로젝트 목록도 업데이트
-                    const allProjects = await projectService.getAllProjects();
-                    setProjects(allProjects);
-                    console.log('Project updated:', updatedProject);
-                  } catch (error) {
-                    console.error('Failed to update project:', error);
-                    alert('프로젝트 업데이트에 실패했습니다.');
-                  }
-                }}
-                onLNBMenuClick={handleLNBMenuClick}
-                lnbConfigs={lnbConfigs}
-                showProjectSelector={true}
-                activeMenu={getActiveMenuName()}
-              />
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <div className="text-6xl mb-4">🚧</div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">DESIGNER 대시보드</h2>
+                  <p className="text-gray-600 mb-4">DESIGNER 앱의 대시보드 기능이 PROJECT 앱으로 이전되었습니다.</p>
+                  <button
+                    onClick={() => navigateToScreen({ type: 'projects', module: 'project', tenantId: currentTenant?.id })}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  >
+                    PROJECT 앱으로 이동
+                  </button>
+                </div>
+              </div>
             ) : selectedProject && !isProjectLoaded ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
@@ -827,16 +978,9 @@ function AppContent() {
           <Route path="/:tenantId/designer/:projectId/illustration" element={
             <div className="flex h-full">
               <Sidebar
-                activeMenu={getActiveMenuName()}
                 onMenuSelect={() => {}}
                 selectedProject={selectedProject}
-                projects={projects}
-                onProjectChange={setSelectedProject}
                 onBridgeChange={setSelectedBridge}
-                selectedBridge={selectedBridge}
-                onLNBMenuClick={handleLNBMenuClick}
-                lnbConfigs={lnbConfigs}
-                showProjectSelector={true}
               />
               <div className="flex-1 p-6">
                 <IllustrationView />
@@ -847,35 +991,24 @@ function AppContent() {
             selectedProject ? (
               <div className="flex h-full">
                 <Sidebar
-                  activeMenu={getActiveMenuName()}
                   onMenuSelect={() => {}}
                   selectedProject={selectedProject}
-                  projects={projects}
-                  onProjectChange={setSelectedProject}
                   onBridgeChange={setSelectedBridge}
-                  selectedBridge={selectedBridge}
-                  onLNBMenuClick={handleLNBMenuClick}
-                  lnbConfigs={lnbConfigs}
-                showProjectSelector={true}
                 />
                 <div className="flex-1 p-6">
-                  <ProjectSettings 
-                    project={selectedProject}
-                    onProjectUpdate={async (updatedProject) => {
-                      try {
-                        const projectService = new ProjectService(new LocalStorageProjectProvider());
-                        await projectService.updateProject(updatedProject);
-                        setSelectedProject(updatedProject);
-                        // 프로젝트 목록도 업데이트
-                        const allProjects = await projectService.getAllProjects();
-                        setProjects(allProjects);
-                        console.log('Project updated:', updatedProject);
-                      } catch (error) {
-                        console.error('Failed to update project:', error);
-                        alert('프로젝트 업데이트에 실패했습니다.');
-                      }
-                    }}
-                  />
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="text-6xl mb-4">⚙️</div>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-2">프로젝트 설정</h2>
+                      <p className="text-gray-600 mb-4">프로젝트 설정 기능이 PROJECT 앱으로 이전되었습니다.</p>
+                      <button
+                        onClick={() => navigateToScreen({ type: 'project-settings', module: 'project', tenantId: currentTenant?.id, projectId: selectedProject?.id })}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                      >
+                        PROJECT 앱으로 이동
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -892,13 +1025,12 @@ function AppContent() {
             <div className="flex h-full">
               <Sidebar
                 activeMenu={getActiveMenuName()}
-                onMenuSelect={() => {}}
+                onMenuSelect={handleLNBMenuClick}
                 selectedProject={selectedProject}
                 projects={projects}
                 onProjectChange={setSelectedProject}
                 onBridgeChange={setSelectedBridge}
                 selectedBridge={selectedBridge}
-                onLNBMenuClick={handleLNBMenuClick}
                 lnbConfigs={lnbConfigs}
                 showProjectSelector={true}
               />
@@ -917,12 +1049,12 @@ function AppContent() {
           
           {/* 기본 라우트 */}
           <Route path="/" element={
-            <Navigate to={`/${currentTenant?.id || 'tenant-1'}/designer/projects`} replace />
+            <Navigate to={`/${currentTenant?.id || 'tenant-1'}/project/projects`} replace />
           } />
           
           {/* 테넌트 기본 라우트 */}
           <Route path="/:tenantId" element={
-            <Navigate to={`/${currentTenant?.id || 'tenant-1'}/designer/projects`} replace />
+            <Navigate to={`/${currentTenant?.id || 'tenant-1'}/project/projects`} replace />
           } />
           
           {/* 하위 호환성을 위한 기존 라우트들 */}
@@ -939,7 +1071,7 @@ function AppContent() {
           
           
           <Route path="/designer/projects" element={
-            <ProjectList 
+            <ProjectAppList 
               onProjectSelect={handleProjectSelect}
               tenantId={currentTenant.id}
             />
@@ -947,47 +1079,19 @@ function AppContent() {
           
           <Route path="/designer/dashboard" element={
             selectedProject ? (
-              <Dashboard 
-                project={selectedProject} 
-                selectedBridge={selectedBridge}
-                projects={projects}
-                onProjectChange={setSelectedProject}
-                onBridgeChange={(bridge) => {
-                  setSelectedBridge(bridge);
-                  // 브리지 변경 시 프로젝트 업데이트
-                  if (selectedProject) {
-                    const updatedProject = {
-                      ...selectedProject,
-                      bridges: selectedProject.bridges.map(b => 
-                        b.id === bridge.id ? bridge : b
-                      )
-                    };
-                    setSelectedProject(updatedProject);
-                  }
-                }}
-                onProjectUpdate={async (updatedProject) => {
-                  try {
-                    const projectService = new ProjectService(new LocalStorageProjectProvider());
-                    await projectService.updateProject(updatedProject);
-                    setSelectedProject(updatedProject);
-                    // 브리지가 변경된 경우 선택된 브리지도 업데이트
-                    if (selectedBridge && !updatedProject.bridges.find(b => b.id === selectedBridge.id)) {
-                      setSelectedBridge(updatedProject.bridges[0]);
-                    }
-                    // 프로젝트 목록도 업데이트
-                    const allProjects = await projectService.getAllProjects();
-                    setProjects(allProjects);
-                    console.log('Project updated:', updatedProject);
-                  } catch (error) {
-                    console.error('Failed to update project:', error);
-                    alert('프로젝트 업데이트에 실패했습니다.');
-                  }
-                }}
-                onLNBMenuClick={handleLNBMenuClick}
-                lnbConfigs={lnbConfigs}
-                showProjectSelector={true}
-                activeMenu={getActiveMenuName()}
-              />
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <div className="text-6xl mb-4">🚧</div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">DESIGNER 대시보드</h2>
+                  <p className="text-gray-600 mb-4">DESIGNER 앱의 대시보드 기능이 PROJECT 앱으로 이전되었습니다.</p>
+                  <button
+                    onClick={() => navigateToScreen({ type: 'projects', module: 'project', tenantId: currentTenant?.id })}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  >
+                    PROJECT 앱으로 이동
+                  </button>
+                </div>
+              </div>
             ) : (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
@@ -1010,6 +1114,68 @@ function AppContent() {
           <Route path="/:tenantId/project/:projectId/designer/sync" element={<DataSyncManager />} />
           <Route path="/:tenantId/project/:projectId/designer/functions" element={<FunctionManager />} />
           
+          {/* DESIGNER 앱 LNB 라우트들 */}
+          <Route path="/:tenantId/designer/:projectId/user-screen" element={
+            <div className="flex h-full">
+              <Sidebar
+                activeMenu={getActiveMenuName()}
+                onMenuSelect={handleLNBMenuClick}
+                selectedProject={selectedProject}
+                projects={projects}
+                onProjectChange={setSelectedProject}
+                onBridgeChange={setSelectedBridge}
+                selectedBridge={selectedBridge}
+                lnbConfigs={lnbConfigs}
+                showProjectSelector={true}
+              />
+              <div className="flex-1 bg-gray-50 overflow-auto">
+                {currentUserScreen ? (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="text-6xl mb-4">📱</div>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-2">사용자 화면</h2>
+                      <p className="text-gray-600">화면 ID: {currentUserScreen}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="text-6xl mb-4">📱</div>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-2">사용자 화면</h2>
+                      <p className="text-gray-600">화면을 로드하는 중입니다...</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          } />
+          
+          <Route path="/:tenantId/designer/:projectId/lnb-menu" element={
+            <div className="flex h-full">
+              <Sidebar
+                activeMenu={getActiveMenuName()}
+                onMenuSelect={handleLNBMenuClick}
+                selectedProject={selectedProject}
+                projects={projects}
+                onProjectChange={setSelectedProject}
+                onBridgeChange={setSelectedBridge}
+                selectedBridge={selectedBridge}
+                lnbConfigs={lnbConfigs}
+                showProjectSelector={true}
+              />
+              <div className="flex-1 bg-gray-50 overflow-auto">
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <div className="text-6xl mb-4">📋</div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">LNB 메뉴</h2>
+                    <p className="text-gray-600 mb-4">LNB 메뉴 화면입니다.</p>
+                    <p className="text-sm text-gray-500">메뉴 ID: {currentRoute.menuId}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          } />
+          
           {/* 하위 호환성을 위한 기존 라우트들 */}
           <Route path="/modeler" element={
             <div className="flex items-center justify-center h-full">
@@ -1025,17 +1191,17 @@ function AppContent() {
           
           {/* 기본 라우트 - 테넌트 기반으로 리다이렉트 */}
           <Route path="/" element={
-            <Navigate to={`/${currentTenant?.id || 'tenant-1'}/designer/projects`} replace />
+            <Navigate to={`/${currentTenant?.id || 'tenant-1'}/project/projects`} replace />
           } />
           
           {/* 테넌트 기본 라우트 */}
           <Route path="/:tenantId" element={
-            <Navigate to={`/${currentTenant?.id || 'tenant-1'}/designer/projects`} replace />
+            <Navigate to={`/${currentTenant?.id || 'tenant-1'}/project/projects`} replace />
           } />
           
           {/* Designer 모듈 라우트 */}
           <Route path="/designer/projects" element={
-            <ProjectList 
+            <ProjectAppList 
               onProjectSelect={handleProjectSelect}
               tenantId={currentTenant.id}
             />
@@ -1044,39 +1210,19 @@ function AppContent() {
           {/* 대시보드 */}
           <Route path="/designer/dashboard" element={
             selectedProject ? (
-              <Dashboard 
-                project={selectedProject} 
-                selectedBridge={selectedBridge}
-                projects={projects}
-                onProjectChange={setSelectedProject}
-                onBridgeChange={(bridge) => {
-                  setSelectedBridge(bridge);
-                  console.log('Selected bridge:', bridge);
-                }}
-                onProjectUpdate={async (updatedProject) => {
-                  try {
-                    await projectService.updateProject(updatedProject);
-                    setSelectedProject(updatedProject);
-                    // 새로 추가된 교량이 있다면 첫 번째 교량 선택
-                    if (updatedProject.bridges && updatedProject.bridges.length > 0) {
-                      if (!selectedBridge || !updatedProject.bridges.find(b => b.id === selectedBridge.id)) {
-                        setSelectedBridge(updatedProject.bridges[0]);
-                      }
-                    }
-                    // 프로젝트 목록도 업데이트
-                    const allProjects = await projectService.getAllProjects();
-                    setProjects(allProjects);
-                    console.log('Project updated:', updatedProject);
-                  } catch (error) {
-                    console.error('Failed to update project:', error);
-                    alert('프로젝트 업데이트에 실패했습니다.');
-                  }
-                }}
-                onLNBMenuClick={handleLNBMenuClick}
-                lnbConfigs={lnbConfigs}
-                showProjectSelector={true}
-                activeMenu={getActiveMenuName()}
-              />
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <div className="text-6xl mb-4">🚧</div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">DESIGNER 대시보드</h2>
+                  <p className="text-gray-600 mb-4">DESIGNER 앱의 대시보드 기능이 PROJECT 앱으로 이전되었습니다.</p>
+                  <button
+                    onClick={() => navigateToScreen({ type: 'projects', module: 'project', tenantId: currentTenant?.id })}
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  >
+                    PROJECT 앱으로 이동
+                  </button>
+                </div>
+              </div>
             ) : (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
@@ -1112,19 +1258,8 @@ function AppContent() {
           <Route path="/designer/screen/:screenId" element={
             <div className="flex h-full">
               <Sidebar
-                activeMenu={getActiveMenuName()}
                 onMenuSelect={() => {}}
                 selectedProject={selectedProject}
-                selectedBridge={selectedBridge}
-                projects={projects}
-                onProjectChange={setSelectedProject}
-                onBridgeChange={(bridge) => {
-                  setSelectedBridge(bridge);
-                  console.log('Selected bridge:', bridge);
-                }}
-                onLNBMenuClick={handleLNBMenuClick}
-                lnbConfigs={lnbConfigs}
-                showProjectSelector={true}
               />
               <div className="flex-1 bg-gray-50 overflow-auto">
                 <UserScreenView 
@@ -1140,19 +1275,8 @@ function AppContent() {
           <Route path="/designer/lnb/:menuId" element={
             <div className="flex h-full">
               <Sidebar
-                activeMenu={getActiveMenuName()}
                 onMenuSelect={() => {}}
                 selectedProject={selectedProject}
-                selectedBridge={selectedBridge}
-                projects={projects}
-                onProjectChange={setSelectedProject}
-                onBridgeChange={(bridge) => {
-                  setSelectedBridge(bridge);
-                  console.log('Selected bridge:', bridge);
-                }}
-                onLNBMenuClick={handleLNBMenuClick}
-                lnbConfigs={lnbConfigs}
-                showProjectSelector={true}
               />
               <div className="flex-1 bg-gray-50 overflow-auto">
                 {currentUserScreen ? (
@@ -1188,19 +1312,8 @@ function AppContent() {
           <Route path="/designer/illustration" element={
             <div className="flex h-full">
               <Sidebar
-                activeMenu={getActiveMenuName()}
                 onMenuSelect={() => {}}
                 selectedProject={selectedProject}
-                selectedBridge={selectedBridge}
-                projects={projects}
-                onProjectChange={setSelectedProject}
-                onBridgeChange={(bridge) => {
-                  setSelectedBridge(bridge);
-                  console.log('Selected bridge:', bridge);
-                }}
-                onLNBMenuClick={handleLNBMenuClick}
-                lnbConfigs={lnbConfigs}
-                showProjectSelector={true}
               />
               <div className="flex-1 bg-gray-50 overflow-auto">
                 <IllustrationView />
@@ -1212,37 +1325,27 @@ function AppContent() {
             selectedProject ? (
               <div className="flex h-full">
                 <Sidebar
-                  activeMenu={getActiveMenuName()}
                   onMenuSelect={() => {}}
                   selectedProject={selectedProject}
-                  selectedBridge={selectedBridge}
-                  projects={projects}
-                  onProjectChange={setSelectedProject}
                   onBridgeChange={(bridge) => {
                     setSelectedBridge(bridge);
                     console.log('Selected bridge:', bridge);
                   }}
-                  onLNBMenuClick={handleLNBMenuClick}
-                  lnbConfigs={lnbConfigs}
-                showProjectSelector={true}
                 />
                 <div className="flex-1 bg-gray-50 overflow-auto">
-                  <ProjectSettings 
-                    project={selectedProject}
-                    onProjectUpdate={async (updatedProject) => {
-                      try {
-                        await projectService.updateProject(updatedProject);
-                        setSelectedProject(updatedProject);
-                        // 프로젝트 목록도 업데이트
-                        const allProjects = await projectService.getAllProjects();
-                        setProjects(allProjects);
-                        console.log('Project updated:', updatedProject);
-                      } catch (error) {
-                        console.error('Failed to update project:', error);
-                        alert('프로젝트 업데이트에 실패했습니다.');
-                      }
-                    }}
-                  />
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="text-6xl mb-4">⚙️</div>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-2">프로젝트 설정</h2>
+                      <p className="text-gray-600 mb-4">프로젝트 설정 기능이 PROJECT 앱으로 이전되었습니다.</p>
+                      <button
+                        onClick={() => navigateToScreen({ type: 'project-settings', module: 'project', tenantId: currentTenant?.id, projectId: selectedProject?.id })}
+                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                      >
+                        PROJECT 앱으로 이동
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (

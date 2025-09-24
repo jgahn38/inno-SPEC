@@ -55,8 +55,6 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId }) 
       setProjects(prev => [...prev, createdProject]);
       setShowCreateModal(false);
       setNewProject({ id: '', name: '', description: '', category: 'bridge' });
-      
-      onProjectSelect(createdProject);
     } catch (err) {
       alert('프로젝트 생성에 실패했습니다.');
     }

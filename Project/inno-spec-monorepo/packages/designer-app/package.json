@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@inno-spec/admin-app": "*",
+    "@inno-spec/project-app": "*",
     "@inno-spec/shared": "*",
     "@inno-spec/ui-lib": "*",
     "@types/react-router-dom": "^5.3.3",

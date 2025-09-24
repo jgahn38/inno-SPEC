@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Grid as BridgeIcon, ChevronDown } from 'lucide-react';
 import { Sidebar } from '@inno-spec/ui-lib';
-import IllustrationView from './IllustrationView';
+// import IllustrationView from '../../designer-app/src/components/IllustrationView';
 import ProjectSettings from './ProjectSettings';
 import { Project, Bridge } from '@inno-spec/shared';
 import { BridgeDataService } from '../services/BridgeDataService';
+import { projectLNBConfig } from '../configs/projectLNBConfig';
 
-interface DashboardProps {
+interface ProjectDashboardProps {
   project: Project;
   selectedBridge: Bridge | null;
   projects: Project[];
@@ -14,11 +15,10 @@ interface DashboardProps {
   onBridgeChange: (bridge: Bridge) => void;
   onProjectUpdate: (updatedProject: Project) => void;
   onLNBMenuClick?: (menuId: string) => void;
-  lnbConfigs?: any[];
   activeMenu?: string;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ 
+const ProjectDashboard: React.FC<ProjectDashboardProps> = ({ 
   project, 
   selectedBridge, 
   projects, 
@@ -26,7 +26,6 @@ const Dashboard: React.FC<DashboardProps> = ({
   onBridgeChange, 
   onProjectUpdate, 
   onLNBMenuClick,
-  lnbConfigs = [],
   activeMenu: propActiveMenu = 'dashboard'
 }) => {
   const [activeMenu, setActiveMenu] = useState(propActiveMenu);
@@ -40,9 +39,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   
   // 메뉴 클릭 처리
   const handleMenuSelect = (menuId: string) => {
-    console.log('Dashboard menu selected:', menuId);
-    // Dashboard 컴포넌트에서는 항상 'dashboard'로 유지
-    setActiveMenu('dashboard');
+    console.log('Project menu selected:', menuId);
+    setActiveMenu(menuId);
   };
   const [isBridgeDropdownOpen, setIsBridgeDropdownOpen] = useState(false);
   // const [bridgeData, setBridgeData] = useState<BridgeData | null>(null); // 사용하지 않음
@@ -241,10 +239,22 @@ const Dashboard: React.FC<DashboardProps> = ({
       
       // 모델링
       case 'section':
-        return <IllustrationView />;
+        return (
+          <div className="space-y-4">
+            <div className="px-6 py-4">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">모델링</h2>
+                <p className="text-sm text-gray-600">교량 모델링 기능이 여기에 구현됩니다.</p>
+              </div>
+            </div>
+            <div className="bg-white rounded-lg border border-gray-200 p-8">
+              <p className="text-gray-600">모델링 기능이 구현될 예정입니다.</p>
+            </div>
+          </div>
+        );
       
       // 프로젝트 설정
-      case 'settings':
+      case 'project-settings':
         return <ProjectSettings project={project} onProjectUpdate={onProjectUpdate} />;
       
       default:
@@ -275,11 +285,11 @@ const Dashboard: React.FC<DashboardProps> = ({
         onProjectChange={onProjectChange}
         onBridgeChange={onBridgeChange}
         onLNBMenuClick={onLNBMenuClick}
-        lnbConfigs={lnbConfigs}
+        lnbConfigs={projectLNBConfig}
       />
       <div className="flex-1 bg-gray-50 overflow-auto">
         {/* 교량 선택 헤더 - 대시보드와 프로젝트 설정 메뉴일 때는 표시하지 않음 */}
-        {activeMenu !== 'dashboard' && activeMenu !== 'settings' && project.bridges && project.bridges.length > 0 && (
+        {activeMenu !== 'dashboard' && activeMenu !== 'project-settings' && project.bridges && project.bridges.length > 0 && (
           <div className="bg-white border-b border-gray-200 px-6 py-4">
             <div className="flex items-center space-x-4">
               <div className="relative w-64">
@@ -346,13 +356,4 @@ const Dashboard: React.FC<DashboardProps> = ({
   );
 };
 
-// const getBridgeTypeLabel = (type: Bridge['type']) => {
-//   switch (type) {
-//     case 'concrete': return '콘크리트';
-//     case 'steel': return '강교';
-//     case 'composite': return '합성교';
-//     default: return type;
-//   }
-// }; // 사용하지 않음
-
-export default Dashboard;
+export default ProjectDashboard;
