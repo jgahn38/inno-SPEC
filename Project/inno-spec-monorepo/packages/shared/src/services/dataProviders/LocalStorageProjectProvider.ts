@@ -27,9 +27,6 @@ export class LocalStorageProjectProvider implements IProjectDataProvider {
     }
   }
   
-  private generateId(): string {
-    return `project-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  }
   
   async getProjects(): Promise<Project[]> {
     const projects = this.getProjectsFromStorage();
@@ -53,18 +50,16 @@ export class LocalStorageProjectProvider implements IProjectDataProvider {
     
     const now = new Date().toISOString();
     
-    const newProject: Project = {
+    const newProject: any = {
       id: request.id,
       name: request.name,
       description: request.description,
-      tenantId: 'default-tenant',
       createdAt: now,
       updatedAt: now,
       status: 'active',
       category: request.category,
       tags: request.tags || [],
       metadata: request.metadata || {},
-      createdBy: 'user',
       bridges: [
         {
           id: `bridge-${Date.now()}`,

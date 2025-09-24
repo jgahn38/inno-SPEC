@@ -13,6 +13,12 @@ export type { CADEntity, CADData, CADParseResult } from './CADParserService';
 // 프로젝트 데이터 제공자 인터페이스
 export type { IProjectDataProvider } from './IProjectDataProvider';
 
+// 서비스들
+export { ProjectService } from './services/ProjectService';
+export { BridgeDataService } from './services/BridgeDataService';
+export { LocalStorageProjectProvider } from './services/dataProviders/LocalStorageProjectProvider';
+export { apiService } from './services/APIService';
+
 export interface TableRow {
   id: string;
   parameter: string;

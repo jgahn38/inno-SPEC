@@ -1,7 +1,7 @@
 ﻿import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { Tenant, User } from '@inno-spec/shared';
 
-interface TenantContextType {
+export interface TenantContextType {
   currentTenant: Tenant | null;
   currentUser: User | null;
   isAuthenticated: boolean;

@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { apiService } from '../services/APIService';
+import { apiService } from '@inno-spec/shared';
 import { ScreenConfig, LNBConfig } from '@inno-spec/shared';
 
-interface APIContextType {
+export interface APIContextType {
   screens: ScreenConfig[];
   lnbConfigs: LNBConfig[];
   loading: boolean;

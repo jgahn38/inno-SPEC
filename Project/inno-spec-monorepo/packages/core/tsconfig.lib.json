@@ -6,8 +6,7 @@
     "types": ["node"],
     "baseUrl": ".",
     "paths": {
-      "@inno-spec/shared": ["../shared/src"],
-      "@inno-spec/ui-lib": ["../ui-lib/src"]
+      "@inno-spec/shared": ["../shared/src"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],

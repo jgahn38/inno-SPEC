@@ -7,11 +7,13 @@
     "strict": false,
     "noImplicitAny": false,
     "skipLibCheck": true,
-    "strictNullChecks": false,
     "paths": {
       "@inno-spec/shared": ["../shared/src"],
       "@inno-spec/ui-lib": ["../ui-lib/src"],
-      "@inno-spec/core": ["../core/src"]
+      "@inno-spec/core": ["../core/src"],
+      "@inno-spec/designer-app": ["../designer-app/src"],
+      "@inno-spec/project-app": ["../project-app/src"],
+      "@inno-spec/admin-app": ["../admin-app/src"]
     }
   },
   "include": ["src/**/*", "index.html"],

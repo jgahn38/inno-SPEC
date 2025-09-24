@@ -29,7 +29,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@inno-spec/shared': path.resolve(__dirname, '../shared/src'),
-      '@inno-spec/admin-app': path.resolve(__dirname, '../admin-app/src'),
+      '@inno-spec/core': path.resolve(__dirname, '../core/src'),
       '@inno-spec/ui-lib': path.resolve(__dirname, '../ui-lib/src'),
     },
   },

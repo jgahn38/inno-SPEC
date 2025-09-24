@@ -4,7 +4,7 @@ import { Sidebar } from '@inno-spec/ui-lib';
 // import IllustrationView from '../../designer-app/src/components/IllustrationView';
 import ProjectSettings from './ProjectSettings';
 import { Project, Bridge } from '@inno-spec/shared';
-import { BridgeDataService } from '../services/BridgeDataService';
+import { BridgeDataService } from '@inno-spec/shared';
 import { projectLNBConfig } from '../configs/projectLNBConfig';
 
 interface ProjectDashboardProps {

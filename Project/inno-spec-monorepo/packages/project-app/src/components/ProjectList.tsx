@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Project } from '@inno-spec/shared';
-import { ProjectService } from '../services/ProjectService';
-import { LocalStorageProjectProvider } from '../services/dataProviders/LocalStorageProjectProvider';
+import { ProjectService, LocalStorageProjectProvider } from '@inno-spec/shared';
 
 interface ProjectListProps {
   onProjectSelect: (project: Project) => void;

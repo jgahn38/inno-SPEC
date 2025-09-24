@@ -1,5 +1,5 @@
 {
-  "name": "@inno-spec/designer-app",
+  "name": "@inno-spec/main-app",
   "version": "0.0.1",
   "type": "module",
   "scripts": {
@@ -8,6 +8,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@inno-spec/designer-app": "*",
+    "@inno-spec/project-app": "*",
+    "@inno-spec/admin-app": "*",
     "@inno-spec/shared": "*",
     "@inno-spec/ui-lib": "*",
     "@inno-spec/core": "*",

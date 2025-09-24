@@ -1,5 +1,5 @@
 import { IProjectDataProvider } from '@inno-spec/shared';
-import { LocalStorageProjectProvider } from '../services/dataProviders/LocalStorageProjectProvider';
+import { LocalStorageProjectProvider } from '@inno-spec/core';
 
 /**
  * 환경에 따라 적절한 데이터 제공자를 반환합니다.

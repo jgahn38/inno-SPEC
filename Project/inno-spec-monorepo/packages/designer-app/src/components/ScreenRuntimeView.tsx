@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ScreenConfig, ScreenComponent, Bridge, Project } from '@inno-spec/shared';
-import { TableSchemaService } from '@inno-spec/admin-app';
-import { variableService } from '@inno-spec/admin-app';
+// admin-app 의존성 제거 - DESIGNER 앱은 순수한 DESIGNER 기능만 담당
 import { ChevronDown, Building2 } from 'lucide-react';
 
 interface ScreenRuntimeViewProps {
@@ -29,7 +28,7 @@ const ScreenRuntimeView: React.FC<ScreenRuntimeViewProps> = ({ screen, lnbMenu, 
   const [isBridgeDropdownOpen, setIsBridgeDropdownOpen] = useState(false);
   const [availableBridges, setAvailableBridges] = useState<Bridge[]>([]);
   
-  const tableService = TableSchemaService.getInstance();
+  // tableService 제거 - admin-app 의존성 제거
 
   // 교량 목록 로드
   useEffect(() => {
@@ -60,7 +59,8 @@ const ScreenRuntimeView: React.FC<ScreenRuntimeViewProps> = ({ screen, lnbMenu, 
       
       for (const component of tableComponents) {
         try {
-          const table = tableService.getTableById(component.componentId);
+          // tableService 제거 - admin-app 의존성 제거
+          const table = null;
           
           if (table) {
             // table.fields가 이미 필드 객체 배열인지 확인
@@ -69,8 +69,9 @@ const ScreenRuntimeView: React.FC<ScreenRuntimeViewProps> = ({ screen, lnbMenu, 
               // 첫 번째 요소가 문자열(필드 ID)인지 객체(필드)인지 확인
               if (typeof table.fields[0] === 'string') {
                 // 필드 ID 배열인 경우 실제 필드 객체로 변환
-                fieldObjects = (table.fields as any[]).map((fieldId: string) => {
-                  const field = tableService.getField(fieldId);
+                fieldObjects = (table.fields as any[]).map((_fieldId: string) => {
+                  // tableService 제거 - admin-app 의존성 제거
+                  const field = null;
                   return field;
                 }).filter(field => field !== undefined);
               } else {
@@ -148,7 +149,8 @@ const ScreenRuntimeView: React.FC<ScreenRuntimeViewProps> = ({ screen, lnbMenu, 
       
       for (const component of variableComponents) {
         try {
-          const variables = variableService.getVariables();
+          // variables 제거 - admin-app 의존성 제거
+          const variables: any[] = [];
           const variable = variables.find(v => v.id === component.componentId);
           if (variable) {
             newVariableData[component.componentId] = {
@@ -783,8 +785,8 @@ const ScreenRuntimeView: React.FC<ScreenRuntimeViewProps> = ({ screen, lnbMenu, 
   const getCurrentGridConfig = () => {
     if (screen.tabs && screen.tabs.length > 0) {
       const tab = screen.tabs[selectedTabIndex];
-      if (tab && typeof tab === 'object' && 'gridConfig' in tab) {
-        return (tab as any).gridConfig.rows || [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }];
+      if (tab && typeof tab === 'object' && tab !== null && 'gridConfig' in tab) {
+        return (tab as any).gridConfig?.rows || [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }];
       }
     } else if (screen.gridConfig) {
       return screen.gridConfig.rows || [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }];

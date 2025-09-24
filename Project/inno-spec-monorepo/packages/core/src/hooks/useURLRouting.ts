@@ -1,6 +1,6 @@
 ﻿import { useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useTenant } from '../contexts/TenantContext';
+import { useTenant } from '@inno-spec/core';
 
 export interface ScreenRoute {
   type: 'projects' | 'dashboard' | 'screens' | 'user-screen' | 'lnb-menu' | 'settings' | 'illustration' | 'project-settings' | 'no-screen' | 'tables' | 'sync' | 'functions' | 'modeler' | 'viewer' | 'admin-db' | 'admin-fields' | 'admin-table-definition' | 'admin-variable-definition' | 'admin-function-definition' | 'admin-lnb-config' | 'admin-screen-config';
@@ -349,9 +349,6 @@ export const useURLRouting = () => {
         break;
       case 'illustration':
         navigate(buildURL('/illustration', true));
-        break;
-      case 'project-settings':
-        navigate(buildURL('/project-settings', true));
         break;
       case 'no-screen':
         navigate(buildURL('/no-screen', true));
