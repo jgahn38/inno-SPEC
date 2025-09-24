@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User, LogOut, ChevronDown, ChevronUp, Zap } from 'lucide-react';
 import { Tenant, User as UserType } from '@inno-spec/shared';
 
-export type AppType = 'DESIGNER' | 'MODELER' | 'VIEWER' | 'ADMIN';
+export type AppType = 'PROJECT' | 'DESIGNER' | 'MODELER' | 'VIEWER' | 'ADMIN';
 
 export interface HeaderProps {
   currentView: string;
@@ -18,6 +18,7 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentTenant,
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const apps: { value: AppType; label: string }[] = [
+    { value: 'PROJECT', label: 'PROJECT' },
     { value: 'DESIGNER', label: 'DESIGNER' },
     { value: 'MODELER', label: 'MODELER' },
     { value: 'VIEWER', label: 'VIEWER' },

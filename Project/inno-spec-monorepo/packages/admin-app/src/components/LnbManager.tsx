@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Save, X, GripVertical, BarChart3, Building2, Image, Anchor, Database, Variable, Table } from 'lucide-react';
+import { Plus, Save, X, GripVertical, BarChart3, Building2, Image, Anchor, Database, Variable } from 'lucide-react';
 import { screenService } from '../services/ScreenService';
 import { ScreenConfig, LNBConfig, SystemScreenType } from '@inno-spec/shared';
 
@@ -21,13 +21,7 @@ const LnbManager: React.FC = () => {
     systemScreenType: undefined as SystemScreenType | undefined
   });
 
-  // 드래그 앤 드롭 상태
-  const [draggedLNB, setDraggedLNB] = useState<LNBConfig | null>(null);
-  const [hasLnbOrderChanges, setHasLnbOrderChanges] = useState<boolean>(false);
-  const [draggedChild, setDraggedChild] = useState<{ parentId: string; childId: string } | null>(null);
-  
   // LNB 구성 변경 감지
-  const [originalLnbConfigs, setOriginalLnbConfigs] = useState<LNBConfig[]>([]);
   const [hasLnbConfigChanges, setHasLnbConfigChanges] = useState<boolean>(false);
 
   useEffect(() => {
@@ -52,7 +46,6 @@ const LnbManager: React.FC = () => {
     });
     
     setLnbConfigs(migratedLnbData);
-    setOriginalLnbConfigs(migratedLnbData);
     setScreens(screenService.getScreens());
     
     if (resetChanges) {
@@ -104,7 +97,7 @@ const LnbManager: React.FC = () => {
           isActive: newLNB.isActive,
           type: 'child',
           screenId: newLNB.screenId || undefined,
-          systemScreenType: newLNB.systemScreenType || undefined,
+          systemScreenType: undefined,
           createdAt: new Date(),
           updatedAt: new Date(),
         } as LNBConfig];
@@ -115,8 +108,8 @@ const LnbManager: React.FC = () => {
           order: newOrder, 
           type: newLNB.type, 
           children: newLNB.type === 'parent' ? [] : [],
-          screenId: newLNB.type === 'parent' ? undefined : (newLNB.screenId === 'placeholder' ? undefined : (newLNB.screenId || undefined)),
-          systemScreenType: newLNB.type === 'parent' ? undefined : (newLNB.systemScreenType || undefined)
+          screenId: newLNB.type === 'parent' ? undefined : (newLNB.screenId || undefined),
+          systemScreenType: undefined
         });
       }
       setNewLNB({ name: '', displayName: '', icon: '', order: 0, isActive: true, parentId: '', isParent: false, type: 'independent', screenId: '', systemScreenType: undefined });
@@ -137,8 +130,8 @@ const LnbManager: React.FC = () => {
       parentId: '',
       isParent: false,
       type: lnb.type || (lnb.children && lnb.children.length > 0 ? 'parent' : 'independent'),
-      screenId: lnb.screenId ? (lnb.screenId || 'placeholder') : '',
-      systemScreenType: lnb.systemScreenType
+      screenId: lnb.screenId || '',
+      systemScreenType: undefined
     });
     setShowLNBModal(true);
   };
@@ -152,7 +145,7 @@ const LnbManager: React.FC = () => {
           if (parent) {
             const updatedChildren = (parent.children || []).map(child => 
               child.id === editingLNB.id 
-                ? { ...child, ...newLNB, type: 'child' as const, screenId: newLNB.screenId, systemScreenType: newLNB.systemScreenType }
+                ? { ...child, ...newLNB, type: 'child' as const, screenId: newLNB.screenId, systemScreenType: undefined }
                 : child
             );
             screenService.updateLNBConfig(parentId, { children: updatedChildren });
@@ -161,8 +154,8 @@ const LnbManager: React.FC = () => {
       } else {
         const updateData = {
           ...newLNB,
-          screenId: newLNB.type === 'parent' ? undefined : (newLNB.screenId === 'placeholder' ? undefined : (newLNB.screenId || undefined)),
-          systemScreenType: newLNB.type === 'parent' ? undefined : (newLNB.systemScreenType || undefined)
+          screenId: newLNB.type === 'parent' ? undefined : (newLNB.screenId || undefined),
+          systemScreenType: undefined
         };
         screenService.updateLNBConfig(editingLNB.id, updateData);
       }
@@ -178,6 +171,15 @@ const LnbManager: React.FC = () => {
   const handleDeleteLNB = (id: string) => {
     if (window.confirm('이 LNB 메뉴를 삭제하시겠습니까?')) {
       screenService.deleteLNBConfig(id);
+      
+      // 삭제 후 순서 재정렬
+      const updatedConfigs = screenService.getLNBConfigs();
+      updatedConfigs
+        .filter(config => config.id !== id)
+        .forEach((config, index) => {
+          screenService.updateLNBConfig(config.id, { order: index + 1 });
+        });
+      
       loadData();
       setHasLnbConfigChanges(true);
     }
@@ -194,8 +196,8 @@ const LnbManager: React.FC = () => {
       parentId: parentId,
       isParent: false,
       type: 'child',
-      screenId: child.screenId ? (child.screenId || 'placeholder') : '',
-      systemScreenType: child.systemScreenType
+      screenId: child.screenId || '',
+      systemScreenType: undefined
     });
     setShowLNBModal(true);
   };
@@ -232,7 +234,7 @@ const LnbManager: React.FC = () => {
     }));
     
     setHasLnbConfigChanges(false);
-    setOriginalLnbConfigs(lnbConfigs);
+    // setOriginalLnbConfigs(lnbConfigs);
     loadData(true);
     
     alert('LNB 구성이 저장되었습니다. DESIGNER의 LNB 메뉴가 업데이트됩니다.');
@@ -256,7 +258,7 @@ const LnbManager: React.FC = () => {
               <h2 className="text-xl font-semibold text-gray-900">LNB 메뉴 구성</h2>
               <div className="text-sm text-gray-500 mt-1">
                 변경 상태: {hasLnbConfigChanges ? '변경됨' : '저장됨'} | 
-                순서 변경: {hasLnbOrderChanges ? '변경됨' : '저장됨'}
+                순서 변경: 저장됨
               </div>
             </div>
             <div className="flex space-x-3">
@@ -299,7 +301,7 @@ const LnbManager: React.FC = () => {
                   <React.Fragment key={lnb.id}>
                     {/* 상위 메뉴 */}
                     <tr 
-                      className={`hover:bg-gray-50 cursor-pointer ${draggedLNB?.id === lnb.id ? 'opacity-50' : ''}`}
+                      className="hover:bg-gray-50 cursor-pointer"
                       onClick={() => handleEditLNB(lnb)}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -362,7 +364,7 @@ const LnbManager: React.FC = () => {
                       .map((child) => (
                       <tr
                         key={child.id || `${lnb.id}-${child.name}`}
-                        className={`hover:bg-gray-50 bg-gray-50 cursor-pointer ${draggedChild?.childId === child.id ? 'opacity-50' : ''}`}
+                        className="hover:bg-gray-50 bg-gray-50 cursor-pointer"
                         onClick={() => handleEditChildLNB(lnb.id, child)}
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -547,72 +549,18 @@ const LnbManager: React.FC = () => {
                         상위 메뉴는 화면 연결이 불가능합니다. (화면 없음으로 고정)
                       </div>
                     ) : (
-                      <>
-                        <div className="mb-3">
-                          <div className="flex items-center space-x-4 text-sm">
-                            <label className="flex items-center space-x-1">
-                              <input
-                                type="radio"
-                                name="screenType"
-                                value="user"
-                                checked={newLNB.screenId !== '' && newLNB.systemScreenType === undefined}
-                                onChange={() => setNewLNB({ ...newLNB, screenId: 'placeholder', systemScreenType: undefined })}
-                              />
-                              <span>사용자 생성 화면</span>
-                            </label>
-                            <label className="flex items-center space-x-1">
-                              <input
-                                type="radio"
-                                name="screenType"
-                                value="system"
-                                checked={newLNB.systemScreenType !== undefined}
-                                onChange={() => setNewLNB({ ...newLNB, screenId: '', systemScreenType: 'dashboard' })}
-                              />
-                              <span>시스템 화면</span>
-                            </label>
-                            <label className="flex items-center space-x-1">
-                              <input
-                                type="radio"
-                                name="screenType"
-                                value="none"
-                                checked={newLNB.screenId === '' && newLNB.systemScreenType === undefined}
-                                onChange={() => setNewLNB({ ...newLNB, screenId: '', systemScreenType: undefined })}
-                              />
-                              <span>화면 없음</span>
-                            </label>
-                          </div>
-                        </div>
-
-                        {(newLNB.screenId === 'placeholder' || (newLNB.screenId !== '' && newLNB.systemScreenType === undefined)) && (
-                          <select
-                            value={newLNB.screenId === 'placeholder' ? '' : newLNB.screenId}
-                            onChange={(e) => setNewLNB({ ...newLNB, screenId: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="">사용자 화면을 선택하세요</option>
-                            {screens.map(screen => (
-                              <option key={screen.id} value={screen.id}>
-                                {screen.displayName} ({screen.name})
-                              </option>
-                            ))}
-                          </select>
-                        )}
-
-                        {newLNB.systemScreenType !== undefined && (
-                          <select
-                            value={newLNB.systemScreenType || ''}
-                            onChange={(e) => setNewLNB({ ...newLNB, systemScreenType: e.target.value as SystemScreenType })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="">시스템 화면을 선택하세요</option>
-                            <option value="dashboard">대시보드</option>
-                            <option value="project-settings">프로젝트 설정</option>
-                            <option value="section-library">단면 라이브러리</option>
-                            <option value="user-profile">사용자 프로필</option>
-                            <option value="system-settings">시스템 설정</option>
-                          </select>
-                        )}
-                      </>
+                      <select
+                        value={newLNB.screenId}
+                        onChange={(e) => setNewLNB({ ...newLNB, screenId: e.target.value, systemScreenType: undefined })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">화면 없음</option>
+                        {screens.map(screen => (
+                          <option key={screen.id} value={screen.id}>
+                            {screen.displayName} ({screen.name})
+                          </option>
+                        ))}
+                      </select>
                     )}
                   </div>
 

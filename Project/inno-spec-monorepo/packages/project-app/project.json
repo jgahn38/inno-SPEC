@@ -1,0 +1,22 @@
+{
+  "name": "project-app",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/project-app/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "packages/project-app/dist",
+        "main": "packages/project-app/src/index.ts",
+        "tsConfig": "packages/project-app/tsconfig.json",
+        "assets": ["packages/project-app/*.md"]
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint"
+    }
+  },
+  "tags": []
+}
