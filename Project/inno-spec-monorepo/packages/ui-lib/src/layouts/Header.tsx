@@ -146,9 +146,11 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentTenant,
                       <div className="font-medium">{currentUser.firstName} {currentUser.lastName}</div>
                       <div className="text-gray-500">{currentUser.email}</div>
                       <div className="text-xs text-gray-400 mt-1">
-                        {currentUser.role === 'tenant_admin' ? '테넌트 관리자' : 
-                         currentUser.role === 'project_admin' ? '프로젝트 관리자' :
-                         currentUser.role === 'user' ? '사용자' : currentUser.role}
+                        {currentUser.role === 'super_admin' ? '슈퍼 관리자' :
+                         currentUser.role === 'tenant_admin' ? '테넌트 관리자' : 
+                         currentUser.role === 'project_manager' ? '프로젝트 관리자' :
+                         currentUser.role === 'engineer' ? '엔지니어' :
+                         currentUser.role === 'viewer' ? '뷰어' : currentUser.role}
                       </div>
                     </div>
                     <button

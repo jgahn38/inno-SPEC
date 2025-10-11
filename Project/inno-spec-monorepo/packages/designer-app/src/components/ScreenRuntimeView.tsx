@@ -783,9 +783,9 @@ const ScreenRuntimeView: React.FC<ScreenRuntimeViewProps> = ({ screen, lnbMenu, 
 
   // 현재 탭의 그리드 설정 가져오기
   const getCurrentGridConfig = () => {
-    if (screen.tabs && screen.tabs.length > 0) {
+    if (screen.tabs && screen.tabs.length > 0 && selectedTabIndex < screen.tabs.length) {
       const tab = screen.tabs[selectedTabIndex];
-      if (tab && typeof tab === 'object' && tab !== null && 'gridConfig' in tab) {
+      if (tab && typeof tab === 'object' && !Array.isArray(tab) && 'gridConfig' in tab) {
         return (tab as any).gridConfig?.rows || [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }];
       }
     } else if (screen.gridConfig) {

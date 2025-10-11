@@ -1,31 +1,17 @@
 {
   "name": "designer-app",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/designer-app/src",
-  "projectType": "application",
+  "projectType": "library",
   "targets": {
-    "dev": {
-      "executor": "@nx/vite:dev-server",
-      "options": {
-        "buildTarget": "designer-app:build",
-        "configFile": "packages/designer-app/vite.config.ts",
-        "port": 5173,
-        "host": "localhost",
-        "root": "packages/designer-app"
-      }
-    },
     "build": {
-      "executor": "@nx/vite:build",
+      "executor": "@nx/js:tsc",
       "outputs": ["{options.outputPath}"],
       "options": {
         "outputPath": "packages/designer-app/dist",
-        "configFile": "packages/designer-app/vite.config.ts",
-        "root": "packages/designer-app"
-      }
-    },
-    "preview": {
-      "executor": "@nx/vite:preview-server",
-      "options": {
-        "buildTarget": "designer-app:build"
+        "main": "packages/designer-app/src/index.ts",
+        "tsConfig": "packages/designer-app/tsconfig.json",
+        "assets": ["packages/designer-app/*.md"]
       }
     }
   },

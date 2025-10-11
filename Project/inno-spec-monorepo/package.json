@@ -3,7 +3,9 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "dev": "npx nx run designer-app:dev",
+    "dev": "npx nx run @inno-spec/main-app:dev",
+    "dev:designer": "npx nx run designer-app:dev",
+    "dev:api": "npx nx run @inno-spec/api-server:dev",
     "build": "npx nx run-many --target=build --all",
     "build:designer-app": "npx nx run designer-app:build",
     "build:shared": "npx nx run shared:build",

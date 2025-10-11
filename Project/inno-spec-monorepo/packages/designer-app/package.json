@@ -1,31 +1,25 @@
 {
   "name": "@inno-spec/designer-app",
   "version": "0.0.1",
-  "type": "module",
+  "description": "Designer application components and services",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "build": "tsc",
+    "dev": "tsc --watch"
   },
   "dependencies": {
     "@inno-spec/shared": "*",
     "@inno-spec/ui-lib": "*",
     "@inno-spec/core": "*",
-    "@types/react-router-dom": "^5.3.3",
     "lucide-react": "^0.263.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^7.9.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@types/react": "^18.2.15",
-    "@types/react-dom": "^18.2.7",
-    "@vitejs/plugin-react": "^4.0.3",
-    "autoprefixer": "^10.4.21",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.17",
-    "typescript": "^5.0.2",
-    "vite": "^4.4.5"
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "typescript": "^5.0.0"
   }
 }

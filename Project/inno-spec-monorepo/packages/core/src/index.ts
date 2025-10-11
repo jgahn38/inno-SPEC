@@ -10,7 +10,7 @@ export { DataSyncService } from './services/DataSyncService';
 export { MEngineService } from './services/MEngineService';
 export { MParser } from './services/MParser';
 export { default as BridgeService } from './services/BridgeService';
-export { LocalStorageProjectProvider } from './services/dataProviders/LocalStorageProjectProvider';
+// LocalStorageProjectProvider는 shared 패키지에서 제공됨
 
 // 타입들
 export type { APIContextType } from './contexts/APIContext';

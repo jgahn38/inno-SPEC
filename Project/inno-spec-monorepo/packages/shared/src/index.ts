@@ -17,7 +17,7 @@ export type { IProjectDataProvider } from './IProjectDataProvider';
 export { ProjectService } from './services/ProjectService';
 export { BridgeDataService } from './services/BridgeDataService';
 export { LocalStorageProjectProvider } from './services/dataProviders/LocalStorageProjectProvider';
-export { apiService } from './services/APIService';
+export { default as APIService, apiService } from './services/APIService';
 
 export interface TableRow {
   id: string;

@@ -27,7 +27,6 @@ export class LocalStorageProjectProvider implements IProjectDataProvider {
     }
   }
   
-  
   async getProjects(): Promise<Project[]> {
     const projects = this.getProjectsFromStorage();
     return projects.filter(p => p.status !== 'deleted');
