@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Header, AppType, LoginView, Sidebar } from '@inno-spec/ui-lib';
-import { TableManager, FieldManager, DatabaseManager, FunctionManager, VariableManager, ScreenManager, LnbManager } from '@inno-spec/admin-app';
+import { TableManager, FieldManager, DatabaseManager, FunctionManager, VariableManager, ScreenManager, LnbManager, screenService } from '@inno-spec/admin-app';
 import { ProjectDashboard, ProjectList as ProjectAppList } from '@inno-spec/project-app';
 import { ScreenRuntimeView } from '@inno-spec/designer-app';
-import { Project, Bridge, LNBConfig } from '@inno-spec/shared';
+import { Project, Bridge, LNBConfig, ProjectService, LocalStorageProjectProvider } from '@inno-spec/shared';
 import { TenantProvider, useTenant } from '@inno-spec/core';
 import { APIProvider, useAPI } from '@inno-spec/core';
 import { useURLRouting } from '@inno-spec/core';
@@ -116,30 +116,72 @@ function AppContent() {
   const { } = useAPI();
   const [selectedApp, setSelectedApp] = useState<AppType>('PROJECT');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [activeAdminMenu, setActiveAdminMenu] = useState<string>('admin-db');
+  const [activeDesignerMenu, setActiveDesignerMenu] = useState<string>('dashboard');
+  const [designerLNBConfigs, setDesignerLNBConfigs] = useState<LNBConfig[]>([]);
   const location = useLocation();
   const { navigateToScreen } = useURLRouting();
+  
+  // ProjectService 인스턴스
+  const [projectService] = useState(() => new ProjectService(new LocalStorageProjectProvider()));
 
-  // localStorage에서 선택된 프로젝트 복원
+  // 프로젝트 목록 로드
   useEffect(() => {
-    const savedProjectId = localStorage.getItem('selectedProjectId');
-    if (savedProjectId && !selectedProject) {
-      // 실제 환경에서는 프로젝트 목록을 가져와서 해당 프로젝트를 찾아야 합니다
-      // 임시로 더미 프로젝트 생성
-      const dummyProject: Project = {
-        id: savedProjectId,
-        name: '프로젝트 1',
-        description: '임시 프로젝트',
-        tenantId: currentTenant?.id || '',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        metadata: {}
-      };
-      setSelectedProject(dummyProject);
+    const loadProjects = async () => {
+      try {
+        const allProjects = await projectService.getAllProjects();
+        setProjects(allProjects);
+        
+        // localStorage에서 선택된 프로젝트 복원
+        const savedProjectId = localStorage.getItem('selectedProjectId');
+        if (savedProjectId) {
+          const savedProject = allProjects.find(p => p.id === savedProjectId);
+          if (savedProject) {
+            setSelectedProject(savedProject);
+          } else if (allProjects.length > 0) {
+            // 저장된 프로젝트를 찾을 수 없으면 첫 번째 프로젝트 선택
+            setSelectedProject(allProjects[0]);
+            localStorage.setItem('selectedProjectId', allProjects[0].id);
+          }
+        } else if (allProjects.length > 0 && !selectedProject) {
+          // 저장된 프로젝트가 없으면 첫 번째 프로젝트 선택
+          setSelectedProject(allProjects[0]);
+          localStorage.setItem('selectedProjectId', allProjects[0].id);
+        }
+      } catch (error) {
+        console.error('Failed to load projects:', error);
+      }
+    };
+    
+    if (currentTenant) {
+      loadProjects();
     }
-  }, [currentTenant, selectedProject]);
+  }, [currentTenant]);
 
-  // URL 기반 앱 선택 및 ADMIN 메뉴 활성화
+  // DESIGNER LNB 설정 로드 및 초기 메뉴 설정
+  useEffect(() => {
+    const lnbConfigs = screenService.getLNBConfigs();
+    setDesignerLNBConfigs(lnbConfigs);
+    
+    // 첫 번째 활성 LNB 메뉴를 초기 메뉴로 설정
+    if (lnbConfigs.length > 0) {
+      const firstMenu = lnbConfigs.find(config => config.isActive);
+      if (firstMenu) {
+        // 첫 번째 메뉴가 부모 메뉴인 경우 첫 번째 자식을 선택
+        if (firstMenu.children && firstMenu.children.length > 0) {
+          const firstChild = firstMenu.children.find(child => child.isActive);
+          if (firstChild) {
+            setActiveDesignerMenu(firstChild.id);
+          }
+        } else {
+          setActiveDesignerMenu(firstMenu.id);
+        }
+      }
+    }
+  }, []);
+
+  // URL 기반 앱 선택 및 메뉴 활성화
   useEffect(() => {
     const pathSegments = location.pathname.split('/').filter(Boolean);
     
@@ -169,6 +211,9 @@ function AppContent() {
           break;
         case 'lnb-config':
           setActiveAdminMenu('admin-lnb-config');
+          // LNB 설정이 변경될 수 있으므로 DESIGNER LNB도 다시 로드
+          const lnbConfigs = screenService.getLNBConfigs();
+          setDesignerLNBConfigs(lnbConfigs);
           break;
         default:
           setActiveAdminMenu('admin-db');
@@ -181,6 +226,11 @@ function AppContent() {
           break;
         case 'designer':
           setSelectedApp('DESIGNER');
+          // DESIGNER 모듈에서 URL 기반 메뉴 활성화
+          if (pathSegments.length >= 4) {
+            const page = pathSegments[3];
+            setActiveDesignerMenu(page);
+          }
           break;
         case 'modeler':
           setSelectedApp('MODELER');
@@ -198,8 +248,20 @@ function AppContent() {
   const handleProjectSelect = (project: Project) => {
     setSelectedProject(project);
     localStorage.setItem('selectedProjectId', project.id);
-    // 프로젝트 선택 시 해당 앱의 대시보드로 이동
-    navigateToScreen({ type: 'dashboard', module: 'project', projectId: project.id });
+    
+    // 현재 앱에 따라 다른 동작
+    if (selectedApp === 'DESIGNER') {
+      // DESIGNER 앱에서는 첫 번째 LNB 메뉴로 이동
+      const firstMenuId = getFirstActiveMenu(designerLNBConfigs);
+      if (firstMenuId) {
+        navigateToScreen({ type: firstMenuId as any, module: 'designer', projectId: project.id });
+      } else {
+        navigateToScreen({ type: 'dashboard', module: 'designer', projectId: project.id });
+      }
+    } else {
+      // PROJECT 앱에서는 대시보드로 이동
+      navigateToScreen({ type: 'dashboard', module: 'project', projectId: project.id });
+    }
   };
 
   // ADMIN LNB 메뉴 클릭 처리
@@ -231,6 +293,32 @@ function AppContent() {
     }
   };
 
+  // DESIGNER LNB 메뉴 클릭 처리
+  const handleDesignerMenuClick = (menuId: string) => {
+    setActiveDesignerMenu(menuId);
+    navigateToScreen({
+      type: menuId as any,
+      module: 'designer',
+      projectId: selectedProject?.id
+    });
+  };
+
+  // 첫 번째 LNB 메뉴 찾기 헬퍼 함수
+  const getFirstActiveMenu = (lnbConfigs: LNBConfig[]): string | null => {
+    if (lnbConfigs.length === 0) return null;
+    
+    const firstMenu = lnbConfigs.find(config => config.isActive);
+    if (!firstMenu) return null;
+    
+    // 부모 메뉴인 경우 첫 번째 자식 반환
+    if (firstMenu.children && firstMenu.children.length > 0) {
+      const firstChild = firstMenu.children.find(child => child.isActive);
+      return firstChild ? firstChild.id : firstMenu.id;
+    }
+    
+    return firstMenu.id;
+  };
+
   // 앱 변경 처리
   const handleAppChange = (app: AppType) => {
     setSelectedApp(app);
@@ -243,7 +331,14 @@ function AppContent() {
       case 'DESIGNER':
         // DESIGNER 앱으로 이동 (프로젝트가 선택된 경우)
         if (selectedProject) {
-          navigateToScreen({ type: 'dashboard', module: 'designer', projectId: selectedProject.id });
+          // 첫 번째 LNB 메뉴로 이동
+          const firstMenuId = getFirstActiveMenu(designerLNBConfigs);
+          if (firstMenuId) {
+            navigateToScreen({ type: firstMenuId as any, module: 'designer', projectId: selectedProject.id });
+          } else {
+            // LNB 설정이 없으면 dashboard로 fallback
+            navigateToScreen({ type: 'dashboard', module: 'designer', projectId: selectedProject.id });
+          }
         } else {
           navigateToScreen({ type: 'projects', module: 'project' });
         }
@@ -298,54 +393,75 @@ function AppContent() {
             />
           } />
 
-          {/* DESIGNER 앱 라우트 */}
-          <Route path="/:tenantId/designer/:projectId/dashboard" element={
-            <div className="flex items-center justify-center h-[calc(100vh-56px)] bg-gray-50">
-              <div className="text-center">
-                <h1 className="text-3xl font-bold text-gray-900 mb-4">DESIGNER 대시보드</h1>
-                <p className="text-gray-600">디자이너 대시보드가 여기에 표시됩니다.</p>
-                {selectedProject && (
-                  <p className="text-sm text-gray-500 mt-2">프로젝트: {selectedProject.name}</p>
-                )}
+          {/* DESIGNER 앱 라우트 - Sidebar와 함께 렌더링 */}
+          {/* 동적 LNB 메뉴 라우트 */}
+          <Route path="/:tenantId/designer/:projectId/:screenId" element={
+            <div className="flex h-[calc(100vh-56px)]">
+              <Sidebar
+                activeMenu={activeDesignerMenu}
+                onMenuSelect={handleDesignerMenuClick}
+                selectedProject={selectedProject}
+                selectedBridge={null}
+                projects={projects}
+                onProjectChange={handleProjectSelect}
+                onBridgeChange={() => {}}
+                lnbConfigs={designerLNBConfigs}
+                showProjectSelector={true}
+              />
+              <div className="flex-1 overflow-y-auto p-6">
+                {(() => {
+                  // URL에서 screenId를 가져와서 해당 화면 찾기
+                  const pathSegments = location.pathname.split('/').filter(Boolean);
+                  const screenId = pathSegments[3];
+                  
+                  // LNB 설정에서 해당 메뉴 찾기
+                  let menuConfig: LNBConfig | undefined;
+                  for (const config of designerLNBConfigs) {
+                    if (config.id === screenId) {
+                      menuConfig = config;
+                      break;
+                    }
+                    if (config.children) {
+                      menuConfig = config.children.find(child => child.id === screenId);
+                      if (menuConfig) break;
+                    }
+                  }
+                  
+                  // 시스템 화면인 경우
+                  if (menuConfig?.systemScreenType) {
+                    return (
+                      <div className="text-center">
+                        <h1 className="text-3xl font-bold text-gray-900 mb-4">{menuConfig.displayName}</h1>
+                        <p className="text-gray-600">시스템 화면 ({menuConfig.systemScreenType})</p>
+                      </div>
+                    );
+                  }
+                  
+                  // 사용자 정의 화면인 경우
+                  if (menuConfig?.screenId) {
+                    const screen = screenService.getScreenById(menuConfig.screenId);
+                    if (screen) {
+                      return (
+                        <ScreenRuntimeView 
+                          screen={screen} 
+                          lnbMenu={menuConfig}
+                          selectedProject={selectedProject} 
+                        />
+                      );
+                    }
+                  }
+                  
+                  // 기본 화면
+                  return (
+                    <div className="text-center">
+                      <h1 className="text-3xl font-bold text-gray-900 mb-4">
+                        {menuConfig?.displayName || 'DESIGNER'}
+                      </h1>
+                      <p className="text-gray-600">화면이 구성되지 않았습니다.</p>
+                    </div>
+                  );
+                })()}
               </div>
-            </div>
-          } />
-          <Route path="/:tenantId/designer/:projectId/screens" element={
-            <div className="p-6">
-              <ScreenRuntimeView
-                screen={{
-                  id: 'screens',
-                  name: '화면 관리',
-                  displayName: '화면 관리',
-                  type: 'custom',
-                  layout: 'single',
-                  components: [],
-                  dataStructure: 'project',
-                  isActive: true,
-                  createdAt: new Date(),
-                  updatedAt: new Date()
-                }}
-                selectedProject={selectedProject}
-              />
-            </div>
-          } />
-          <Route path="/:tenantId/designer/screens" element={
-            <div className="p-6">
-              <ScreenRuntimeView
-                screen={{
-                  id: 'screens-list',
-                  name: '화면 목록',
-                  displayName: '화면 목록',
-                  type: 'custom',
-                  layout: 'single',
-                  components: [],
-                  dataStructure: 'project',
-                  isActive: true,
-                  createdAt: new Date(),
-                  updatedAt: new Date()
-                }}
-                selectedProject={selectedProject}
-              />
             </div>
           } />
 

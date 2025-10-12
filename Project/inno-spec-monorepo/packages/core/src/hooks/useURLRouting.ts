@@ -354,7 +354,13 @@ export const useURLRouting = () => {
         navigate(buildURL('/no-screen', true));
         break;
       default:
-        navigate(buildURL('/projects'));
+        // 동적 LNB 메뉴 ID 처리 (사용자 정의 화면 등)
+        // type이 인식되지 않는 경우, LNB 메뉴 ID로 간주하고 동적 라우트 사용
+        if (projectId) {
+          navigate(buildURL(`/${route.type}`, true));
+        } else {
+          navigate(buildURL('/projects'));
+        }
     }
   }, [navigate, currentTenant]);
 

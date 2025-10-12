@@ -8,6 +8,3 @@ export { default as ExcelDataImporter } from './components/ExcelDataImporter';
 export * from './types/BridgeData';
 export * from './types/sectionLibrary';
 
-// Re-export services from shared (for backward compatibility)
-export { APIService, BridgeDataService, ProjectService } from '@inno-spec/shared';
-

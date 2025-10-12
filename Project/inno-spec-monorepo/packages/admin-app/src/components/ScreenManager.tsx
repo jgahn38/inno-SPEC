@@ -190,6 +190,49 @@ const ScreenManager: React.FC = () => {
             </div>
           </div>
 
+        {/* 화면 캔버스 */}
+        {currentScreenId && (() => {
+          const screen = screenService.getScreenById(currentScreenId);
+          if (!screen) return null;
+          
+          return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+              <div className="bg-white rounded-lg w-full h-full m-4 flex flex-col">
+                <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                  <h2 className="text-xl font-semibold text-gray-900">화면 캔버스: {screen.displayName}</h2>
+                  <button
+                    onClick={() => setCurrentScreenId('')}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <ScreenCanvas
+                    screen={screen}
+                    components={screen.components}
+                    onComponentsChange={(newComponents) => {
+                      screenService.updateScreen(currentScreenId, { components: newComponents });
+                      loadData();
+                    }}
+                    onLayoutChange={(layout, gridConfig, tabs, components) => {
+                      screenService.updateScreen(currentScreenId, { 
+                        layout, 
+                        gridConfig, 
+                        tabs,
+                        components: components || screen.components
+                      });
+                      loadData();
+                    }}
+                    availableTables={tables}
+                    availableVariables={variables}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* 화면 추가/수정 모달 */}
         {showScreenModal && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">

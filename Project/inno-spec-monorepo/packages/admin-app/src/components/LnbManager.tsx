@@ -11,6 +11,7 @@ const LnbManager: React.FC = () => {
   const [newLNB, setNewLNB] = useState({ 
     name: '', 
     displayName: '', 
+    description: '',
     icon: '', 
     order: 0, 
     isActive: true, 
@@ -92,6 +93,7 @@ const LnbManager: React.FC = () => {
           id: `lnb-${Date.now()}`,
           name: newLNB.name,
           displayName: newLNB.displayName,
+          description: newLNB.description || undefined,
           icon: newLNB.icon,
           order: childOrder,
           isActive: newLNB.isActive,
@@ -112,7 +114,7 @@ const LnbManager: React.FC = () => {
           systemScreenType: undefined
         });
       }
-      setNewLNB({ name: '', displayName: '', icon: '', order: 0, isActive: true, parentId: '', isParent: false, type: 'independent', screenId: '', systemScreenType: undefined });
+      setNewLNB({ name: '', displayName: '', description: '', icon: '', order: 0, isActive: true, parentId: '', isParent: false, type: 'independent', screenId: '', systemScreenType: undefined });
       setShowLNBModal(false);
       loadData();
       setHasLnbConfigChanges(true);
@@ -124,6 +126,7 @@ const LnbManager: React.FC = () => {
     setNewLNB({ 
       name: lnb.name, 
       displayName: lnb.displayName, 
+      description: lnb.description || '',
       icon: lnb.icon || '', 
       order: lnb.order, 
       isActive: lnb.isActive,
@@ -161,7 +164,7 @@ const LnbManager: React.FC = () => {
       }
       
       setEditingLNB(null);
-      setNewLNB({ name: '', displayName: '', icon: '', order: 0, isActive: true, parentId: '', isParent: false, type: 'independent', screenId: '', systemScreenType: undefined });
+      setNewLNB({ name: '', displayName: '', description: '', icon: '', order: 0, isActive: true, parentId: '', isParent: false, type: 'independent', screenId: '', systemScreenType: undefined });
       setShowLNBModal(false);
       loadData();
       setHasLnbConfigChanges(true);
@@ -190,6 +193,7 @@ const LnbManager: React.FC = () => {
     setNewLNB({ 
       name: child.name, 
       displayName: child.displayName, 
+      description: child.description || '',
       icon: child.icon || '', 
       order: child.order, 
       isActive: child.isActive,
@@ -222,7 +226,7 @@ const LnbManager: React.FC = () => {
   };
 
   const resetLNBForm = () => {
-    setNewLNB({ name: '', displayName: '', icon: '', order: 0, isActive: true, parentId: '', isParent: false, type: 'independent', screenId: '', systemScreenType: undefined });
+    setNewLNB({ name: '', displayName: '', description: '', icon: '', order: 0, isActive: true, parentId: '', isParent: false, type: 'independent', screenId: '', systemScreenType: undefined });
     setEditingLNB(null);
   };
 
@@ -537,6 +541,17 @@ const LnbManager: React.FC = () => {
                       onChange={(e) => setNewLNB({ ...newLNB, displayName: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="표시명을 입력하세요 (한글)"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">설명</label>
+                    <textarea
+                      value={newLNB.description}
+                      onChange={(e) => setNewLNB({ ...newLNB, description: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="메뉴에 대한 설명을 입력하세요"
+                      rows={2}
                     />
                   </div>
 

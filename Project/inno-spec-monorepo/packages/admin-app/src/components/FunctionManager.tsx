@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Plus, Save, X, Search, GripVertical } from 'lucide-react';
 
 interface FunctionDefinition {

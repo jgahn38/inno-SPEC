@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { TableField, FieldType, DatabaseCategory, BridgeDatabase } from '@inno-spec/shared';
 import { TableSchemaService } from '../TableSchemaService';
 import { DatabaseService } from '../DatabaseService';
-import { Plus, Save, X, Columns, Search, GripVertical, FileSpreadsheet } from 'lucide-react';
+import { Plus, Save, X, Search, GripVertical, FileSpreadsheet } from 'lucide-react';
 import ExcelFieldImporter from './ExcelFieldImporter';
 
 const FieldManager: React.FC = () => {
@@ -158,7 +158,7 @@ const FieldManager: React.FC = () => {
     // 이 필드를 사용하는 모든 테이블 스키마도 업데이트
     const updatedSchemas = schemas.map(schema => ({
       ...schema,
-      fields: schema.fields.map(f => 
+      fields: schema.fields.map((f: TableField) => 
         f.id === editingField.id ? updatedField : f
       ),
       updatedAt: new Date()
@@ -182,7 +182,7 @@ const FieldManager: React.FC = () => {
       // 이 필드를 사용하는 모든 테이블 스키마에서도 제거
       const updatedSchemas = schemas.map(schema => ({
         ...schema,
-        fields: schema.fields.filter(f => f.id !== fieldId),
+        fields: schema.fields.filter((f: TableField) => f.id !== fieldId),
         updatedAt: new Date()
       }));
       setSchemas(updatedSchemas);
@@ -222,7 +222,7 @@ const FieldManager: React.FC = () => {
   );
 
   const getTablesUsingField = (fieldId: string) => {
-    return schemas.filter(schema => schema.fields.some(f => f.id === fieldId));
+    return schemas.filter(schema => schema.fields.some((f: TableField) => f.id === fieldId));
   };
 
   return (

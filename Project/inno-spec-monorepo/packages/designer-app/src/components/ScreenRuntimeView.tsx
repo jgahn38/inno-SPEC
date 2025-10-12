@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ScreenConfig, ScreenComponent, Bridge, Project } from '@inno-spec/shared';
-// admin-app 의존성 제거 - DESIGNER 앱은 순수한 DESIGNER 기능만 담당
+import { variableService } from '@inno-spec/admin-app';
 import { ChevronDown, Building2 } from 'lucide-react';
 
 interface ScreenRuntimeViewProps {
@@ -27,6 +27,9 @@ const ScreenRuntimeView: React.FC<ScreenRuntimeViewProps> = ({ screen, lnbMenu, 
   const [selectedBridgeId, setSelectedBridgeId] = useState<string>('');
   const [isBridgeDropdownOpen, setIsBridgeDropdownOpen] = useState(false);
   const [availableBridges, setAvailableBridges] = useState<Bridge[]>([]);
+  
+  // 화면 제목 결정 (LNB 표시명 우선)
+  const screenTitle = lnbMenu?.displayName || screen.displayName || screen.name;
   
   // tableService 제거 - admin-app 의존성 제거
 
@@ -147,10 +150,11 @@ const ScreenRuntimeView: React.FC<ScreenRuntimeViewProps> = ({ screen, lnbMenu, 
       const variableComponents = screen.components.filter(comp => comp.type === 'variable');
       const newVariableData: VariableData = {};
       
+      // variableService에서 모든 변수 가져오기
+      const variables = variableService.getVariables();
+      
       for (const component of variableComponents) {
         try {
-          // variables 제거 - admin-app 의존성 제거
-          const variables: any[] = [];
           const variable = variables.find(v => v.id === component.componentId);
           if (variable) {
             newVariableData[component.componentId] = {
@@ -915,9 +919,11 @@ const ScreenRuntimeView: React.FC<ScreenRuntimeViewProps> = ({ screen, lnbMenu, 
           <div className="px-6 py-4">
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                {lnbMenu?.displayName || screen.displayName}
+                {screenTitle}
               </h2>
-              {screen.description && (
+              {lnbMenu?.description ? (
+                <p className="text-sm text-gray-600">{lnbMenu.description}</p>
+              ) : screen.description && (
                 <p className="text-sm text-gray-600">{screen.description}</p>
               )}
             </div>

@@ -45,7 +45,7 @@ export interface ScreenConfig {
   type: 'dashboard' | 'custom';
   layout: 'single' | 'grid' | 'tabs';
   gridConfig?: { rows: number; cols: number };
-  tabs?: string[];
+  tabs?: string[] | Array<{ name: string; gridConfig: { rows: Array<{ cols: Array<{ width: number }> }> } }>;
   components: ScreenComponent[];
   isActive: boolean;
   dataStructure?: UserScreenDataStructure; // 사용자 생성 화면의 데이터 저장 구조
@@ -83,6 +83,7 @@ export interface LNBConfig {
   id: string;
   name: string;
   displayName: string;
+  description?: string; // 메뉴 설명
   icon?: string;
   order: number;
   screenId?: string; // 연결된 화면 ID (사용자 생성 화면인 경우)

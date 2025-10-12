@@ -518,16 +518,16 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
           cellComponentCounts: Object.fromEntries(cellComponentCounts),
           maxComponentsInCell
         });
-        // 컴포?�트 개수???�른 ?�이 계산 (기본 50px + 추�? 컴포?�트??50px)
+        // 컴포넌트 개수에 따른 높이 계산 (기본 50px + 추가 컴포넌트당 50px)
         const baseHeight = 50;
         const additionalHeight = Math.max(0, maxComponentsInCell - 1) * 50;
         const totalHeight = baseHeight + additionalHeight;
         
-          baseHeight,
-          additionalHeight,
         console.log({
           totalHeight,
-          maxComponentsInCell
+          maxComponentsInCell,
+          baseHeight,
+          additionalHeight
         });
         heights[rowIndex] = totalHeight;
       }
@@ -856,15 +856,15 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
 
   return (
     <div className="flex h-full">
-      {/* 좌측: ?�용 가?�한 컴포?�트 목록 */}
+      {/* 좌측: 사용 가능한 컴포넌트 목록 */}
       {(
       <div className="w-64 bg-white border-r border-gray-200 p-4 overflow-y-auto">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">?�용 가?�한 컴포?�트</h3>
+        <h3 className="text-lg font-medium text-gray-900 mb-4">사용 가능한 컴포넌트</h3>
         
-        {/* ?�이�?목록 */}
+        {/* 테이블 목록 */}
         <div className="mb-6">
           <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
-            ?�� ?�이�?
+            📊 테이블
           </h4>
           <div className="space-y-2">
             {availableTables.map(table => (
@@ -885,10 +885,10 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
           </div>
         </div>
 
-        {/* 변??목록 */}
+        {/* 변수 목록 */}
         <div className="mb-6">
           <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
-            ?�� 변??
+            🔢 변수
           </h4>
           <div className="space-y-2">
             {availableVariables.map(variable => (
@@ -911,12 +911,12 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
       </div>
       )}
 
-      {/* ?�측: ?�이?�웃 캔버??*/}
+      {/* 우측: 레이아웃 캔버스 */}
       <div className="flex-1 p-4">
-        {/* ?�이?�웃 ?�정 UI */}
+        {/* 레이아웃 설정 UI */}
         <div className="mb-4">
           <div className="flex justify-between items-center mb-2">
-            {/* ?�이?�웃 ?�???�택 */}
+            {/* 레이아웃 타입 선택 */}
             <div className="flex items-center space-x-4">
               <div className="flex space-x-4">
                 <label className="flex items-center">
@@ -931,7 +931,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                     }}
                     className="mr-2"
                   />
-                  <span className="text-sm text-gray-700">?�일</span>
+                  <span className="text-sm text-gray-700">단일</span>
                 </label>
                 <label className="flex items-center">
                   <input
@@ -942,10 +942,10 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                     onChange={(e) => {
                       const newLayout = e.target.value as 'single' | 'tabs';
                       if (newLayout === 'tabs') {
-                        // ???�이?�웃?�로 변경할 ??기본 ??2�??�성
+                        // 탭 레이아웃으로 변경할 때 기본 탭 2개 생성
                         const defaultTabs = [
-                          { name: '??1', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } },
-                          { name: '??2', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } }
+                          { name: '탭1', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } },
+                          { name: '탭2', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } }
                         ];
                         handleLayoutChange(newLayout, undefined, defaultTabs, localComponents);
                       } else {
@@ -958,10 +958,10 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                 </label>
               </div>
               
-              {/* ??개수 ?�정 - ???�이?�웃???�만 ?�시 */}
+              {/* 탭 개수 설정 - 탭 레이아웃일 때만 표시 */}
               {(screen && localLayout === 'tabs') && (
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-500">??개수:</span>
+                  <span className="text-sm text-gray-500">탭 개수:</span>
                   <input
                     type="number"
                     min="2"
@@ -970,7 +970,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                     onChange={(e) => {
                       const tabCount = parseInt(e.target.value) || 2;
                       const newTabs = Array.from({ length: tabCount }, (_, i) => ({
-                        name: `??${i + 1}`,
+                        name: `탭${i + 1}`,
                         gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] }
                       }));
                       setLocalTabs(newTabs);
@@ -984,16 +984,16 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
             </div>
             
             <div className="flex items-center space-x-2">
-              {/* 그리???�정 버튼 */}
+              {/* 그리드 설정 버튼 */}
               <button
                 onClick={handleOpenLayoutSettings}
                 className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
                 <Settings className="h-4 w-4" />
-                <span>그리???�정</span>
+                <span>그리드 설정</span>
               </button>
               
-              {/* ?�??버튼 */}
+              {/* 저장 버튼 */}
               <button
                 onClick={handleSaveChanges}
                 className={`flex items-center space-x-2 px-3 py-2 rounded-md transition-colors ${
@@ -1016,7 +1016,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
 
 
 
-        {/* ???�택 UI - ???�이?�웃???�만 ?�시 */}
+        {/* 탭 선택 UI - 탭 레이아웃일 때만 표시 */}
         {(screen && localLayout === 'tabs' && localTabs.length > 0) && (
           <div className="mb-4">
             <div className="flex space-x-2 border-b border-gray-200">
@@ -1039,13 +1039,13 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
           </div>
         )}
 
-        {/* 캔버??*/}
+        {/* 캔버스 */}
         <div
           ref={canvasRef}
           className="relative bg-white border-2 border-dashed border-gray-300 rounded-lg"
           style={{ height: '600px' }}
         >
-          {/* 그리??가?�드 */}
+          {/* 그리드 가이드 */}
           <div className="absolute inset-0 pointer-events-none">
             {(() => {
               const currentGridConfig = getCurrentGridConfig();
@@ -1064,14 +1064,14 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
             })()}
           </div>
 
-          {/* ?�래�?중인 컴포?�트 미리보기 */}
+          {/* 드래그 중인 컴포넌트 미리보기 */}
           {draggedComponent && (() => {
-            // ?�제 컴포?�트?� ?�일???�기 계산 ?�용
+            // 현재 컴포넌트와 동일한 위치 계산 사용
             const left = getColPosition(draggedComponentPosition.y, draggedComponentPosition.x) * 100;
             const width = getColWidth(draggedComponentPosition.y, draggedComponentPosition.x) * 100;
-            const top = getRowTopPosition(draggedComponentPosition.y); // ?�적 ?�이 ?�용
+            const top = getRowTopPosition(draggedComponentPosition.y); // 동적 높이 사용
             
-            const height = 50; // 고정 ?�이 ?�용
+            const height = 50; // 고정 높이 사용
             
             return (
               <div 
@@ -1081,7 +1081,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                   left: `${left}%`,
                   top: `${top}px`,
                   width: `${width}%`,
-                  height: `${height}px` // 고정 ?�이 ?�용
+                  height: `${height}px` // 고정 높이 사용
                 }}
               >
                 <div className="bg-blue-100 border-2 border-blue-300 rounded p-2 shadow-lg h-full flex flex-col justify-center">
@@ -1096,7 +1096,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
             );
           })()}
 
-          {/* 컴포?�트??*/}
+          {/* 컴포넌트들 */}
           {(() => {
             const currentGridConfig = getCurrentGridConfig();
             const cells = [];
@@ -1110,21 +1110,21 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
 
 
 
-          {/* 그리???�보 ?�시 */}
+          {/* 그리드 정보 표시 */}
           {((screen && localLayout === 'tabs' && localTabs.length > 0) || tabs.length > 0) && (
             <div className="absolute top-2 right-2 bg-white bg-opacity-90 px-2 py-1 rounded text-xs text-gray-600">
               {screen && localTabs.length > 0
                 ? localTabs[selectedTabIndex]?.name
                 : tabs[selectedTabIndex]?.name
-              }: {getCurrentGridConfig().length}??
+              }: {getCurrentGridConfig().length}행
             </div>
           )}
         </div>
 
-        {/* ?�택??컴포?�트 ?�보 */}
+        {/* 선택된 컴포넌트 정보 */}
         {selectedComponent && (
           <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">?�택??컴포?�트</h4>
+            <h4 className="text-sm font-medium text-gray-700 mb-2">선택된 컴포넌트</h4>
             <div className="text-sm text-gray-600">
               {localComponents.find(comp => comp.id === selectedComponent)?.displayName}
             </div>
@@ -1132,12 +1132,12 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
         )}
       </div>
 
-      {/* 컴포?�트 ?�정 모달 */}
+      {/* 컴포넌트 설정 모달 */}
       {showComponentSettings && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-96 max-h-96 overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">컴포?�트 ?�정</h3>
+              <h3 className="text-lg font-medium text-gray-900">컴포넌트 설정</h3>
               <button
                 onClick={() => setShowComponentSettings(null)}
                 className="text-gray-400 hover:text-gray-600"
@@ -1200,10 +1200,10 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                     </div>
                   </div>
 
-                  {/* ?�이�??�정 */}
+                  {/* 테이블 설정 */}
                   {component.type === 'table' && (
                     <div className="border-t pt-4">
-                      <h4 className="text-sm font-medium text-gray-700 mb-3">?�이�??�정</h4>
+                      <h4 className="text-sm font-medium text-gray-700 mb-3">테이블 설정</h4>
                       <div className="grid grid-cols-2 gap-4">
                         <label className="flex items-center">
                           <input
@@ -1212,7 +1212,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                             onChange={(e) => handleComponentConfigChange(component.id, { showHeader: e.target.checked })}
                             className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                           />
-                          <span className="ml-2 text-sm text-gray-700">?�더 ?�시</span>
+                          <span className="ml-2 text-sm text-gray-700">헤더 표시</span>
                         </label>
                         <label className="flex items-center">
                           <input
@@ -1230,7 +1230,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                             onChange={(e) => handleComponentConfigChange(component.id, { showSearch: e.target.checked })}
                             className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                           />
-                          <span className="ml-2 text-sm text-gray-700">검??기능</span>
+                          <span className="ml-2 text-sm text-gray-700">검색 기능</span>
                         </label>
                         <label className="flex items-center">
                           <input
@@ -1262,12 +1262,12 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
         </div>
       )}
 
-      {/* ?�이?�웃 ?�정 모달 */}
+      {/* 레이아웃 설정 모달 */}
       {showLayoutSettings && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-6xl max-w-7xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">그리???�정</h3>
+              <h3 className="text-lg font-medium text-gray-900">그리드 설정</h3>
               <button
                 onClick={() => setShowLayoutSettings(false)}
                 className="text-gray-400 hover:text-gray-600"
@@ -1277,13 +1277,13 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
             </div>
 
             <div className="space-y-6">
-              {/* 그리???�정 */}
+              {/* 그리드 설정 */}
               <div>
                 {/* 단일 탭 레이아웃만 */}
                 {((screen && localLayout === 'single') || (!screen && tempTabs.length === 0)) && (
                   <div className="p-4 bg-gray-50 rounded-lg border">
                     
-                    {/* ?�일 그리???�정 */}
+                    {/* 단일 그리드 설정 */}
                     <div className="space-y-4">
                       <div className="flex justify-end">
                         <button
@@ -1304,7 +1304,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                           className="flex items-center space-x-1 px-2 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
                         >
                           <Plus className="h-3 w-3" />
-                          <span>??추�?</span>
+                          <span>행 추가</span>
                         </button>
                       </div>
                       
@@ -1312,7 +1312,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                         {(tempTabs.length > 0 ? tempTabs[0] : { gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } }).gridConfig.rows.map((row: any, rowIndex: number) => (
                           <div key={rowIndex} className="p-3 bg-white rounded border">
                             <div className="flex items-center justify-between mb-3">
-                              <span className="text-sm font-medium text-gray-700">??{rowIndex + 1}</span>
+                              <span className="text-sm font-medium text-gray-700">행 {rowIndex + 1}</span>
                               <button
                                 onClick={() => {
                                   const newTempTabs = tempTabs.length > 0 ? tempTabs : [{ name: '단일 그리드', gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } }];
@@ -1398,7 +1398,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                             
                             <div className="mt-3 flex justify-between items-center">
                               <div className="text-sm text-gray-500">
-                                �?비율: {row.cols.reduce((sum: number, col: any) => sum + (typeof col.width === 'number' ? col.width : 0.25), 0).toFixed(2)}
+                                열 비율: {row.cols.reduce((sum: number, col: any) => sum + (typeof col.width === 'number' ? col.width : 0.25), 0).toFixed(2)}
                               </div>
                               <button
                                 onClick={() => {
@@ -1422,7 +1422,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                                 className="flex items-center space-x-1 px-2 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
                               >
                                 <Plus className="h-3 w-3" />
-                                <span>??추�?</span>
+                                <span>열 추가</span>
                               </button>
                             </div>
                           </div>
@@ -1435,7 +1435,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                 {/* 다중 탭 레이아웃만 */}
                 {((screen && localLayout === 'tabs') || (!screen && tempTabs.length > 0)) && (
                 <div>
-                  {/* ???�택 UI */}
+                  {/* 탭 선택 UI */}
                   <div className="mb-6">
                     <div className="flex space-x-2 border-b border-gray-200">
                       {tempTabs.map((tab, index) => (
@@ -1472,7 +1472,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                           className="flex items-center space-x-1 px-2 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
                         >
                           <Plus className="h-3 w-3" />
-                          <span>??추�?</span>
+                          <span>행 추가</span>
                         </button>
                       </div>
                       
@@ -1480,7 +1480,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                         {(tempTabs[selectedTabIndex] || { gridConfig: { rows: [{ cols: [{ width: 0.25 }, { width: 0.25 }, { width: 0.25 }, { width: 0.25 }] }] } }).gridConfig.rows.map((row: any, rowIndex: number) => (
                           <div key={rowIndex} className="p-3 bg-white rounded border">
                             <div className="flex items-center justify-between mb-3">
-                              <span className="text-sm font-medium text-gray-700">??{rowIndex + 1}</span>
+                              <span className="text-sm font-medium text-gray-700">행 {rowIndex + 1}</span>
                               <button
                                 onClick={() => {
                                   const newTempTabs = [...tempTabs];
@@ -1540,7 +1540,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                             
                             <div className="mt-3 flex justify-between items-center">
                               <div className="text-sm text-gray-500">
-                                �?비율: {row.cols.reduce((sum: number, col: any) => sum + (typeof col.width === 'number' ? col.width : 0.25), 0).toFixed(2)}
+                                열 비율: {row.cols.reduce((sum: number, col: any) => sum + (typeof col.width === 'number' ? col.width : 0.25), 0).toFixed(2)}
                               </div>
                               <button
                                 onClick={() => {
@@ -1554,7 +1554,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                                 className="flex items-center space-x-1 px-2 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
                               >
                                 <Plus className="h-3 w-3" />
-                                <span>??추�?</span>
+                                <span>열 추가</span>
                               </button>
                             </div>
                           </div>

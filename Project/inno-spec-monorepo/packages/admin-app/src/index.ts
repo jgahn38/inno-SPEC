@@ -2,7 +2,7 @@
 export { DatabaseService } from './DatabaseService';
 export { TableSchemaService } from './TableSchemaService';
 
-// Variable Services
+// Services
 export { variableService } from './services/VariableService';
 export { screenService } from './services/ScreenService';
 
