@@ -7,7 +7,7 @@ interface ProjectListProps {
   tenantId: string;
 }
 
-const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId }) => {
+const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId: _tenantId }) => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

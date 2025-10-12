@@ -7,6 +7,8 @@ interface ScreenRuntimeViewProps {
   screen: ScreenConfig;
   lnbMenu?: any;
   selectedProject?: Project | null;
+  selectedBridge?: Bridge | null;
+  onBridgeChange?: (bridge: Bridge) => void;
 }
 
 interface TableData {
@@ -17,34 +19,25 @@ interface VariableData {
   [key: string]: any;
 }
 
-const ScreenRuntimeView: React.FC<ScreenRuntimeViewProps> = ({ screen, lnbMenu, selectedProject }) => {
+const ScreenRuntimeView: React.FC<ScreenRuntimeViewProps> = ({ 
+  screen, 
+  lnbMenu, 
+  selectedProject,
+  selectedBridge,
+  onBridgeChange 
+}) => {
   const [tableData, setTableData] = useState<TableData>({});
   const [editableTableData, setEditableTableData] = useState<{[componentId: string]: any[]}>({});
   const [editingCell, setEditingCell] = useState<{componentId: string, rowIndex: number, fieldName: string} | null>(null);
   const [variableData, setVariableData] = useState<VariableData>({});
   const [selectedTabIndex, setSelectedTabIndex] = useState(0);
   const [selectedRows, setSelectedRows] = useState<{[componentId: string]: Set<number>}>({});
-  const [selectedBridgeId, setSelectedBridgeId] = useState<string>('');
   const [isBridgeDropdownOpen, setIsBridgeDropdownOpen] = useState(false);
-  const [availableBridges, setAvailableBridges] = useState<Bridge[]>([]);
   
   // 화면 제목 결정 (LNB 표시명 우선)
   const screenTitle = lnbMenu?.displayName || screen.displayName || screen.name;
   
   // tableService 제거 - admin-app 의존성 제거
-
-  // 교량 목록 로드
-  useEffect(() => {
-    if (screen.dataStructure === 'bridge' && selectedProject) {
-      const projectBridges = selectedProject.bridges || [];
-      setAvailableBridges(projectBridges);
-      
-      // 첫 번째 교량을 기본 선택
-      if (projectBridges.length > 0 && !selectedBridgeId) {
-        setSelectedBridgeId(projectBridges[0].id);
-      }
-    }
-  }, [screen.dataStructure, selectedProject, selectedBridgeId]);
 
   // 교량별 데이터 저장을 위한 키 생성
   const getDataKey = (componentId: string, bridgeId?: string) => {
@@ -142,7 +135,7 @@ const ScreenRuntimeView: React.FC<ScreenRuntimeViewProps> = ({ screen, lnbMenu, 
     };
 
     loadTableData();
-  }, [screen.components, selectedBridgeId]); // selectedBridgeId 의존성 추가
+  }, [screen.components, selectedBridge]); // selectedBridge 의존성 추가
 
   // 변수 데이터 로드
   useEffect(() => {
@@ -341,7 +334,7 @@ const ScreenRuntimeView: React.FC<ScreenRuntimeViewProps> = ({ screen, lnbMenu, 
   // 테이블 데이터 저장
   const saveTableData = (componentId: string, data: any[]) => {
     try {
-      const dataKey = getDataKey(componentId, selectedBridgeId);
+      const dataKey = getDataKey(componentId, selectedBridge?.id);
       const storageKey = `table_data_${dataKey}`;
       localStorage.setItem(storageKey, JSON.stringify(data));
     } catch (error) {
@@ -352,7 +345,7 @@ const ScreenRuntimeView: React.FC<ScreenRuntimeViewProps> = ({ screen, lnbMenu, 
   // 저장된 테이블 데이터 로드
   const loadSavedTableData = (componentId: string) => {
     try {
-      const dataKey = getDataKey(componentId, selectedBridgeId);
+      const dataKey = getDataKey(componentId, selectedBridge?.id);
       const storageKey = `table_data_${dataKey}`;
       const savedData = localStorage.getItem(storageKey);
       if (savedData) {
@@ -848,65 +841,62 @@ const ScreenRuntimeView: React.FC<ScreenRuntimeViewProps> = ({ screen, lnbMenu, 
 
   return (
     <div>
-        {/* 교량 선택 UI (교량별 데이터 구조일 때만 표시) - 화면 제목보다 위에 배치 */}
-        {screen.dataStructure === 'bridge' && (
+        {/* 교량 선택 헤더 - 모든 화면에 표시 */}
+        {selectedProject && selectedProject.bridges && selectedProject.bridges.length > 0 && (
           <div className="bg-white border-b border-gray-200 px-6 py-4">
             <div className="flex items-center space-x-4">
-              {availableBridges.length > 0 ? (
-                <>
-                  <div className="relative w-64">
-                    <button
-                      onClick={() => setIsBridgeDropdownOpen(!isBridgeDropdownOpen)}
-                      className="w-full flex items-center justify-between p-2 text-left hover:bg-gray-50 rounded-md transition-colors border border-gray-200"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center">
-                          <Building2 className="h-3 w-3 text-green-600" />
-                        </div>
-                        <div className="font-medium text-gray-900 text-sm truncate" title={availableBridges.find(b => b.id === selectedBridgeId)?.name || ''}>
-                          {availableBridges.find(b => b.id === selectedBridgeId)?.name || ''}
-                        </div>
-                      </div>
-                      <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isBridgeDropdownOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    
-                    {isBridgeDropdownOpen && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-48 overflow-y-auto">
-                        {availableBridges.map((bridge) => (
-                          <button
-                            key={bridge.id}
-                            onClick={() => {
-                              setSelectedBridgeId(bridge.id);
-                              setIsBridgeDropdownOpen(false);
-                            }}
-                            className={`w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors ${
-                              selectedBridgeId === bridge.id ? 'bg-green-50 text-green-700' : 'text-gray-700'
-                            }`}
-                          >
-                            <div className="truncate font-medium text-sm" title={bridge.name}>
-                              {bridge.name}
-                            </div>
-                            {bridge.description && (
-                              <div className="text-xs text-gray-500 mt-1">{bridge.description}</div>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* 교량 정보 표시 */}
-                  {selectedBridgeId && (
-                    <div className="text-sm text-gray-600">
-                      <span className="font-medium">선택된 교량</span>
-                      <span className="mx-2">•</span>
-                      <span>데이터 입력 가능</span>
+              <div className="relative w-64">
+                <button
+                  onClick={() => setIsBridgeDropdownOpen(!isBridgeDropdownOpen)}
+                  className="w-full flex items-center justify-between p-2 text-left hover:bg-gray-50 rounded-md transition-colors border border-gray-200"
+                >
+                  <div className="flex items-center space-x-2">
+                    <div className="w-5 h-5 bg-green-100 rounded flex items-center justify-center">
+                      <Building2 className="h-3 w-3 text-green-600" />
                     </div>
+                    <div className="font-medium text-gray-900 text-sm truncate" title={selectedBridge?.name || '교량 선택'}>
+                      {selectedBridge?.name || '교량 선택'}
+                    </div>
+                  </div>
+                  <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isBridgeDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {isBridgeDropdownOpen && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg z-10 max-h-48 overflow-y-auto">
+                    {selectedProject.bridges.map((bridge) => (
+                      <button
+                        key={bridge.id}
+                        onClick={() => {
+                          if (onBridgeChange) {
+                            onBridgeChange(bridge);
+                          }
+                          setIsBridgeDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 hover:bg-gray-50 transition-colors ${
+                          selectedBridge?.id === bridge.id ? 'bg-green-50 text-green-700' : 'text-gray-700'
+                        }`}
+                      >
+                        <div className="truncate font-medium text-sm" title={bridge.displayName}>
+                          {bridge.displayName}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {/* 교량 정보 표시 */}
+              {selectedBridge && (
+                <div className="text-sm text-gray-600">
+                  <span className="font-medium">{selectedBridge.type === 'concrete' ? '콘크리트' : selectedBridge.type === 'steel' ? '강교' : '합성교'}</span>
+                  <span className="mx-2">•</span>
+                  <span>L={selectedBridge.length}m × W={selectedBridge.width}m</span>
+                  {selectedBridge.spanCount > 1 && (
+                    <>
+                      <span className="mx-2">•</span>
+                      <span>{selectedBridge.spanCount}경간</span>
+                    </>
                   )}
-                </>
-              ) : (
-                <div className="text-sm text-amber-600">
-                  프로젝트 설정에서 교량을 먼저 등록해주세요.
                 </div>
               )}
             </div>
@@ -951,7 +941,7 @@ const ScreenRuntimeView: React.FC<ScreenRuntimeViewProps> = ({ screen, lnbMenu, 
         )}
 
           {/* 메인 콘텐츠 */}
-          {screen.dataStructure === 'bridge' && availableBridges.length === 0 ? (
+          {screen.dataStructure === 'bridge' && (!selectedProject?.bridges || selectedProject.bridges.length === 0) ? (
             <div className="py-12 text-center">
               <div className="text-gray-500">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -961,7 +951,7 @@ const ScreenRuntimeView: React.FC<ScreenRuntimeViewProps> = ({ screen, lnbMenu, 
                 <p className="text-sm">프로젝트 설정에서 교량을 먼저 등록해주세요.</p>
               </div>
             </div>
-          ) : screen.dataStructure === 'bridge' && !selectedBridgeId ? (
+          ) : screen.dataStructure === 'bridge' && !selectedBridge ? (
             <div className="py-12 text-center">
               <div className="text-gray-500">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">

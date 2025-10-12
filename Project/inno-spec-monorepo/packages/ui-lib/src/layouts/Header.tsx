@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, LogOut, ChevronDown, ChevronUp, Zap } from 'lucide-react';
+import { User, LogOut, ChevronDown, Zap } from 'lucide-react';
 import { Tenant, User as UserType } from '@inno-spec/shared';
 
 export type AppType = 'PROJECT' | 'DESIGNER' | 'MODELER' | 'VIEWER' | 'ADMIN';
@@ -14,7 +14,7 @@ export interface HeaderProps {
   onAppChange: (app: AppType) => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentView, onNavigate, currentTenant, currentUser, onLogout, selectedApp, onAppChange }) => {
+const Header: React.FC<HeaderProps> = ({ currentView: _currentView, onNavigate: _onNavigate, currentTenant, currentUser, onLogout, selectedApp, onAppChange }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const apps: { value: AppType; label: string }[] = [

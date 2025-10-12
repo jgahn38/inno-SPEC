@@ -32,6 +32,8 @@ const adminLNBConfig: LNBConfig[] = [
     order: 1,
     isActive: true,
     type: 'parent',
+    createdAt: new Date(),
+    updatedAt: new Date(),
     children: [
       {
         id: 'admin-db',
@@ -40,7 +42,9 @@ const adminLNBConfig: LNBConfig[] = [
         icon: 'Database',
         order: 1,
         isActive: true,
-        type: 'child'
+        type: 'child',
+        createdAt: new Date(),
+        updatedAt: new Date()
       },
       {
         id: 'admin-fields',
@@ -49,7 +53,9 @@ const adminLNBConfig: LNBConfig[] = [
         icon: 'Variable',
         order: 2,
         isActive: true,
-        type: 'child'
+        type: 'child',
+        createdAt: new Date(),
+        updatedAt: new Date()
       },
       {
         id: 'admin-table-definition',
@@ -58,7 +64,9 @@ const adminLNBConfig: LNBConfig[] = [
         icon: 'Table',
         order: 3,
         isActive: true,
-        type: 'child'
+        type: 'child',
+        createdAt: new Date(),
+        updatedAt: new Date()
       }
     ]
   },
@@ -70,6 +78,8 @@ const adminLNBConfig: LNBConfig[] = [
     order: 2,
     isActive: true,
     type: 'parent',
+    createdAt: new Date(),
+    updatedAt: new Date(),
     children: [
       {
         id: 'admin-variable-definition',
@@ -78,7 +88,9 @@ const adminLNBConfig: LNBConfig[] = [
         icon: 'Variable',
         order: 1,
         isActive: true,
-        type: 'child'
+        type: 'child',
+        createdAt: new Date(),
+        updatedAt: new Date()
       },
       {
         id: 'admin-function-definition',
@@ -87,7 +99,9 @@ const adminLNBConfig: LNBConfig[] = [
         icon: 'Variable',
         order: 2,
         isActive: true,
-        type: 'child'
+        type: 'child',
+        createdAt: new Date(),
+        updatedAt: new Date()
       },
       {
         id: 'admin-screen-config',
@@ -96,7 +110,9 @@ const adminLNBConfig: LNBConfig[] = [
         icon: 'Settings',
         order: 3,
         isActive: true,
-        type: 'child'
+        type: 'child',
+        createdAt: new Date(),
+        updatedAt: new Date()
       },
       {
         id: 'admin-lnb-config',
@@ -105,7 +121,9 @@ const adminLNBConfig: LNBConfig[] = [
         icon: 'Settings',
         order: 4,
         isActive: true,
-        type: 'child'
+        type: 'child',
+        createdAt: new Date(),
+        updatedAt: new Date()
       }
     ]
   }
@@ -116,13 +134,15 @@ function AppContent() {
   const { } = useAPI();
   const [selectedApp, setSelectedApp] = useState<AppType>('PROJECT');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [selectedBridge, setSelectedBridge] = useState<Bridge | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [activeProjectMenu, setActiveProjectMenu] = useState<string>('dashboard');
   const [activeAdminMenu, setActiveAdminMenu] = useState<string>('admin-db');
   const [activeDesignerMenu, setActiveDesignerMenu] = useState<string>('dashboard');
   const [designerLNBConfigs, setDesignerLNBConfigs] = useState<LNBConfig[]>([]);
   const location = useLocation();
   const { navigateToScreen } = useURLRouting();
-  
+
   // ProjectService 인스턴스
   const [projectService] = useState(() => new ProjectService(new LocalStorageProjectProvider()));
 
@@ -223,6 +243,18 @@ function AppContent() {
       switch (module) {
         case 'project':
           setSelectedApp('PROJECT');
+          // PROJECT 모듈에서 URL 기반 메뉴 활성화
+          if (pathSegments.length >= 4) {
+            const page = pathSegments[3];
+            switch (page) {
+              case 'dashboard':
+                setActiveProjectMenu('dashboard');
+                break;
+              case 'project-settings':
+                setActiveProjectMenu('project-settings');
+                break;
+            }
+          }
           break;
         case 'designer':
           setSelectedApp('DESIGNER');
@@ -260,7 +292,21 @@ function AppContent() {
       }
     } else {
       // PROJECT 앱에서는 대시보드로 이동
-      navigateToScreen({ type: 'dashboard', module: 'project', projectId: project.id });
+    navigateToScreen({ type: 'dashboard', module: 'project', projectId: project.id });
+    }
+  };
+
+  // PROJECT LNB 메뉴 클릭 처리
+  const handleProjectMenuClick = (menuId: string) => {
+    setActiveProjectMenu(menuId);
+    
+    switch (menuId) {
+      case 'dashboard':
+        navigateToScreen({ type: 'dashboard', module: 'project', projectId: selectedProject?.id });
+        break;
+      case 'project-settings':
+        navigateToScreen({ type: 'project-settings', module: 'project', projectId: selectedProject?.id });
+        break;
     }
   };
 
@@ -337,7 +383,7 @@ function AppContent() {
             navigateToScreen({ type: firstMenuId as any, module: 'designer', projectId: selectedProject.id });
           } else {
             // LNB 설정이 없으면 dashboard로 fallback
-            navigateToScreen({ type: 'dashboard', module: 'designer', projectId: selectedProject.id });
+          navigateToScreen({ type: 'dashboard', module: 'designer', projectId: selectedProject.id });
           }
         } else {
           navigateToScreen({ type: 'projects', module: 'project' });
@@ -382,15 +428,54 @@ function AppContent() {
             />
           } />
           <Route path="/:tenantId/project/:projectId/dashboard" element={
+            <div className="h-[calc(100vh-56px)]">
+              {selectedProject ? (
             <ProjectDashboard
               project={selectedProject}
-            />
+                  selectedBridge={selectedBridge}
+                  projects={projects}
+                  onProjectChange={handleProjectSelect}
+                  onBridgeChange={setSelectedBridge}
+                  onProjectUpdate={async (updatedProject) => {
+                    await projectService.updateProject(updatedProject);
+                    const allProjects = await projectService.getAllProjects();
+                    setProjects(allProjects);
+                    setSelectedProject(updatedProject);
+                  }}
+                  onLNBMenuClick={handleProjectMenuClick}
+                  activeMenu={activeProjectMenu}
+                />
+              ) : (
+                <div className="p-6 text-center text-gray-500">
+                  프로젝트를 선택해주세요.
+                </div>
+              )}
+            </div>
           } />
           <Route path="/:tenantId/project/:projectId/project-settings" element={
-            <ProjectAppList 
-              onProjectSelect={handleProjectSelect}
-              tenantId={currentTenant?.id || ''}
-            />
+            <div className="h-[calc(100vh-56px)]">
+              {selectedProject ? (
+                <ProjectDashboard
+                  project={selectedProject}
+                  selectedBridge={selectedBridge}
+                  projects={projects}
+                  onProjectChange={handleProjectSelect}
+                  onBridgeChange={setSelectedBridge}
+                  onProjectUpdate={async (updatedProject) => {
+                    await projectService.updateProject(updatedProject);
+                    const allProjects = await projectService.getAllProjects();
+                    setProjects(allProjects);
+                    setSelectedProject(updatedProject);
+                  }}
+                  onLNBMenuClick={handleProjectMenuClick}
+                  activeMenu="project-settings"
+                />
+              ) : (
+                <div className="p-6 text-center text-gray-500">
+                  프로젝트를 선택해주세요.
+                </div>
+              )}
+            </div>
           } />
 
           {/* DESIGNER 앱 라우트 - Sidebar와 함께 렌더링 */}
@@ -401,14 +486,14 @@ function AppContent() {
                 activeMenu={activeDesignerMenu}
                 onMenuSelect={handleDesignerMenuClick}
                 selectedProject={selectedProject}
-                selectedBridge={null}
+                selectedBridge={selectedBridge}
                 projects={projects}
                 onProjectChange={handleProjectSelect}
-                onBridgeChange={() => {}}
+                onBridgeChange={setSelectedBridge}
                 lnbConfigs={designerLNBConfigs}
                 showProjectSelector={true}
               />
-              <div className="flex-1 overflow-y-auto p-6">
+              <div className="flex-1 overflow-y-auto">
                 {(() => {
                   // URL에서 screenId를 가져와서 해당 화면 찾기
                   const pathSegments = location.pathname.split('/').filter(Boolean);
@@ -430,9 +515,11 @@ function AppContent() {
                   // 시스템 화면인 경우
                   if (menuConfig?.systemScreenType) {
                     return (
-                      <div className="text-center">
-                        <h1 className="text-3xl font-bold text-gray-900 mb-4">{menuConfig.displayName}</h1>
-                        <p className="text-gray-600">시스템 화면 ({menuConfig.systemScreenType})</p>
+                      <div className="p-6">
+                        <div className="text-center">
+                          <h1 className="text-3xl font-bold text-gray-900 mb-4">{menuConfig.displayName}</h1>
+                          <p className="text-gray-600">시스템 화면 ({menuConfig.systemScreenType})</p>
+                        </div>
                       </div>
                     );
                   }
@@ -445,7 +532,9 @@ function AppContent() {
                         <ScreenRuntimeView 
                           screen={screen} 
                           lnbMenu={menuConfig}
-                          selectedProject={selectedProject} 
+                          selectedProject={selectedProject}
+                          selectedBridge={selectedBridge}
+                          onBridgeChange={setSelectedBridge}
                         />
                       );
                     }
@@ -453,11 +542,13 @@ function AppContent() {
                   
                   // 기본 화면
                   return (
-                    <div className="text-center">
-                      <h1 className="text-3xl font-bold text-gray-900 mb-4">
-                        {menuConfig?.displayName || 'DESIGNER'}
-                      </h1>
-                      <p className="text-gray-600">화면이 구성되지 않았습니다.</p>
+                    <div className="p-6">
+                      <div className="text-center">
+                        <h1 className="text-3xl font-bold text-gray-900 mb-4">
+                          {menuConfig?.displayName || 'DESIGNER'}
+                        </h1>
+                        <p className="text-gray-600">화면이 구성되지 않았습니다.</p>
+                      </div>
                     </div>
                   );
                 })()}

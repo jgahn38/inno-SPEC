@@ -30,17 +30,16 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
 }) => {
   const [activeMenu, setActiveMenu] = useState(propActiveMenu);
   
-  // Dashboard 컴포넌트에서는 항상 'dashboard'로 유지
+  // propActiveMenu가 변경되면 activeMenu 동기화
   useEffect(() => {
-    if (propActiveMenu !== 'dashboard') {
-      setActiveMenu('dashboard');
-    }
+    setActiveMenu(propActiveMenu);
   }, [propActiveMenu]);
   
   // 메뉴 클릭 처리
   const handleMenuSelect = (menuId: string) => {
     console.log('Project menu selected:', menuId);
     setActiveMenu(menuId);
+    onLNBMenuClick?.(menuId);
   };
   const [isBridgeDropdownOpen, setIsBridgeDropdownOpen] = useState(false);
   // const [bridgeData, setBridgeData] = useState<BridgeData | null>(null); // 사용하지 않음
@@ -253,11 +252,8 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
           </div>
         );
       
-      // 프로젝트 설정
-      case 'project-settings':
-        return <ProjectSettings project={project} onProjectUpdate={onProjectUpdate} />;
-      
-      default:
+      // 교량제원 (이전 default case)
+      case 'bridge-specs':
         return (
           <div className="space-y-4">
             <div className="px-6 py-4">
@@ -268,6 +264,124 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
             </div>
             <div className="bg-white rounded-lg border border-gray-200 p-8">
               <p className="text-gray-600">교량제원 관리 기능이 여기에 구현됩니다.</p>
+            </div>
+          </div>
+        );
+      
+      // 프로젝트 설정
+      case 'project-settings':
+        return <ProjectSettings project={project} onProjectUpdate={onProjectUpdate} />;
+      
+      default:
+        // default는 대시보드로 변경
+        return (
+          <div className="space-y-6">
+            <div className="px-6 py-4">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">대시보드</h2>
+                <p className="text-sm text-gray-600">프로젝트 전체 교량의 내진성능평가 현황을 한눈에 확인하세요.</p>
+              </div>
+            </div>
+            
+            {/* 프로젝트 요약 정보 */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">프로젝트 개요</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-blue-600 mb-2">{project.bridges?.length || 0}</div>
+                  <div className="text-sm text-gray-600">등록된 교량</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-green-600 mb-2">
+                    {project.bridges?.filter(b => b.status === 'active').length || 0}
+                  </div>
+                  <div className="text-sm text-gray-600">활성 교량</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-orange-600 mb-2">
+                    {project.bridges?.filter(b => b.status === 'maintenance').length || 0}
+                  </div>
+                  <div className="text-sm text-gray-600">점검중 교량</div>
+                </div>
+              </div>
+            </div>
+
+            {/* 교량별 평가 현황 */}
+            {project.bridges && project.bridges.length > 0 && (
+              <div className="bg-white rounded-lg border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">교량별 평가 현황</h3>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">교량명</th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">유형</th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상태</th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">평가 진행률</th>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">최종 점검일</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {project.bridges.map((bridge) => (
+                        <tr key={bridge.id} className="hover:bg-gray-50">
+                          <td className="px-3 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">{bridge.name}</div>
+                            <div className="text-sm text-gray-500">{bridge.description}</div>
+                          </td>
+                          <td className="px-3 py-4 whitespace-nowrap">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {getBridgeTypeLabel(bridge.type)}
+                            </span>
+                          </td>
+                          <td className="px-3 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              bridge.status === 'active' ? 'bg-green-100 text-green-800' :
+                              bridge.status === 'maintenance' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {bridge.status === 'active' ? '활성' : 
+                               bridge.status === 'maintenance' ? '점검중' : '비활성'}
+                            </span>
+                          </td>
+                          <td className="px-3 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                                <div className="bg-blue-600 h-2 rounded-full" style={{ width: '25%' }}></div>
+                              </div>
+                              <span className="text-sm text-gray-600">25%</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {bridge.updatedAt ? new Date(bridge.updatedAt).toLocaleDateString('ko-KR') : '미정'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* 최근 활동 */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">최근 활동</h3>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">새 교량 "교량 D"가 추가되었습니다.</span>
+                  <span className="text-xs text-gray-400 ml-auto">2시간 전</span>
+                </div>
+                <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">"교량 A"의 구조물 현황이 업데이트되었습니다.</span>
+                  <span className="text-xs text-gray-400 ml-auto">1일 전</span>
+                </div>
+                <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">"교량 B"의 교량받침 점검이 예정되었습니다.</span>
+                  <span className="text-xs text-gray-400 ml-auto">3일 전</span>
+                </div>
+              </div>
             </div>
           </div>
         );

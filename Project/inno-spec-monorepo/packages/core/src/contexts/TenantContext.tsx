@@ -188,7 +188,7 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
     setIsAuthenticated(false);
   };
 
-  const switchTenant = async (tenantId: string) => {
+  const switchTenant = async (_tenantId: string) => {
     try {
       // 실제 구현에서는 API 호출
       // const tenant = await tenantService.getTenantById(tenantId);
