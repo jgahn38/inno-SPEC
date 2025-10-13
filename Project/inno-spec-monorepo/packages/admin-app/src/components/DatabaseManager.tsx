@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PageLayout } from '@inno-spec/ui-lib';
+import { PageLayout, Modal } from '@inno-spec/ui-lib';
 import { 
   Plus, 
   Database, 
@@ -980,23 +980,36 @@ const DatabaseManager: React.FC<DatabaseManagerProps> = ({ }) => {
         </div>
 
       {/* 새 DB 생성 모달 */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">새 데이터베이스 생성</h2>
-              <button
-                onClick={() => {
-                  setShowCreateModal(false);
-                  resetCreateForm();
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            
-            <div className="space-y-6">
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => {
+          setShowCreateModal(false);
+          resetCreateForm();
+        }}
+        title="새 데이터베이스 생성"
+        size="xl"
+        footer={
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={() => {
+                setShowCreateModal(false);
+                resetCreateForm();
+              }}
+              className="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              취소
+            </button>
+            <button
+              onClick={handleCreateDatabase}
+              disabled={!newDatabase.name.trim() || !newDatabase.displayName.trim() || newDatabase.fields.length === 0}
+              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              데이터베이스 생성
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-6">
               {/* 기본 정보 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -1250,44 +1263,34 @@ const DatabaseManager: React.FC<DatabaseManagerProps> = ({ }) => {
                 )}
               </div>
             </div>
-            
-            <div className="flex justify-end space-x-3 mt-8 pt-6 border-t border-gray-200">
-              <button
-                onClick={() => {
-                  setShowCreateModal(false);
-                  resetCreateForm();
-                }}
-                className="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleCreateDatabase}
-                disabled={!newDatabase.name.trim() || !newDatabase.displayName.trim() || newDatabase.fields.length === 0}
-                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                데이터베이스 생성
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* 데이터베이스 편집 모달 */}
-      {showEditModal && editingDatabase && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">데이터베이스 편집</h2>
-              <button
-                onClick={handleCloseEditModal}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            
-            <div className="space-y-6">
+      <Modal
+        isOpen={showEditModal && editingDatabase !== null}
+        onClose={handleCloseEditModal}
+        title="데이터베이스 편집"
+        size="xl"
+        footer={
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={handleCloseEditModal}
+              className="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              취소
+            </button>
+            <button
+              onClick={handleSaveEdit}
+              disabled={!editingDatabase || editingDatabase.displayName.trim() === '' || editingFields.length === 0}
+              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              데이터베이스 저장
+            </button>
+          </div>
+        }
+      >
+        {editingDatabase && (
+          <div className="space-y-6">
               {/* 기본 정보 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -1575,25 +1578,8 @@ const DatabaseManager: React.FC<DatabaseManagerProps> = ({ }) => {
                 )}
               </div>
             </div>
-            
-            <div className="flex justify-end space-x-3 mt-8 pt-6 border-t border-gray-200">
-              <button
-                onClick={handleCloseEditModal}
-                className="px-6 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                disabled={editingDatabase.displayName.trim() === '' || editingFields.length === 0}
-                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                데이터베이스 저장
-              </button>
-            </div>
-          </div>
-        </div>
         )}
+      </Modal>
     </PageLayout>
   );
 };

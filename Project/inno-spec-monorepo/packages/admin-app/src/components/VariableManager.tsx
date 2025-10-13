@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PageLayout } from '@inno-spec/ui-lib';
+import { PageLayout, Modal } from '@inno-spec/ui-lib';
 import { Plus, Save, X, Search, GripVertical } from 'lucide-react';
 import { variableService } from '../services/VariableService';
 import { VariableDefinition } from '../types';
@@ -246,27 +246,38 @@ const VariableManager: React.FC = () => {
         </div>
 
         {/* 변수 추가/수정 모달 */}
-        {showVariableModal && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-              <div className="mt-3">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    {editingVariable ? '변수 수정' : '변수 추가'}
-                  </h3>
-                  <button
-                    onClick={() => {
-                      setShowVariableModal(false);
-                      resetVariableForm();
-                      setEditingVariable(null);
-                    }}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="h-6 w-6" />
-                  </button>
-                </div>
-                
-                <div className="space-y-4">
+        <Modal
+          isOpen={showVariableModal}
+          onClose={() => {
+            setShowVariableModal(false);
+            resetVariableForm();
+            setEditingVariable(null);
+          }}
+          title={editingVariable ? '변수 수정' : '변수 추가'}
+          size="md"
+          footer={
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowVariableModal(false);
+                  resetVariableForm();
+                  setEditingVariable(null);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={editingVariable ? handleUpdateVariable : handleAddVariable}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                <Save className="h-4 w-4" />
+                <span>{editingVariable ? '저장' : '추가'}</span>
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">변수명 (영문) *</label>
                     <input
@@ -377,30 +388,7 @@ const VariableManager: React.FC = () => {
                     />
                   </div>
                 </div>
-
-                <div className="flex justify-end space-x-3 mt-6">
-                  <button
-                    onClick={() => {
-                      setShowVariableModal(false);
-                      resetVariableForm();
-                      setEditingVariable(null);
-                    }}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    취소
-                  </button>
-                  <button
-                    onClick={editingVariable ? handleUpdateVariable : handleAddVariable}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                  >
-                    <Save className="h-4 w-4" />
-                    <span>{editingVariable ? '저장' : '추가'}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        </Modal>
     </PageLayout>
   );
 };

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
+import { Modal } from '@inno-spec/ui-lib';
 import { Download, Upload, FileSpreadsheet, AlertCircle, CheckCircle, X } from 'lucide-react';
 
 interface ExcelDataImporterProps {
@@ -177,20 +178,33 @@ const ExcelDataImporter: React.FC<ExcelDataImporterProps> = ({ onImport, onClose
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-6xl shadow-lg rounded-md bg-white">
-        <div className="mt-3">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-medium text-gray-900">데이터 일괄 등록</h3>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <X className="h-6 w-6" />
-            </button>
-          </div>
-
-          {/* 필드 정보 안내 */}
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title="데이터 일괄 등록"
+      size="xl"
+      className="!max-w-6xl"
+      footer={
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            취소
+          </button>
+          <button
+            onClick={handleImport}
+            disabled={importedData.length === 0}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            <Upload className="h-4 w-4" />
+            <span>등록 ({importedData.length}개)</span>
+          </button>
+        </div>
+      }
+    >
+      <div>
+        {/* 필드 정보 안내 */}
           <div className="mb-6 p-4 bg-blue-50 rounded-lg">
             <div className="flex items-center mb-2">
               <FileSpreadsheet className="h-5 w-5 text-blue-600 mr-2" />
@@ -329,27 +343,8 @@ const ExcelDataImporter: React.FC<ExcelDataImporterProps> = ({ onImport, onClose
               </div>
             </div>
           )}
-
-          {/* 버튼 */}
-          <div className="flex justify-end space-x-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              취소
-            </button>
-            <button
-              onClick={handleImport}
-              disabled={importedData.length === 0}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-            >
-              <Upload className="h-4 w-4" />
-              <span>등록 ({importedData.length}개)</span>
-            </button>
-          </div>
-        </div>
       </div>
-    </div>
+    </Modal>
   );
 };
 

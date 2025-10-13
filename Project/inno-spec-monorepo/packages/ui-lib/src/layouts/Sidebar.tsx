@@ -66,9 +66,9 @@ const Sidebar: React.FC<SidebarProps> = React.memo(({
   console.log('Sidebar - lnbConfigs:', lnbConfigs);
   console.log('Sidebar - menuItems:', menuItems);
 
-  // LNB 메뉴가 로드된 후 상위 메뉴들을 자동으로 Expand (초기 로드 시에만)
+  // LNB 메뉴가 로드되거나 변경될 때마다 상위 메뉴들을 자동으로 Expand
   React.useEffect(() => {
-    if (menuItems.length > 0 && expandedCategories.size === 0) {
+    if (menuItems.length > 0) {
       const parentMenuIds = menuItems
         .filter(item => item.children && item.children.length > 0)
         .map(item => item.id);
@@ -78,7 +78,7 @@ const Sidebar: React.FC<SidebarProps> = React.memo(({
         console.log('Auto-expanding parent menus:', parentMenuIds);
       }
     }
-  }, [menuItems, expandedCategories.size]);
+  }, [menuItems]);
 
   // LNBConfig를 그룹화 (부모-자식 관계 처리)
   const groupedMenus = React.useMemo(() => {

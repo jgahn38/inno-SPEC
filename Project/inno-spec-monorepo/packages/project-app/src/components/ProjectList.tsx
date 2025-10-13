@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PageLayout } from '@inno-spec/ui-lib';
+import { PageLayout, Modal } from '@inno-spec/ui-lib';
 import { Project } from '@inno-spec/shared';
 import { ProjectService, LocalStorageProjectProvider } from '@inno-spec/shared';
 
@@ -264,12 +264,29 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId: _t
       )}
 
       {/* 프로젝트 생성 모달 */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">새 프로젝트 생성</h2>
-            
-            <div className="space-y-4">
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="새 프로젝트 생성"
+        size="md"
+        footer={
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={() => setShowCreateModal(false)}
+              className="px-4 py-2 text-gray-600 hover:text-gray-800"
+            >
+              취소
+            </button>
+            <button
+              onClick={handleCreateProject}
+              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              생성
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   프로젝트 ID
@@ -332,24 +349,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId: _t
                 )}
               </div>
             </div>
-            
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleCreateProject}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-              >
-                생성
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </Modal>
     </PageLayout>
   );
 };

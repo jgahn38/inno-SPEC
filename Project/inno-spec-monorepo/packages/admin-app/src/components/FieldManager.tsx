@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { TableField, FieldType, DatabaseCategory, BridgeDatabase } from '@inno-spec/shared';
-import { PageLayout } from '@inno-spec/ui-lib';
+import { PageLayout, Modal } from '@inno-spec/ui-lib';
 import { TableSchemaService } from '../TableSchemaService';
 import { DatabaseService } from '../DatabaseService';
 import { Plus, Save, X, Search, GripVertical, FileSpreadsheet } from 'lucide-react';
@@ -372,27 +372,38 @@ const FieldManager: React.FC = () => {
         </div>
 
         {/* 필드 추가/수정 모달 */}
-        {showFieldModal && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-              <div className="mt-3">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    {editingField ? '필드 수정' : '필드 추가'}
-                  </h3>
-                  <button
-                    onClick={() => {
-                      setShowFieldModal(false);
-                      setEditingField(null);
-                      resetFieldForm();
-                    }}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="h-6 w-6" />
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-1 gap-6">
+        <Modal
+          isOpen={showFieldModal}
+          onClose={() => {
+            setShowFieldModal(false);
+            setEditingField(null);
+            resetFieldForm();
+          }}
+          title={editingField ? '필드 수정' : '필드 추가'}
+          size="md"
+          footer={
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowFieldModal(false);
+                  setEditingField(null);
+                  resetFieldForm();
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={editingField ? handleUpdateField : handleAddField}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                <Save className="h-4 w-4" />
+                <span>{editingField ? '저장' : '추가'}</span>
+              </button>
+            </div>
+          }
+        >
+          <div className="grid grid-cols-1 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">필드명 (영문) *</label>
                     <input
@@ -610,30 +621,7 @@ const FieldManager: React.FC = () => {
                     />
                   </div>
                 </div>
-                
-                <div className="flex justify-end space-x-3 mt-6">
-                  <button
-                    onClick={() => {
-                      setShowFieldModal(false);
-                      setEditingField(null);
-                      resetFieldForm();
-                    }}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    취소
-                  </button>
-                  <button
-                    onClick={editingField ? handleUpdateField : handleAddField}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                  >
-                    <Save className="h-4 w-4" />
-                    <span>{editingField ? '저장' : '추가'}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        </Modal>
 
         {/* 엑셀 불러오기 모달 */}
         {showExcelImporter && (

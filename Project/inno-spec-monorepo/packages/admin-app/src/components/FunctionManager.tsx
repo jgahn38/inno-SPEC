@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PageLayout } from '@inno-spec/ui-lib';
+import { PageLayout, Modal } from '@inno-spec/ui-lib';
 import { Plus, Save, X, Search, GripVertical } from 'lucide-react';
 
 interface FunctionDefinition {
@@ -248,27 +248,38 @@ const FunctionManager: React.FC = () => {
         </div>
 
         {/* 함수 추가/수정 모달 */}
-        {showFunctionModal && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
-              <div className="mt-3">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    {editingFunction ? '함수 수정' : '함수 추가'}
-                  </h3>
-                  <button
-                    onClick={() => {
-                      setShowFunctionModal(false);
-                      resetFunctionForm();
-                      setEditingFunction(null);
-                    }}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="h-6 w-6" />
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Modal
+          isOpen={showFunctionModal}
+          onClose={() => {
+            setShowFunctionModal(false);
+            resetFunctionForm();
+            setEditingFunction(null);
+          }}
+          title={editingFunction ? '함수 수정' : '함수 추가'}
+          size="xl"
+          footer={
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowFunctionModal(false);
+                  resetFunctionForm();
+                  setEditingFunction(null);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={editingFunction ? handleUpdateFunction : handleAddFunction}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                <Save className="h-4 w-4" />
+                <span>{editingFunction ? '저장' : '추가'}</span>
+              </button>
+            </div>
+          }
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">함수명 *</label>
                     <input
@@ -352,30 +363,7 @@ const FunctionManager: React.FC = () => {
                     />
                   </div>
                 </div>
-
-                <div className="flex justify-end space-x-3 mt-6">
-                  <button
-                    onClick={() => {
-                      setShowFunctionModal(false);
-                      resetFunctionForm();
-                      setEditingFunction(null);
-                    }}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    취소
-                  </button>
-                  <button
-                    onClick={editingFunction ? handleUpdateFunction : handleAddFunction}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                  >
-                    <Save className="h-4 w-4" />
-                    <span>{editingFunction ? '저장' : '추가'}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        </Modal>
     </PageLayout>
   );
 };

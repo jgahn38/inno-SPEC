@@ -7,6 +7,7 @@ export interface ModalProps {
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
+  footer?: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   showCloseButton?: boolean;
   className?: string;
@@ -17,6 +18,7 @@ const Modal: React.FC<ModalProps> = ({
   onClose,
   title,
   children,
+  footer,
   size = 'md',
   showCloseButton = true,
   className = '',
@@ -68,10 +70,13 @@ const Modal: React.FC<ModalProps> = ({
       
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className={`relative w-full ${sizeClasses[size]} transform overflow-hidden rounded-lg bg-white shadow-xl transition-all ${className}`}>
-          {/* Header */}
+        <div 
+          className={`relative w-full ${sizeClasses[size]} flex flex-col max-h-[90vh] overflow-hidden transform rounded-lg bg-white shadow-xl transition-all ${className}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header - 고정 */}
           {(title || showCloseButton) && (
-            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+            <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 flex-shrink-0">
               {title && (
                 <h3 className="text-lg font-semibold text-gray-900">
                   {title}
@@ -91,10 +96,17 @@ const Modal: React.FC<ModalProps> = ({
             </div>
           )}
           
-          {/* Body */}
-          <div className="px-6 py-4">
+          {/* Body - 스크롤 가능 */}
+          <div className="px-6 py-4 overflow-y-auto flex-1 min-h-0">
             {children}
           </div>
+          
+          {/* Footer - 고정 */}
+          {footer && (
+            <div className="border-t border-gray-200 px-6 py-4 flex-shrink-0">
+              {footer}
+            </div>
+          )}
         </div>
       </div>
     </div>

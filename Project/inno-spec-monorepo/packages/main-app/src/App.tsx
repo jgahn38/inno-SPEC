@@ -453,7 +453,7 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
       <Header
         currentView="main"
         onNavigate={() => {}}
@@ -464,17 +464,19 @@ function AppContent() {
         onAppChange={handleAppChange}
       />
       
-      <main className="flex-1">
+      <main className="flex-1 overflow-hidden">
         <Routes>
           {/* PROJECT 앱 라우트 */}
           <Route path="/:tenantId/project/projects" element={
-            <ProjectAppList 
-              onProjectSelect={handleProjectSelect}
-              tenantId={currentTenant?.id || ''}
-            />
+            <div className="h-full overflow-y-auto">
+              <ProjectAppList 
+                onProjectSelect={handleProjectSelect}
+                tenantId={currentTenant?.id || ''}
+              />
+            </div>
           } />
           <Route path="/:tenantId/project/:projectId/dashboard" element={
-            <div className="h-[calc(100vh-56px)]">
+            <div className="h-full">
               {selectedProject ? (
             <ProjectDashboard
               project={selectedProject}
@@ -499,7 +501,7 @@ function AppContent() {
             </div>
           } />
           <Route path="/:tenantId/project/:projectId/project-settings" element={
-            <div className="h-[calc(100vh-56px)]">
+            <div className="h-full">
               {selectedProject ? (
                 <ProjectDashboard
                   project={selectedProject}
@@ -527,7 +529,7 @@ function AppContent() {
           {/* DESIGNER 앱 라우트 - Sidebar와 함께 렌더링 */}
           {/* 동적 LNB 메뉴 라우트 */}
           <Route path="/:tenantId/designer/:projectId/:screenId" element={
-            <div className="flex h-[calc(100vh-56px)]">
+            <div className="flex h-full">
               <Sidebar
                 activeMenu={activeDesignerMenu}
                 onMenuSelect={handleDesignerMenuClick}
@@ -604,7 +606,7 @@ function AppContent() {
 
           {/* ADMIN 앱 라우트 - Sidebar와 함께 렌더링 */}
           <Route path="/admin/db" element={
-            <div className="flex h-[calc(100vh-56px)]">
+            <div className="flex h-full">
               <Sidebar
                 activeMenu={activeAdminMenu}
                 onMenuSelect={handleAdminMenuClick}
@@ -622,7 +624,7 @@ function AppContent() {
             </div>
           } />
           <Route path="/admin/field-definition" element={
-            <div className="flex h-[calc(100vh-56px)]">
+            <div className="flex h-full">
               <Sidebar
                 activeMenu={activeAdminMenu}
                 onMenuSelect={handleAdminMenuClick}
@@ -640,7 +642,7 @@ function AppContent() {
             </div>
           } />
           <Route path="/admin/project-category" element={
-            <div className="flex h-[calc(100vh-56px)]">
+            <div className="flex h-full">
               <Sidebar
                 activeMenu={activeAdminMenu}
                 onMenuSelect={handleAdminMenuClick}
@@ -658,7 +660,7 @@ function AppContent() {
             </div>
           } />
           <Route path="/admin/table-definition" element={
-            <div className="flex h-[calc(100vh-56px)]">
+            <div className="flex h-full">
               <Sidebar
                 activeMenu={activeAdminMenu}
                 onMenuSelect={handleAdminMenuClick}
@@ -676,7 +678,7 @@ function AppContent() {
             </div>
           } />
           <Route path="/admin/variable-definition" element={
-            <div className="flex h-[calc(100vh-56px)]">
+            <div className="flex h-full">
               <Sidebar
                 activeMenu={activeAdminMenu}
                 onMenuSelect={handleAdminMenuClick}
@@ -694,7 +696,7 @@ function AppContent() {
             </div>
           } />
           <Route path="/admin/function-definition" element={
-            <div className="flex h-[calc(100vh-56px)]">
+            <div className="flex h-full">
               <Sidebar
                 activeMenu={activeAdminMenu}
                 onMenuSelect={handleAdminMenuClick}
@@ -712,7 +714,7 @@ function AppContent() {
             </div>
           } />
           <Route path="/admin/screen-config" element={
-            <div className="flex h-[calc(100vh-56px)]">
+            <div className="flex h-full">
               <Sidebar
                 activeMenu={activeAdminMenu}
                 onMenuSelect={handleAdminMenuClick}
@@ -730,7 +732,7 @@ function AppContent() {
             </div>
           } />
           <Route path="/admin/lnb-config" element={
-            <div className="flex h-[calc(100vh-56px)]">
+            <div className="flex h-full">
               <Sidebar
                 activeMenu={activeAdminMenu}
                 onMenuSelect={handleAdminMenuClick}
@@ -750,7 +752,7 @@ function AppContent() {
 
           {/* MODELER 앱 라우트 */}
           <Route path="/:tenantId/modeler" element={
-            <div className="flex items-center justify-center h-[calc(100vh-56px)] bg-gray-50">
+            <div className="flex items-center justify-center h-full bg-gray-50">
               <div className="text-center">
                 <h1 className="text-3xl font-bold text-gray-900 mb-4">MODELER</h1>
                 <p className="text-gray-600">모델러 화면이 여기에 표시됩니다.</p>
@@ -760,7 +762,7 @@ function AppContent() {
 
           {/* VIEWER 앱 라우트 */}
           <Route path="/:tenantId/viewer" element={
-            <div className="flex items-center justify-center h-[calc(100vh-56px)] bg-gray-50">
+            <div className="flex items-center justify-center h-full bg-gray-50">
               <div className="text-center">
                 <h1 className="text-3xl font-bold text-gray-900 mb-4">VIEWER</h1>
                 <p className="text-gray-600">뷰어 화면이 여기에 표시됩니다.</p>

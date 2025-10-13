@@ -1,5 +1,6 @@
 ﻿import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { X, Settings, Plus, Save } from 'lucide-react';
+import { Modal } from '@inno-spec/ui-lib';
 import { ScreenComponent, ComponentConfig, ScreenConfig } from '../types';
 
 interface ScreenCanvasProps {
@@ -1133,20 +1134,13 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
       </div>
 
       {/* 컴포넌트 설정 모달 */}
-      {showComponentSettings && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 max-h-96 overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">컴포넌트 설정</h3>
-              <button
-                onClick={() => setShowComponentSettings(null)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-
-            {(() => {
+      <Modal
+        isOpen={!!showComponentSettings}
+        onClose={() => setShowComponentSettings(null)}
+        title="컴포넌트 설정"
+        size="md"
+      >
+        {(() => {
               const component = localComponents.find(comp => comp.id === showComponentSettings);
               if (!component) return null;
 
@@ -1258,25 +1252,34 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                 </div>
               );
             })()}
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* 레이아웃 설정 모달 */}
-      {showLayoutSettings && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-6xl max-w-7xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-medium text-gray-900">그리드 설정</h3>
-              <button
-                onClick={() => setShowLayoutSettings(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-
-            <div className="space-y-6">
+      <Modal
+        isOpen={showLayoutSettings}
+        onClose={() => setShowLayoutSettings(false)}
+        title="그리드 설정"
+        size="xl"
+        className="!max-w-7xl"
+        footer={
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={handleCancelLayoutSettings}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              취소
+            </button>
+            <button
+              onClick={handleSaveLayoutSettings}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              <Save className="h-4 w-4" />
+              <span>저장</span>
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-6">
               {/* 그리드 설정 */}
               <div>
                 {/* 단일 탭 레이아웃만 */}
@@ -1566,25 +1569,7 @@ const ScreenCanvas: React.FC<ScreenCanvasProps> = ({
                 )}
               </div>
             </div>
-
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={handleCancelLayoutSettings}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleSaveLayoutSettings}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
-                <Save className="h-4 w-4" />
-                <span>저장</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PageLayout } from '@inno-spec/ui-lib';
+import { PageLayout, Modal } from '@inno-spec/ui-lib';
 import { Plus, Save, X, Settings } from 'lucide-react';
 import { screenService } from '../services/ScreenService';
 import { variableService } from '../services/VariableService';
@@ -193,18 +193,14 @@ const ScreenManager: React.FC = () => {
           if (!screen) return null;
           
           return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-              <div className="bg-white rounded-lg w-full h-full m-4 flex flex-col">
-                <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                  <h2 className="text-xl font-semibold text-gray-900">화면 캔버스: {screen.displayName}</h2>
-                  <button
-                    onClick={() => setCurrentScreenId('')}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="h-6 w-6" />
-                  </button>
-                </div>
-                <div className="flex-1 overflow-hidden">
+            <Modal
+              isOpen={true}
+              onClose={() => setCurrentScreenId('')}
+              title={`화면 캔버스: ${screen.displayName}`}
+              size="xl"
+              className="!max-w-[calc(100%-2rem)] !max-h-[calc(100%-2rem)] !h-[calc(100vh-2rem)]"
+            >
+              <div className="h-full overflow-hidden">
                   <ScreenCanvas
                     screen={screen}
                     components={screen.components}
@@ -224,33 +220,42 @@ const ScreenManager: React.FC = () => {
                     availableTables={tables}
                     availableVariables={variables}
                   />
-                </div>
               </div>
-            </div>
+            </Modal>
           );
         })()}
 
         {/* 화면 추가/수정 모달 */}
-        {showScreenModal && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-              <div className="mt-3">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    {editingScreen ? '화면 수정' : '화면 추가'}
-                  </h3>
-                  <button
-                    onClick={() => {
-                      setShowScreenModal(false);
-                      resetScreenForm();
-                    }}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="h-6 w-6" />
-                  </button>
-                </div>
-                
-                <div className="space-y-4">
+        <Modal
+          isOpen={showScreenModal}
+          onClose={() => {
+            setShowScreenModal(false);
+            resetScreenForm();
+          }}
+          title={editingScreen ? '화면 수정' : '화면 추가'}
+          size="md"
+          footer={
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowScreenModal(false);
+                  resetScreenForm();
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={editingScreen ? handleUpdateScreen : handleAddScreen}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                <Save className="h-4 w-4" />
+                <span>{editingScreen ? '저장' : '추가'}</span>
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">화면명 (영문) *</label>
                     <input
@@ -302,29 +307,7 @@ const ScreenManager: React.FC = () => {
                     </p>
                   </div>
                 </div>
-
-                <div className="flex justify-end space-x-3 mt-6">
-                  <button
-                    onClick={() => {
-                      setShowScreenModal(false);
-                      resetScreenForm();
-                    }}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    취소
-                  </button>
-                  <button
-                    onClick={editingScreen ? handleUpdateScreen : handleAddScreen}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                  >
-                    <Save className="h-4 w-4" />
-                    <span>{editingScreen ? '저장' : '추가'}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        </Modal>
     </PageLayout>
   );
 };

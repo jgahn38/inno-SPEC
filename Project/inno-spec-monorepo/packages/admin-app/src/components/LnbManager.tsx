@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PageLayout } from '@inno-spec/ui-lib';
+import { PageLayout, Modal } from '@inno-spec/ui-lib';
 import { Plus, Save, X, GripVertical, BarChart3, Building2, Image, Anchor, Database, Variable } from 'lucide-react';
 import { screenService } from '../services/ScreenService';
 import { ScreenConfig, LNBConfig, SystemScreenType } from '@inno-spec/shared';
@@ -427,26 +427,36 @@ const LnbManager: React.FC = () => {
         </div>
 
         {/* LNB 메뉴 추가/수정 모달 */}
-        {showLNBModal && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-              <div className="mt-3">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    {editingLNB ? 'LNB 메뉴 수정' : 'LNB 메뉴 추가'}
-                  </h3>
-                  <button
-                    onClick={() => {
-                      setShowLNBModal(false);
-                      resetLNBForm();
-                    }}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="h-6 w-6" />
-                  </button>
-                </div>
-                
-                <div className="space-y-4">
+        <Modal
+          isOpen={showLNBModal}
+          onClose={() => {
+            setShowLNBModal(false);
+            resetLNBForm();
+          }}
+          title={editingLNB ? 'LNB 메뉴 수정' : 'LNB 메뉴 추가'}
+          size="md"
+          footer={
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowLNBModal(false);
+                  resetLNBForm();
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={editingLNB ? handleUpdateLNB : handleAddLNB}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                <Save className="h-4 w-4" />
+                <span>{editingLNB ? '저장' : '추가'}</span>
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-4">
                   {/* 구분 선택 */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">구분</label>
@@ -689,29 +699,7 @@ const LnbManager: React.FC = () => {
                     </label>
                   </div>
                 </div>
-
-                <div className="flex justify-end space-x-3 mt-6">
-                  <button
-                    onClick={() => {
-                      setShowLNBModal(false);
-                      resetLNBForm();
-                    }}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    취소
-                  </button>
-                  <button
-                    onClick={editingLNB ? handleUpdateLNB : handleAddLNB}
-                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                  >
-                    <Save className="h-4 w-4" />
-                    <span>{editingLNB ? '저장' : '추가'}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        </Modal>
     </PageLayout>
   );
 };

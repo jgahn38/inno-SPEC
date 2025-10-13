@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Save, X, Search, GripVertical } from 'lucide-react';
-import { PageLayout } from '@inno-spec/ui-lib';
+import { PageLayout, Modal } from '@inno-spec/ui-lib';
 
 interface ProjectCategory {
   id: string;
@@ -351,22 +351,30 @@ const ProjectCategoryManager: React.FC = () => {
       </div>
 
       {/* 모달 */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900">
-                {editingCategory ? '카테고리 수정' : '새 카테고리'}
-              </h2>
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title={editingCategory ? '카테고리 수정' : '새 카테고리'}
+        size="md"
+        footer={
+          <div className="flex justify-end space-x-3">
+            <button
+              onClick={() => setShowModal(false)}
+              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              취소
+            </button>
+            <button
+              onClick={handleSaveCategory}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              저장
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   카테고리명 *
@@ -440,25 +448,7 @@ const ProjectCategoryManager: React.FC = () => {
                 </label>
               </div>
             </div>
-
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleSaveCategory}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                저장
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </Modal>
     </PageLayout>
   );
 };
