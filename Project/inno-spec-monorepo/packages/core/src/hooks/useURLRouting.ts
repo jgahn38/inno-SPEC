@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useTenant } from '@inno-spec/core';
 
 export interface ScreenRoute {
-  type: 'projects' | 'dashboard' | 'screens' | 'user-screen' | 'lnb-menu' | 'settings' | 'illustration' | 'project-settings' | 'no-screen' | 'tables' | 'sync' | 'functions' | 'modeler' | 'viewer' | 'admin-db' | 'admin-fields' | 'admin-table-definition' | 'admin-variable-definition' | 'admin-function-definition' | 'admin-lnb-config' | 'admin-screen-config';
+  type: 'projects' | 'dashboard' | 'screens' | 'user-screen' | 'lnb-menu' | 'settings' | 'illustration' | 'project-settings' | 'no-screen' | 'tables' | 'sync' | 'functions' | 'modeler' | 'viewer' | 'admin-db' | 'admin-project-category' | 'admin-field-definition' | 'admin-table-definition' | 'admin-variable-definition' | 'admin-function-definition' | 'admin-lnb-config' | 'admin-screen-config';
   module?: 'project' | 'designer' | 'modeler' | 'viewer' | 'admin';
   tenantId?: string;
   screenId?: string;
@@ -34,8 +34,10 @@ export const useURLRouting = () => {
       switch (page) {
         case 'db':
           return { type: 'admin-db', module: 'admin' };
-        case 'fields':
-          return { type: 'admin-fields', module: 'admin' };
+        case 'project-category':
+          return { type: 'admin-project-category', module: 'admin' };
+        case 'field-definition':
+          return { type: 'admin-field-definition', module: 'admin' };
         case 'table-definition':
           return { type: 'admin-table-definition', module: 'admin' };
         case 'variable-definition':
@@ -260,8 +262,11 @@ export const useURLRouting = () => {
             case 'admin-db':
               navigate('/admin/db');
               break;
-            case 'admin-fields':
-              navigate('/admin/fields');
+            case 'admin-project-category':
+              navigate('/admin/project-category');
+              break;
+            case 'admin-field-definition':
+              navigate('/admin/field-definition');
               break;
             case 'admin-table-definition':
               navigate('/admin/table-definition');

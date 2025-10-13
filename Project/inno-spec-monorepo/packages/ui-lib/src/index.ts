@@ -8,6 +8,8 @@ export { default as LoginView } from './components/LoginView';
 // 레이아웃 컴포넌트
 export { default as Header } from './layouts/Header';
 export { default as Sidebar } from './layouts/Sidebar';
+export { default as PageLayout } from './layouts/PageLayout';
+export { default as ContentLayout } from './layouts/ContentLayout';
 
 // 타입 정의
 export type { ButtonProps } from './components/Button';
@@ -17,6 +19,8 @@ export type { ModalProps } from './components/Modal';
 export type { LoginViewProps } from './components/LoginView';
 export type { HeaderProps, AppType } from './layouts/Header';
 export type { SidebarProps } from './layouts/Sidebar';
+export type { PageLayoutProps } from './layouts/PageLayout';
+export type { ContentLayoutProps } from './layouts/ContentLayout';
 
 // 스타일
 import './styles/index.css';

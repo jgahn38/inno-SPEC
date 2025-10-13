@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { PageLayout } from '@inno-spec/ui-lib';
 import { Plus, Save, X, GripVertical, BarChart3, Building2, Image, Anchor, Database, Variable } from 'lucide-react';
 import { screenService } from '../services/ScreenService';
 import { ScreenConfig, LNBConfig, SystemScreenType } from '@inno-spec/shared';
@@ -245,48 +246,44 @@ const LnbManager: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 헤더 */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">LNB 구성</h1>
-          <p className="text-gray-600">
-            좌측 네비게이션 바의 메뉴 구조를 설정하여 내진성능평가 시스템을 맞춤형으로 구성할 수 있습니다.
-          </p>
+    <PageLayout
+      title="LNB 구성"
+      description="좌측 네비게이션 바의 메뉴 구조를 설정하여 내진성능평가 시스템을 맞춤형으로 구성할 수 있습니다."
+      actions={
+        <div className="flex space-x-3">
+          {hasLnbConfigChanges && (
+            <button
+              onClick={handleSaveLnbConfig}
+              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+              title="LNB 구성을 저장하고 DESIGNER에 적용"
+            >
+              <Save className="h-4 w-4" />
+              <span>LNB 구성 저장</span>
+            </button>
+          )}
+          <button
+            onClick={() => setShowLNBModal(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            <span>LNB 메뉴 추가</span>
+          </button>
         </div>
-
-        {/* LNB 메뉴 구성 */}
-        <div>
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">LNB 메뉴 구성</h2>
-              <div className="text-sm text-gray-500 mt-1">
-                변경 상태: {hasLnbConfigChanges ? '변경됨' : '저장됨'} | 
-                순서 변경: 저장됨
-              </div>
-            </div>
-            <div className="flex space-x-3">
-              {hasLnbConfigChanges && (
-                <button
-                  onClick={handleSaveLnbConfig}
-                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-                  title="LNB 구성을 저장하고 DESIGNER에 적용"
-                >
-                  <Save className="h-4 w-4" />
-                  <span>LNB 구성 저장</span>
-                </button>
-              )}
-              <button
-                onClick={() => setShowLNBModal(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
-                <Plus className="h-4 w-4" />
-                <span>LNB 메뉴 추가</span>
-              </button>
+      }
+    >
+      {/* LNB 메뉴 구성 */}
+      <div>
+        <div className="mb-6">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">LNB 메뉴 구성</h2>
+            <div className="text-sm text-gray-500 mt-1">
+              변경 상태: {hasLnbConfigChanges ? '변경됨' : '저장됨'} | 
+              순서 변경: 저장됨
             </div>
           </div>
+        </div>
 
-          <div className="bg-white shadow overflow-hidden sm:rounded-md">
+        <div className="bg-white shadow overflow-hidden sm:rounded-md">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -715,8 +712,7 @@ const LnbManager: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </PageLayout>
   );
 };
 

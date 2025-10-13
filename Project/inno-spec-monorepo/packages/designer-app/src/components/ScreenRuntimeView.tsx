@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ScreenConfig, ScreenComponent, Bridge, Project } from '@inno-spec/shared';
+import { PageLayout } from '@inno-spec/ui-lib';
 import { variableService } from '@inno-spec/admin-app';
 import { ChevronDown, Building2 } from 'lucide-react';
 
@@ -843,7 +844,7 @@ const ScreenRuntimeView: React.FC<ScreenRuntimeViewProps> = ({
     <div>
         {/* 교량 선택 헤더 - 모든 화면에 표시 */}
         {selectedProject && selectedProject.bridges && selectedProject.bridges.length > 0 && (
-          <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="bg-white border-b border-gray-200 px-4 py-3">
             <div className="flex items-center space-x-4">
               <div className="relative w-64">
                 <button
@@ -903,26 +904,14 @@ const ScreenRuntimeView: React.FC<ScreenRuntimeViewProps> = ({
           </div>
         )}
 
-      <div className="p-6">
-        <div className="space-y-6">
-          {/* 화면 헤더 */}
-          <div className="px-6 py-4">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                {screenTitle}
-              </h2>
-              {lnbMenu?.description ? (
-                <p className="text-sm text-gray-600">{lnbMenu.description}</p>
-              ) : screen.description && (
-                <p className="text-sm text-gray-600">{screen.description}</p>
-              )}
-            </div>
-          </div>
-
+      <PageLayout
+        title={screenTitle}
+        description={lnbMenu?.description || screen.description}
+      >
         {/* 탭이 있는 경우 탭 헤더 (레이아웃이 'tabs'일 때만) */}
         {screen.layout === 'tabs' && screen.tabs && screen.tabs.length > 0 && (
           <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8 px-6">
+            <nav className="-mb-px flex space-x-8">
               {screen.tabs.map((tab, index) => (
                 <button
                   key={index}
@@ -962,12 +951,9 @@ const ScreenRuntimeView: React.FC<ScreenRuntimeViewProps> = ({
               </div>
             </div>
           ) : (
-            <div className="px-6">
-              {renderGrid()}
-            </div>
+            renderGrid()
           )}
-        </div>
-      </div>
+      </PageLayout>
     </div>
   );
 };

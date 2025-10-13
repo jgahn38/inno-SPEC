@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { TableSchema, TableField } from '@inno-spec/shared';
+import { PageLayout } from '@inno-spec/ui-lib';
 import { TableSchemaService } from '../TableSchemaService';
 import { Plus, Save, X, Search, GripVertical } from 'lucide-react';
 
@@ -155,41 +156,34 @@ const TableManager: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 헤더 */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">테이블 정의</h1>
-          <p className="text-gray-600">
-            정의된 필드들을 조합하여 테이블 스키마를 구성하세요. 
-            모든 프로젝트에서 공통으로 사용할 수 있습니다.
-          </p>
+    <PageLayout
+      title="테이블 정의"
+      description="정의된 필드들을 조합하여 테이블 스키마를 구성하세요. 모든 프로젝트에서 공통으로 사용할 수 있습니다."
+      actions={
+        <button
+          onClick={() => setShowTableModal(true)}
+          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          <span>테이블 추가</span>
+        </button>
+      }
+    >
+      {/* 테이블 검색 */}
+      <div className="mb-6">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <input
+            type="text"
+            placeholder="테이블 검색..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
         </div>
-        
-        {/* 테이블 검색 및 추가 */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex-1 max-w-md">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <input
-                type="text"
-                placeholder="테이블 검색..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-          <button
-            onClick={() => setShowTableModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            <span>테이블 추가</span>
-          </button>
-        </div>
+      </div>
 
-        {/* 테이블 목록 */}
+      {/* 테이블 목록 */}
         <div className="bg-white shadow overflow-hidden sm:rounded-md">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -463,8 +457,7 @@ const TableManager: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </PageLayout>
   );
 };
 

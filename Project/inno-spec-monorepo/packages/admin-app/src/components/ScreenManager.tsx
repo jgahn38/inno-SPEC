@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { PageLayout } from '@inno-spec/ui-lib';
 import { Plus, Save, X, Settings } from 'lucide-react';
 import { screenService } from '../services/ScreenService';
 import { variableService } from '../services/VariableService';
@@ -111,28 +112,24 @@ const ScreenManager: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 헤더 */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">화면 구성</h1>
-          <p className="text-gray-600">
-            사용자 정의 화면을 생성하고 관리하여 내진성능평가 시스템을 맞춤형으로 설정할 수 있습니다.
-          </p>
+    <PageLayout
+      title="화면 구성"
+      description="사용자 정의 화면을 생성하고 관리하여 내진성능평가 시스템을 맞춤형으로 설정할 수 있습니다."
+      actions={
+        <button
+          onClick={() => setShowScreenModal(true)}
+          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          <span>화면 추가</span>
+        </button>
+      }
+    >
+      {/* 화면 목록 */}
+      <div>
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-gray-900">화면 목록</h2>
         </div>
-
-        {/* 화면 구성 */}
-          <div>
-            <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">화면 목록</h2>
-              <button
-                onClick={() => setShowScreenModal(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              >
-                <Plus className="h-4 w-4" />
-                <span>화면 추가</span>
-              </button>
-            </div>
 
             <div className="bg-white shadow overflow-hidden sm:rounded-md">
               <table className="min-w-full divide-y divide-gray-200">
@@ -328,8 +325,7 @@ const ScreenManager: React.FC = () => {
             </div>
           </div>
         )}
-                </div>
-                    </div>
+    </PageLayout>
   );
 };
 

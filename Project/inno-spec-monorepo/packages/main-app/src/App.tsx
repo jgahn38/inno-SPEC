@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Header, AppType, LoginView, Sidebar } from '@inno-spec/ui-lib';
-import { TableManager, FieldManager, DatabaseManager, FunctionManager, VariableManager, ScreenManager, LnbManager, screenService } from '@inno-spec/admin-app';
+import { TableManager, FieldManager, DatabaseManager, FunctionManager, VariableManager, ScreenManager, LnbManager, ProjectCategoryManager, screenService } from '@inno-spec/admin-app';
 import { ProjectDashboard, ProjectList as ProjectAppList } from '@inno-spec/project-app';
 import { ScreenRuntimeView } from '@inno-spec/designer-app';
 import { Project, Bridge, LNBConfig, ProjectService, LocalStorageProjectProvider } from '@inno-spec/shared';
@@ -25,9 +25,9 @@ function App() {
 // ADMIN LNB 메뉴 설정 (계층 구조)
 const adminLNBConfig: LNBConfig[] = [
   {
-    id: 'admin-data-management',
-    name: 'admin-data-management',
-    displayName: '데이터 관리',
+    id: 'admin-database',
+    name: 'admin-database',
+    displayName: '데이터베이스',
     icon: 'Database',
     order: 1,
     isActive: true,
@@ -38,20 +38,57 @@ const adminLNBConfig: LNBConfig[] = [
       {
         id: 'admin-db',
         name: 'admin-db',
-        displayName: '데이터베이스',
+        displayName: 'DB 관리',
         icon: 'Database',
         order: 1,
         isActive: true,
         type: 'child',
         createdAt: new Date(),
         updatedAt: new Date()
-      },
+      }
+    ]
+  },
+  {
+    id: 'admin-project',
+    name: 'admin-project',
+    displayName: '프로젝트',
+    icon: 'FolderOpen',
+    order: 2,
+    isActive: true,
+    type: 'parent',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    children: [
       {
-        id: 'admin-fields',
-        name: 'admin-fields',
-        displayName: '필드 관리',
-        icon: 'Variable',
-        order: 2,
+        id: 'admin-project-category',
+        name: 'admin-project-category',
+        displayName: '카테고리 관리',
+        icon: 'Tag',
+        order: 1,
+        isActive: true,
+        type: 'child',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ]
+  },
+  {
+    id: 'admin-component',
+    name: 'admin-component',
+    displayName: '컴포넌트',
+    icon: 'Component',
+    order: 3,
+    isActive: true,
+    type: 'parent',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    children: [
+      {
+        id: 'admin-field-definition',
+        name: 'admin-field-definition',
+        displayName: '필드 정의',
+        icon: 'Type',
+        order: 1,
         isActive: true,
         type: 'child',
         createdAt: new Date(),
@@ -62,31 +99,18 @@ const adminLNBConfig: LNBConfig[] = [
         name: 'admin-table-definition',
         displayName: '테이블 정의',
         icon: 'Table',
-        order: 3,
+        order: 2,
         isActive: true,
         type: 'child',
         createdAt: new Date(),
         updatedAt: new Date()
-      }
-    ]
-  },
-  {
-    id: 'admin-system-config',
-    name: 'admin-system-config',
-    displayName: '시스템 설정',
-    icon: 'Settings',
-    order: 2,
-    isActive: true,
-    type: 'parent',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    children: [
+      },
       {
         id: 'admin-variable-definition',
         name: 'admin-variable-definition',
         displayName: '변수 정의',
         icon: 'Variable',
-        order: 1,
+        order: 3,
         isActive: true,
         type: 'child',
         createdAt: new Date(),
@@ -96,19 +120,32 @@ const adminLNBConfig: LNBConfig[] = [
         id: 'admin-function-definition',
         name: 'admin-function-definition',
         displayName: '함수 정의',
-        icon: 'Variable',
-        order: 2,
+        icon: 'Code',
+        order: 4,
         isActive: true,
         type: 'child',
         createdAt: new Date(),
         updatedAt: new Date()
-      },
+      }
+    ]
+  },
+  {
+    id: 'admin-screen',
+    name: 'admin-screen',
+    displayName: '화면',
+    icon: 'Monitor',
+    order: 4,
+    isActive: true,
+    type: 'parent',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    children: [
       {
         id: 'admin-screen-config',
         name: 'admin-screen-config',
-        displayName: '화면 설정',
-        icon: 'Settings',
-        order: 3,
+        displayName: '화면 구성',
+        icon: 'Layers',
+        order: 1,
         isActive: true,
         type: 'child',
         createdAt: new Date(),
@@ -117,9 +154,9 @@ const adminLNBConfig: LNBConfig[] = [
       {
         id: 'admin-lnb-config',
         name: 'admin-lnb-config',
-        displayName: 'LNB 설정',
-        icon: 'Settings',
-        order: 4,
+        displayName: 'LNB 구성',
+        icon: 'Menu',
+        order: 2,
         isActive: true,
         type: 'child',
         createdAt: new Date(),
@@ -181,6 +218,9 @@ function AppContent() {
 
   // DESIGNER LNB 설정 로드 및 초기 메뉴 설정
   useEffect(() => {
+    // 기본 LNB 구성이 없으면 생성
+    screenService.createDefaultLNBConfig();
+    
     const lnbConfigs = screenService.getLNBConfigs();
     setDesignerLNBConfigs(lnbConfigs);
     
@@ -214,8 +254,11 @@ function AppContent() {
         case 'db':
           setActiveAdminMenu('admin-db');
           break;
-        case 'fields':
-          setActiveAdminMenu('admin-fields');
+        case 'project-category':
+          setActiveAdminMenu('admin-project-category');
+          break;
+        case 'field-definition':
+          setActiveAdminMenu('admin-field-definition');
           break;
         case 'table-definition':
           setActiveAdminMenu('admin-table-definition');
@@ -318,8 +361,11 @@ function AppContent() {
       case 'admin-db':
         navigateToScreen({ type: 'admin-db', module: 'admin' });
         break;
-      case 'admin-fields':
-        navigateToScreen({ type: 'admin-fields', module: 'admin' });
+      case 'admin-project-category':
+        navigateToScreen({ type: 'admin-project-category', module: 'admin' });
+        break;
+      case 'admin-field-definition':
+        navigateToScreen({ type: 'admin-field-definition', module: 'admin' });
         break;
       case 'admin-table-definition':
         navigateToScreen({ type: 'admin-table-definition', module: 'admin' });
@@ -575,7 +621,7 @@ function AppContent() {
               </div>
             </div>
           } />
-          <Route path="/admin/fields" element={
+          <Route path="/admin/field-definition" element={
             <div className="flex h-[calc(100vh-56px)]">
               <Sidebar
                 activeMenu={activeAdminMenu}
@@ -590,6 +636,24 @@ function AppContent() {
               />
               <div className="flex-1 overflow-y-auto">
                 <FieldManager />
+              </div>
+            </div>
+          } />
+          <Route path="/admin/project-category" element={
+            <div className="flex h-[calc(100vh-56px)]">
+              <Sidebar
+                activeMenu={activeAdminMenu}
+                onMenuSelect={handleAdminMenuClick}
+                selectedProject={null}
+                selectedBridge={null}
+                projects={[]}
+                onProjectChange={() => {}}
+                onBridgeChange={() => {}}
+                lnbConfigs={adminLNBConfig}
+                showProjectSelector={false}
+              />
+              <div className="flex-1 overflow-y-auto">
+                <ProjectCategoryManager />
               </div>
             </div>
           } />

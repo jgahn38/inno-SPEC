@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { PageLayout } from '@inno-spec/ui-lib';
 import { Plus, Save, X, Search, GripVertical } from 'lucide-react';
 import { variableService } from '../services/VariableService';
 import { VariableDefinition } from '../types';
@@ -117,54 +118,49 @@ const VariableManager: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 헤더 */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">변수 정의</h1>
-          <p className="text-gray-600">
-            내진성능평가에 필요한 변수를 정의하고 관리하세요. 
-            모든 프로젝트에서 공통으로 사용할 수 있습니다.
-          </p>
-        </div>
-
-        {/* 검색 및 필터 */}
-        <div className="mb-6 flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="변수명, 설명, 태그로 검색..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            </div>
+    <PageLayout
+      title="변수 정의"
+      description="내진성능평가에 필요한 변수를 정의하고 관리하세요. 모든 프로젝트에서 공통으로 사용할 수 있습니다."
+      actions={
+        <button
+          onClick={() => setShowVariableModal(true)}
+          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          <span>변수 추가</span>
+        </button>
+      }
+    >
+      {/* 검색 및 필터 */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="flex-1 max-w-md">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="변수명, 설명, 태그로 검색..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
           </div>
-          <div className="flex gap-2">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        </div>
+        <div>
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">모든 카테고리</option>
-              <option value="input">입력</option>
-              <option value="output">출력</option>
-              <option value="intermediate">중간</option>
-              <option value="constant">상수</option>
-            </select>
-            <button
-              onClick={() => setShowVariableModal(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              <span>변수 추가</span>
-            </button>
-          </div>
+            <option value="input">입력</option>
+            <option value="output">출력</option>
+            <option value="intermediate">중간</option>
+            <option value="constant">상수</option>
+          </select>
         </div>
+      </div>
 
-        {/* 변수 목록 */}
+      {/* 변수 목록 */}
         <div className="bg-white shadow overflow-hidden sm:rounded-md">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -405,8 +401,7 @@ const VariableManager: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </PageLayout>
   );
 };
 

@@ -19,6 +19,7 @@ export { default as VariableManager } from './components/VariableManager';
 export { default as ScreenManager } from './components/ScreenManager';
 export { default as LnbManager } from './components/LnbManager';
 export { default as ScreenCanvas } from './components/ScreenCanvas';
+export { default as ProjectCategoryManager } from './components/ProjectCategoryManager';
 
 // Types
 export * from './types';

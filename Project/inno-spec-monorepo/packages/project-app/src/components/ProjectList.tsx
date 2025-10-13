@@ -1,6 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { PageLayout } from '@inno-spec/ui-lib';
 import { Project } from '@inno-spec/shared';
 import { ProjectService, LocalStorageProjectProvider } from '@inno-spec/shared';
+
+interface ProjectCategory {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string;
+  color: string;
+  icon: string;
+  order: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 interface ProjectListProps {
   onProjectSelect: (project: Project) => void;
@@ -12,18 +26,36 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId: _t
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [categories, setCategories] = useState<ProjectCategory[]>([]);
   const [newProject, setNewProject] = useState({
     id: '',
     name: '',
     description: '',
-    category: 'bridge'
+    category: ''
   });
 
   const projectService = new ProjectService(new LocalStorageProjectProvider());
 
   useEffect(() => {
     loadProjects();
+    loadCategories();
   }, []);
+
+  const loadCategories = () => {
+    const stored = localStorage.getItem('project-categories');
+    if (stored) {
+      const parsedCategories = JSON.parse(stored).map((cat: any) => ({
+        ...cat,
+        createdAt: new Date(cat.createdAt),
+        updatedAt: new Date(cat.updatedAt)
+      }));
+      // 활성화된 카테고리만 필터링하고 순서대로 정렬
+      const activeCategories = parsedCategories
+        .filter((cat: ProjectCategory) => cat.isActive)
+        .sort((a: ProjectCategory, b: ProjectCategory) => a.order - b.order);
+      setCategories(activeCategories);
+    }
+  };
 
   const loadProjects = async () => {
     try {
@@ -38,7 +70,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId: _t
   };
 
   const handleCreateProject = async () => {
-    if (!newProject.id.trim() || !newProject.name.trim() || !newProject.description.trim()) {
+    if (!newProject.id.trim() || !newProject.name.trim() || !newProject.description.trim() || !newProject.category.trim()) {
       alert('모든 필드를 입력해주세요.');
       return;
     }
@@ -53,9 +85,11 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId: _t
       
       setProjects(prev => [...prev, createdProject]);
       setShowCreateModal(false);
-      setNewProject({ id: '', name: '', description: '', category: 'bridge' });
+      setNewProject({ id: '', name: '', description: '', category: '' });
     } catch (err) {
-      alert('프로젝트 생성에 실패했습니다.');
+      console.error('프로젝트 생성 에러:', err);
+      const errorMessage = err instanceof Error ? err.message : '프로젝트 생성에 실패했습니다.';
+      alert(errorMessage);
     }
   };
 
@@ -83,6 +117,14 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId: _t
       default:
         return '알 수 없음';
     }
+  };
+
+  const getCategoryInfo = (categoryName: string) => {
+    const category = categories.find(cat => cat.name === categoryName);
+    return {
+      displayName: category?.displayName || categoryName,
+      color: category?.color || '#6B7280' // 기본 회색
+    };
   };
 
   // 프로젝트 삭제 기능
@@ -127,24 +169,21 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId: _t
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-3xl font-bold text-gray-900">프로젝트 목록</h1>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            <span>새 프로젝트 생성</span>
-          </button>
-        </div>
-        <div className="text-sm text-gray-600">
-          총 {projects.length}개의 프로젝트가 있습니다.
-        </div>
-      </div>
+    <PageLayout
+      title="프로젝트 목록"
+      description={`총 ${projects.length}개의 프로젝트가 있습니다.`}
+      actions={
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors shadow-sm"
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          <span>새 프로젝트 생성</span>
+        </button>
+      }
+    >
 
       {projects.length === 0 ? (
         <div className="text-center py-16">
@@ -173,37 +212,43 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId: _t
               className="bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer group relative"
               onClick={() => onProjectSelect(project)}
             >
-              {/* 삭제 버튼 */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteProject(project.id, project.name);
-                }}
-                className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-white rounded-full shadow-sm hover:shadow-md z-10"
-                title="프로젝트 삭제"
-              >
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-
               <div className="p-4">
-                <div className="flex justify-between items-start mb-3">
+                <div className="flex justify-between items-start mb-2">
                   <h3 className="text-lg font-semibold text-gray-900 truncate pr-2">
                     {project.name}
                   </h3>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${getStatusBadgeClass(project.status)}`}>
-                    {getStatusText(project.status)}
-                  </span>
+                  <div className="flex items-center space-x-2 flex-shrink-0">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeClass(project.status)}`}>
+                      {getStatusText(project.status)}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteProject(project.id, project.name);
+                      }}
+                      className="p-1 text-gray-400 hover:text-red-600 transition-colors rounded-full hover:bg-red-50"
+                      title="프로젝트 삭제"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
                 
-                <p className="text-gray-600 mb-3 text-sm line-clamp-2">
+                <p className="text-gray-600 mb-2 text-sm line-clamp-2">
                   {project.description}
                 </p>
                 
-                <div className="flex justify-between items-center text-xs text-gray-500 mb-3">
-                  <span className="bg-gray-100 px-2 py-1 rounded">
-                    {project.category}
+                <div className="flex justify-between items-center text-xs text-gray-500 mb-2">
+                  <span 
+                    className="px-2 py-1 rounded font-medium"
+                    style={{ 
+                      backgroundColor: `${getCategoryInfo(project.category).color}20`,
+                      color: getCategoryInfo(project.category).color
+                    }}
+                  >
+                    {getCategoryInfo(project.category).displayName}
                   </span>
                   <span className="flex items-center">
                     <svg className="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -273,12 +318,18 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId: _t
                   onChange={(e) => setNewProject(prev => ({ ...prev, category: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="bridge">교량</option>
-                  <option value="tunnel">터널</option>
-                  <option value="road">도로</option>
-                  <option value="building">건물</option>
-                  <option value="other">기타</option>
+                  <option value="">카테고리를 선택하세요</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.name}>
+                      {category.displayName}
+                    </option>
+                  ))}
                 </select>
+                {categories.length === 0 && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    ⚠️ 등록된 카테고리가 없습니다. 관리자 앱에서 카테고리를 먼저 생성해주세요.
+                  </p>
+                )}
               </div>
             </div>
             
@@ -299,7 +350,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId: _t
           </div>
         </div>
       )}
-    </div>
+    </PageLayout>
   );
 };
 

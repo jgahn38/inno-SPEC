@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Grid as BridgeIcon, ChevronDown } from 'lucide-react';
-import { Sidebar } from '@inno-spec/ui-lib';
+import { Sidebar, PageLayout } from '@inno-spec/ui-lib';
 // import IllustrationView from '../../designer-app/src/components/IllustrationView';
 import ProjectSettings from './ProjectSettings';
 import { Project, Bridge } from '@inno-spec/shared';
@@ -79,14 +79,10 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
       // 대시보드
       case 'dashboard':
         return (
-          <div className="space-y-6">
-            <div className="px-6 py-4">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">대시보드</h2>
-                <p className="text-sm text-gray-600">프로젝트 전체 교량의 내진성능평가 현황을 한눈에 확인하세요.</p>
-              </div>
-            </div>
-            
+          <PageLayout
+            title="대시보드"
+            description="프로젝트 전체 교량의 내진성능평가 현황을 한눈에 확인하세요."
+          >
             {/* 프로젝트 요약 정보 */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">프로젝트 개요</h3>
@@ -187,102 +183,77 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 </div>
               </div>
             </div>
-          </div>
+          </PageLayout>
         );
 
       // 교량현황
       case 'bridge-specs':
         return (
-          <div className="space-y-4">
-            <div className="px-6 py-4">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">교량제원</h2>
-                <p className="text-sm text-gray-600">교량의 기본 제원 정보를 확인하고 관리하세요.</p>
-              </div>
-            </div>
+          <PageLayout
+            title="교량제원"
+            description="교량의 기본 제원 정보를 확인하고 관리하세요."
+          >
             <div className="bg-white rounded-lg border border-gray-200 p-8">
               <p className="text-gray-600">교량제원 관리 기능이 여기에 구현됩니다.</p>
             </div>
-          </div>
+          </PageLayout>
         );
       
       case 'structure-status':
         return (
-          <div className="space-y-4">
-            <div className="px-6 py-4">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">구조물 현황</h2>
-                <p className="text-sm text-gray-600">교량 구조물의 현재 상태를 확인하세요.</p>
-              </div>
-            </div>
+          <PageLayout
+            title="구조물 현황"
+            description="교량 구조물의 현재 상태를 확인하세요."
+          >
             <div className="bg-white rounded-lg border border-gray-200 p-8">
               <p className="text-gray-600">구조물 현황 관리 기능이 여기에 구현됩니다.</p>
             </div>
-          </div>
+          </PageLayout>
         );
       
       case 'bearing-status':
         return (
-          <div className="space-y-4">
-            <div className="px-6 py-4">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">교량받침 현황</h2>
-                <p className="text-sm text-gray-600">교량받침의 상태와 정보를 확인하세요.</p>
-              </div>
-            </div>
+          <PageLayout
+            title="교량받침 현황"
+            description="교량받침의 상태와 정보를 확인하세요."
+          >
             <div className="bg-white rounded-lg border border-gray-200 p-8">
               <p className="text-gray-600">교량받침 현황 관리 기능이 여기에 구현됩니다.</p>
             </div>
-          </div>
+          </PageLayout>
         );
       
       // 모델링
       case 'section':
         return (
-          <div className="space-y-4">
-            <div className="px-6 py-4">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">모델링</h2>
-                <p className="text-sm text-gray-600">교량 모델링 기능이 여기에 구현됩니다.</p>
-              </div>
-            </div>
+          <PageLayout
+            title="모델링"
+            description="교량 모델링 기능이 여기에 구현됩니다."
+          >
             <div className="bg-white rounded-lg border border-gray-200 p-8">
               <p className="text-gray-600">모델링 기능이 구현될 예정입니다.</p>
             </div>
-          </div>
-        );
-      
-      // 교량제원 (이전 default case)
-      case 'bridge-specs':
-        return (
-          <div className="space-y-4">
-            <div className="px-6 py-4">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">교량제원</h2>
-                <p className="text-sm text-gray-600">교량의 기본 제원 정보를 확인하고 관리하세요.</p>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg border border-gray-200 p-8">
-              <p className="text-gray-600">교량제원 관리 기능이 여기에 구현됩니다.</p>
-            </div>
-          </div>
+          </PageLayout>
         );
       
       // 프로젝트 설정
       case 'project-settings':
-        return <ProjectSettings project={project} onProjectUpdate={onProjectUpdate} />;
+        return (
+          <PageLayout
+            title="프로젝트 설정"
+            description="프로젝트 정보 및 교량을 관리하세요."
+          >
+            <ProjectSettings project={project} onProjectUpdate={onProjectUpdate} />
+          </PageLayout>
+        );
       
       default:
         // default는 대시보드로 변경
         return (
-          <div className="space-y-6">
-            <div className="px-6 py-4">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">대시보드</h2>
-                <p className="text-sm text-gray-600">프로젝트 전체 교량의 내진성능평가 현황을 한눈에 확인하세요.</p>
-              </div>
-            </div>
-            
+          <PageLayout
+            title="대시보드"
+            description="프로젝트 전체 교량의 내진성능평가 현황을 한눈에 확인하세요."
+          >
             {/* 프로젝트 요약 정보 */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">프로젝트 개요</h3>
@@ -383,7 +354,7 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                 </div>
               </div>
             </div>
-          </div>
+          </PageLayout>
         );
     }
   };
@@ -404,7 +375,7 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
       <div className="flex-1 bg-gray-50 overflow-auto">
         {/* 교량 선택 헤더 - 대시보드와 프로젝트 설정 메뉴일 때는 표시하지 않음 */}
         {activeMenu !== 'dashboard' && activeMenu !== 'project-settings' && project.bridges && project.bridges.length > 0 && (
-          <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="bg-white border-b border-gray-200 px-4 py-3">
             <div className="flex items-center space-x-4">
               <div className="relative w-64">
                 <button
@@ -462,9 +433,7 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
           </div>
         )}
         
-        <div className="p-6">
-          {renderContent()}
-        </div>
+        {renderContent()}
       </div>
     </div>
   );

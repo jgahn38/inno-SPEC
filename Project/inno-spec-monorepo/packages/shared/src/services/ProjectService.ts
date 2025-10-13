@@ -41,7 +41,8 @@ export class ProjectService {
       return project;
     } catch (error) {
       console.error('Failed to create project:', error);
-      throw new Error('프로젝트 생성에 실패했습니다.');
+      // 원래 에러 메시지를 유지하며 다시 throw
+      throw error;
     }
   }
   

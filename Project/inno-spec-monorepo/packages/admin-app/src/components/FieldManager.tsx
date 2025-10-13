@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { TableField, FieldType, DatabaseCategory, BridgeDatabase } from '@inno-spec/shared';
+import { PageLayout } from '@inno-spec/ui-lib';
 import { TableSchemaService } from '../TableSchemaService';
 import { DatabaseService } from '../DatabaseService';
 import { Plus, Save, X, Search, GripVertical, FileSpreadsheet } from 'lucide-react';
@@ -226,50 +227,43 @@ const FieldManager: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 헤더 */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">필드 정의</h1>
-          <p className="text-gray-600">
-            내진성능평가에 필요한 필드를 먼저 정의하세요. 
-            정의된 필드들은 테이블 스키마 구성 시 사용할 수 있습니다.
-          </p>
+    <PageLayout
+      title="필드 정의"
+      description="내진성능평가에 필요한 필드를 먼저 정의하세요. 정의된 필드들은 테이블 스키마 구성 시 사용할 수 있습니다."
+      actions={
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setShowExcelImporter(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            <span>엑셀 불러오기</span>
+          </button>
+          <button
+            onClick={() => setShowFieldModal(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            <span>필드 추가</span>
+          </button>
         </div>
-        
-        {/* 필드 검색 및 추가 */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex-1 max-w-md">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <input
-                type="text"
-                placeholder="필드 검색..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setShowExcelImporter(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-            >
-              <FileSpreadsheet className="h-4 w-4" />
-              <span>엑셀 불러오기</span>
-            </button>
-            <button
-              onClick={() => setShowFieldModal(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              <span>필드 추가</span>
-            </button>
-          </div>
+      }
+    >
+      {/* 필드 검색 */}
+      <div className="mb-6">
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <input
+            type="text"
+            placeholder="필드 검색..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
         </div>
-        
-        {/* 필드 목록 */}
+      </div>
+      
+      {/* 필드 목록 */}
         <div className="bg-white shadow overflow-hidden sm:rounded-md">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -648,8 +642,7 @@ const FieldManager: React.FC = () => {
             onClose={() => setShowExcelImporter(false)}
           />
         )}
-      </div>
-    </div>
+    </PageLayout>
   );
 };
 

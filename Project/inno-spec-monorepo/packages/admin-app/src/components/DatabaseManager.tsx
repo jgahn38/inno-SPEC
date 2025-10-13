@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { PageLayout } from '@inno-spec/ui-lib';
 import { 
   Plus, 
   Database, 
@@ -625,41 +626,33 @@ const DatabaseManager: React.FC<DatabaseManagerProps> = ({ }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 헤더 */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">데이터베이스 관리</h1>
-          <p className="text-gray-600">
-            교량 내진성능평가에 필요한 공통 데이터베이스를 관리합니다. 모든 프로젝트에서 공통으로 사용할 수 있습니다.
-          </p>
+    <PageLayout
+      title="데이터베이스 관리"
+      description="교량 내진성능평가에 필요한 공통 데이터베이스를 관리합니다. 모든 프로젝트에서 공통으로 사용할 수 있습니다."
+      actions={
+        <button
+          onClick={handleResetData}
+          className="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+          title="개발/테스트용 - 모든 데이터 초기화"
+        >
+          데이터 초기화
+        </button>
+      }
+    >
+      {/* 저장 상태 정보 */}
+      <div className="flex items-center space-x-6 mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <div className="text-sm">
+          <span className="font-medium text-blue-800">저장된 DB:</span> {getStorageInfo().databasesCount}개
         </div>
-        
-        {/* 저장 상태 및 관리 버튼 */}
-        <div className="flex items-center justify-between mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <div className="flex items-center space-x-6">
-            <div className="text-sm">
-              <span className="font-medium text-blue-800">저장된 DB:</span> {getStorageInfo().databasesCount}개
-            </div>
-            <div className="text-sm">
-              <span className="font-medium text-blue-800">총 레코드:</span> {getStorageInfo().recordsCount}개
-            </div>
-            <div className="text-sm">
-              <span className="font-medium text-blue-800">저장 크기:</span> {(getStorageInfo().storageSize / 1024).toFixed(2)}KB
-            </div>
-          </div>
-          <div className="flex space-x-2">
-            <button
-              onClick={handleResetData}
-              className="px-3 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-              title="개발/테스트용 - 모든 데이터 초기화"
-            >
-              데이터 초기화
-            </button>
-          </div>
+        <div className="text-sm">
+          <span className="font-medium text-blue-800">총 레코드:</span> {getStorageInfo().recordsCount}개
         </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="text-sm">
+          <span className="font-medium text-blue-800">저장 크기:</span> {(getStorageInfo().storageSize / 1024).toFixed(2)}KB
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* 왼쪽: DB 목록 */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-md p-6">
@@ -985,7 +978,6 @@ const DatabaseManager: React.FC<DatabaseManagerProps> = ({ }) => {
             </div>
           </div>
         </div>
-      </div>
 
       {/* 새 DB 생성 모달 */}
       {showCreateModal && (
@@ -1601,8 +1593,8 @@ const DatabaseManager: React.FC<DatabaseManagerProps> = ({ }) => {
             </div>
           </div>
         </div>
-      )}
-    </div>
+        )}
+    </PageLayout>
   );
 };
 

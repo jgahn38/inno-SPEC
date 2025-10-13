@@ -187,15 +187,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({ project, onProjectUpd
   };
 
   return (
-    <div className="p-6">
-      <div className="space-y-6">
-        <div className="px-6 py-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">프로젝트 설정</h2>
-            <p className="text-sm text-gray-600">프로젝트 정보 및 교량을 관리하세요.</p>
-          </div>
-        </div>
-
+    <div className="space-y-6">
       {/* 프로젝트 기본 정보 */}
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">프로젝트 정보</h3>
@@ -469,7 +461,6 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({ project, onProjectUpd
           </div>
         </div>
       )}
-      </div>
     </div>
   );
 };

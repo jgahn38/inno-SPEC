@@ -6,6 +6,7 @@
     "dev": "npx nx run @inno-spec/main-app:dev",
     "dev:designer": "npx nx run designer-app:dev",
     "dev:api": "npx nx run @inno-spec/api-server:dev",
+    "dev:mariadb": "cd packages/api-server && npm run dev:mariadb",
     "build": "npx nx run-many --target=build --all",
     "build:designer-app": "npx nx run designer-app:build",
     "build:shared": "npx nx run shared:build",

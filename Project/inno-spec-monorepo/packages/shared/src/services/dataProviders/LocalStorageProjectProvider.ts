@@ -41,16 +41,17 @@ export class LocalStorageProjectProvider implements IProjectDataProvider {
   async createProject(request: CreateProjectRequest): Promise<Project> {
     const projects = this.getProjectsFromStorage();
     
-    // ID 중복 검사
-    const existingProject = projects.find(p => p.id === request.id);
+    // ID 중복 검사 (삭제되지 않은 프로젝트만 검사)
+    const existingProject = projects.find(p => p.id === request.id && p.status !== 'deleted');
     if (existingProject) {
       throw new Error(`프로젝트 ID '${request.id}'가 이미 존재합니다. 다른 ID를 사용해주세요.`);
     }
     
     const now = new Date().toISOString();
     
-    const newProject: any = {
+    const newProject: Project = {
       id: request.id,
+      tenantId: 'default-tenant', // 기본 테넌트 ID
       name: request.name,
       description: request.description,
       createdAt: now,
@@ -59,6 +60,8 @@ export class LocalStorageProjectProvider implements IProjectDataProvider {
       category: request.category,
       tags: request.tags || [],
       metadata: request.metadata || {},
+      createdBy: 'default-user', // 기본 사용자 ID
+      assignedTo: undefined,
       bridges: [
         {
           id: `bridge-${Date.now()}`,
