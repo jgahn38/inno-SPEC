@@ -317,3 +317,38 @@ export interface VariableDefinition {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// 프로젝트 카테고리 관련 타입
+export interface ProjectCategory {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string;
+  color: string;
+  icon: string;
+  order: number;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateProjectCategoryRequest {
+  name: string;
+  displayName: string;
+  description: string;
+  color: string;
+  icon: string;
+  order: number;
+  isActive?: boolean;
+}
+
+export interface UpdateProjectCategoryRequest {
+  id: string;
+  name?: string;
+  displayName?: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  order?: number;
+  isActive?: boolean;
+}

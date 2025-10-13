@@ -140,12 +140,21 @@ class MariaDBConnection {
           id VARCHAR(36) PRIMARY KEY,
           name VARCHAR(255) NOT NULL,
           description TEXT,
+          category VARCHAR(255) NOT NULL,
+          categoryId VARCHAR(36),
+          tags JSON,
+          metadata JSON,
+          status VARCHAR(50) DEFAULT 'active',
           isActive BOOLEAN DEFAULT TRUE,
           createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           tenantId VARCHAR(36) NOT NULL,
+          createdBy VARCHAR(36) NOT NULL,
+          assignedTo VARCHAR(36),
           INDEX idx_tenant_id (tenantId),
-          INDEX idx_created_at (createdAt)
+          INDEX idx_created_at (createdAt),
+          INDEX idx_category (category),
+          INDEX idx_status (status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
       `);
 
@@ -163,6 +172,102 @@ class MariaDBConnection {
           INDEX idx_project_id (projectId),
           INDEX idx_tenant_id (tenantId),
           FOREIGN KEY (projectId) REFERENCES projects(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+
+      // 데이터베이스(교량받침DB, 내진DB 등) 테이블 생성
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS bridge_databases (
+          id VARCHAR(36) PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          displayName VARCHAR(255) NOT NULL,
+          description TEXT,
+          category VARCHAR(50) NOT NULL,
+          version VARCHAR(50) NOT NULL,
+          lastUpdated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          recordCount INT DEFAULT 0,
+          isActive BOOLEAN DEFAULT TRUE,
+          metadata JSON,
+          fields JSON,
+          createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          tenantId VARCHAR(36) NOT NULL,
+          INDEX idx_tenant_id (tenantId),
+          INDEX idx_category (category),
+          INDEX idx_is_active (isActive)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+
+      // 데이터베이스 레코드 테이블 생성
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS database_records (
+          id VARCHAR(36) PRIMARY KEY,
+          databaseId VARCHAR(36) NOT NULL,
+          data JSON NOT NULL,
+          createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          tenantId VARCHAR(36) NOT NULL,
+          INDEX idx_database_id (databaseId),
+          INDEX idx_tenant_id (tenantId),
+          FOREIGN KEY (databaseId) REFERENCES bridge_databases(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+
+      // 테이블 스키마 테이블 생성
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS table_schemas (
+          id VARCHAR(36) PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          displayName VARCHAR(255) NOT NULL,
+          description TEXT,
+          fields JSON NOT NULL,
+          createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          tenantId VARCHAR(36) NOT NULL,
+          INDEX idx_tenant_id (tenantId),
+          INDEX idx_name (name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+
+      // 변수 정의 테이블 생성
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS variable_definitions (
+          id VARCHAR(36) PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          displayName VARCHAR(255) NOT NULL,
+          description TEXT,
+          type VARCHAR(50) NOT NULL,
+          unit VARCHAR(50),
+          defaultValue TEXT,
+          category VARCHAR(50) NOT NULL,
+          scope VARCHAR(50) NOT NULL,
+          tags JSON,
+          createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          tenantId VARCHAR(36) NOT NULL,
+          INDEX idx_tenant_id (tenantId),
+          INDEX idx_category (category),
+          INDEX idx_scope (scope)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+
+      // 프로젝트 카테고리 테이블 생성
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS project_categories (
+          id VARCHAR(36) PRIMARY KEY,
+          name VARCHAR(255) NOT NULL UNIQUE,
+          displayName VARCHAR(255) NOT NULL,
+          description TEXT,
+          color VARCHAR(50) NOT NULL,
+          icon VARCHAR(100) NOT NULL,
+          \`order\` INT NOT NULL,
+          isActive BOOLEAN DEFAULT TRUE,
+          createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          tenantId VARCHAR(36) NOT NULL,
+          INDEX idx_tenant_id (tenantId),
+          INDEX idx_order (\`order\`),
+          INDEX idx_is_active (isActive)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
       `);
 

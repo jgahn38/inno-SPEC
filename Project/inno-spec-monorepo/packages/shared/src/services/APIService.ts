@@ -1,4 +1,4 @@
-import { ScreenConfig, LNBConfig } from '@inno-spec/shared';
+import { ScreenConfig, LNBConfig, Project, CreateProjectRequest, UpdateProjectRequest, BridgeDatabase, DatabaseRecord, CreateDatabaseRequest, UpdateDatabaseRequest, TableSchema, VariableDefinition, ProjectCategory, CreateProjectCategoryRequest, UpdateProjectCategoryRequest } from '@inno-spec/shared';
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -10,10 +10,12 @@ const API_BASE_URL = 'http://localhost:3001/api';
 
 class APIService {
   private getHeaders(): HeadersInit {
-    const tenantId = localStorage.getItem('currentTenantId') || 'default-tenant';
+    const tenantId = localStorage.getItem('current_tenant_id') || 'default-tenant';
+    const userId = localStorage.getItem('current_user_id') || 'default-user';
     return {
       'Content-Type': 'application/json',
       'x-tenant-id': tenantId,
+      'x-user-id': userId,
     };
   }
 
@@ -131,6 +133,214 @@ class APIService {
   async deleteLNBConfig(id: string): Promise<ApiResponse<void>> {
     return this.request<void>(`/lnb/${id}`, {
       method: 'DELETE',
+    });
+  }
+
+  // 프로젝트 관련 API
+  async getProjects(): Promise<ApiResponse<Project[]>> {
+    return this.request<Project[]>('/projects');
+  }
+
+  async getProjectById(id: string): Promise<ApiResponse<Project>> {
+    return this.request<Project>(`/projects/${id}`);
+  }
+
+  async createProject(project: CreateProjectRequest): Promise<ApiResponse<Project>> {
+    return this.request<Project>('/projects', {
+      method: 'POST',
+      body: JSON.stringify(project),
+    });
+  }
+
+  async updateProject(id: string, project: UpdateProjectRequest): Promise<ApiResponse<Project>> {
+    return this.request<Project>(`/projects/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(project),
+    });
+  }
+
+  async deleteProject(id: string): Promise<ApiResponse<void>> {
+    return this.request<void>(`/projects/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getProjectsByCategory(category: string): Promise<ApiResponse<Project[]>> {
+    return this.request<Project[]>(`/projects/category/${category}`);
+  }
+
+  // 데이터베이스 관련 API
+  async getDatabases(): Promise<ApiResponse<BridgeDatabase[]>> {
+    return this.request<BridgeDatabase[]>('/databases');
+  }
+
+  async getDatabaseById(id: string): Promise<ApiResponse<BridgeDatabase>> {
+    return this.request<BridgeDatabase>(`/databases/${id}`);
+  }
+
+  async getDatabasesByCategory(category: string): Promise<ApiResponse<BridgeDatabase[]>> {
+    return this.request<BridgeDatabase[]>(`/databases/category/${category}`);
+  }
+
+  async createDatabase(database: CreateDatabaseRequest): Promise<ApiResponse<BridgeDatabase>> {
+    return this.request<BridgeDatabase>('/databases', {
+      method: 'POST',
+      body: JSON.stringify(database),
+    });
+  }
+
+  async updateDatabase(id: string, database: UpdateDatabaseRequest): Promise<ApiResponse<BridgeDatabase>> {
+    return this.request<BridgeDatabase>(`/databases/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(database),
+    });
+  }
+
+  async deleteDatabase(id: string): Promise<ApiResponse<void>> {
+    return this.request<void>(`/databases/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // 데이터베이스 레코드 관련 API
+  async getDatabaseRecords(databaseId: string): Promise<ApiResponse<DatabaseRecord[]>> {
+    return this.request<DatabaseRecord[]>(`/databases/${databaseId}/records`);
+  }
+
+  async getDatabaseRecordById(recordId: string): Promise<ApiResponse<DatabaseRecord>> {
+    return this.request<DatabaseRecord>(`/databases/records/${recordId}`);
+  }
+
+  async createDatabaseRecord(databaseId: string, data: Record<string, any>): Promise<ApiResponse<DatabaseRecord>> {
+    return this.request<DatabaseRecord>(`/databases/${databaseId}/records`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async bulkCreateDatabaseRecords(databaseId: string, records: Record<string, any>[]): Promise<ApiResponse<DatabaseRecord[]>> {
+    return this.request<DatabaseRecord[]>(`/databases/${databaseId}/records/bulk`, {
+      method: 'POST',
+      body: JSON.stringify({ records }),
+    });
+  }
+
+  async updateDatabaseRecord(recordId: string, data: Record<string, any>): Promise<ApiResponse<DatabaseRecord>> {
+    return this.request<DatabaseRecord>(`/databases/records/${recordId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteDatabaseRecord(recordId: string): Promise<ApiResponse<void>> {
+    return this.request<void>(`/databases/records/${recordId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // 테이블 스키마 관련 API
+  async getTableSchemas(): Promise<ApiResponse<TableSchema[]>> {
+    return this.request<TableSchema[]>('/table-schemas');
+  }
+
+  async getTableSchemaById(id: string): Promise<ApiResponse<TableSchema>> {
+    return this.request<TableSchema>(`/table-schemas/${id}`);
+  }
+
+  async getTableSchemaByName(name: string): Promise<ApiResponse<TableSchema>> {
+    return this.request<TableSchema>(`/table-schemas/name/${name}`);
+  }
+
+  async createTableSchema(schema: any): Promise<ApiResponse<TableSchema>> {
+    return this.request<TableSchema>('/table-schemas', {
+      method: 'POST',
+      body: JSON.stringify(schema),
+    });
+  }
+
+  async updateTableSchema(id: string, schema: any): Promise<ApiResponse<TableSchema>> {
+    return this.request<TableSchema>(`/table-schemas/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(schema),
+    });
+  }
+
+  async deleteTableSchema(id: string): Promise<ApiResponse<void>> {
+    return this.request<void>(`/table-schemas/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // 변수 관련 API
+  async getVariables(): Promise<ApiResponse<VariableDefinition[]>> {
+    return this.request<VariableDefinition[]>('/variables');
+  }
+
+  async getVariableById(id: string): Promise<ApiResponse<VariableDefinition>> {
+    return this.request<VariableDefinition>(`/variables/${id}`);
+  }
+
+  async getVariablesByCategory(category: string): Promise<ApiResponse<VariableDefinition[]>> {
+    return this.request<VariableDefinition[]>(`/variables/category/${category}`);
+  }
+
+  async getVariablesByScope(scope: string): Promise<ApiResponse<VariableDefinition[]>> {
+    return this.request<VariableDefinition[]>(`/variables/scope/${scope}`);
+  }
+
+  async createVariable(variable: any): Promise<ApiResponse<VariableDefinition>> {
+    return this.request<VariableDefinition>('/variables', {
+      method: 'POST',
+      body: JSON.stringify(variable),
+    });
+  }
+
+  async updateVariable(id: string, variable: any): Promise<ApiResponse<VariableDefinition>> {
+    return this.request<VariableDefinition>(`/variables/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(variable),
+    });
+  }
+
+  async deleteVariable(id: string): Promise<ApiResponse<void>> {
+    return this.request<void>(`/variables/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // 프로젝트 카테고리 관련 API
+  async getProjectCategories(): Promise<ApiResponse<ProjectCategory[]>> {
+    return this.request<ProjectCategory[]>('/project-categories');
+  }
+
+  async getProjectCategoryById(id: string): Promise<ApiResponse<ProjectCategory>> {
+    return this.request<ProjectCategory>(`/project-categories/${id}`);
+  }
+
+  async createProjectCategory(category: CreateProjectCategoryRequest): Promise<ApiResponse<ProjectCategory>> {
+    return this.request<ProjectCategory>('/project-categories', {
+      method: 'POST',
+      body: JSON.stringify(category),
+    });
+  }
+
+  async updateProjectCategory(id: string, category: UpdateProjectCategoryRequest): Promise<ApiResponse<ProjectCategory>> {
+    return this.request<ProjectCategory>(`/project-categories/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(category),
+    });
+  }
+
+  async deleteProjectCategory(id: string): Promise<ApiResponse<void>> {
+    return this.request<void>(`/project-categories/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async reorderProjectCategories(categoryOrders: { id: string; order: number }[]): Promise<ApiResponse<void>> {
+    return this.request<void>('/project-categories/reorder', {
+      method: 'POST',
+      body: JSON.stringify({ categoryOrders }),
     });
   }
 }

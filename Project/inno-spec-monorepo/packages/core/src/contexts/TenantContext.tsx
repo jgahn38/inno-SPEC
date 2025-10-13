@@ -22,7 +22,7 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
   // 개발 모드: 초기 상태를 바로 인증된 상태로 설정
   const [currentTenant, setCurrentTenant] = useState<Tenant | null>(() => {
     // 개발용 기본 테넌트 정보
-    return {
+    const tenant = {
       id: 'tenant-1',
       name: '테스트기업',
       code: 'DEV001',
@@ -56,11 +56,16 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
         }
       }
     };
+    
+    // localStorage에 저장
+    localStorage.setItem('current_tenant_id', tenant.id);
+    
+    return tenant;
   });
   
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     // 개발용 기본 사용자 정보
-    return {
+    const user = {
       id: 'user-1',
       tenantId: 'tenant-1',
       username: 'admin',
@@ -84,6 +89,11 @@ export const TenantProvider: React.FC<TenantProviderProps> = ({ children }) => {
         { resource: 'tenant', action: 'read' }
       ]
     };
+    
+    // localStorage에 저장
+    localStorage.setItem('current_user_id', user.id);
+    
+    return user;
   });
   
   const [isAuthenticated, setIsAuthenticated] = useState(true);

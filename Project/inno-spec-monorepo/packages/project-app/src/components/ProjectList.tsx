@@ -1,20 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PageLayout, Modal } from '@inno-spec/ui-lib';
-import { Project } from '@inno-spec/shared';
-import { ProjectService, LocalStorageProjectProvider } from '@inno-spec/shared';
-
-interface ProjectCategory {
-  id: string;
-  name: string;
-  displayName: string;
-  description: string;
-  color: string;
-  icon: string;
-  order: number;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { Project, ProjectCategory } from '@inno-spec/shared';
+import { useAPI } from '@inno-spec/core';
 
 interface ProjectListProps {
   onProjectSelect: (project: Project) => void;
@@ -22,6 +9,15 @@ interface ProjectListProps {
 }
 
 const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId: _tenantId }) => {
+  const { 
+    projects: apiProjects, 
+    projectCategories: apiCategories,
+    createProject, 
+    updateProject, 
+    deleteProject, 
+    loading: apiLoading 
+  } = useAPI();
+  
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,40 +31,24 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId: _t
     categoryId: ''
   });
 
-  const projectService = new ProjectService(new LocalStorageProjectProvider());
-
+  // API에서 프로젝트 가져오기
   useEffect(() => {
-    loadProjects();
-    loadCategories();
-  }, []);
+    if (apiProjects) {
+      setProjects(apiProjects);
+      setLoading(apiLoading);
+    }
+  }, [apiProjects, apiLoading]);
 
-  const loadCategories = () => {
-    const stored = localStorage.getItem('project-categories');
-    if (stored) {
-      const parsedCategories = JSON.parse(stored).map((cat: any) => ({
-        ...cat,
-        createdAt: new Date(cat.createdAt),
-        updatedAt: new Date(cat.updatedAt)
-      }));
+  // API에서 카테고리 가져오기
+  useEffect(() => {
+    if (apiCategories) {
       // 활성화된 카테고리만 필터링하고 순서대로 정렬
-      const activeCategories = parsedCategories
+      const activeCategories = apiCategories
         .filter((cat: ProjectCategory) => cat.isActive)
         .sort((a: ProjectCategory, b: ProjectCategory) => a.order - b.order);
       setCategories(activeCategories);
     }
-  };
-
-  const loadProjects = async () => {
-    try {
-      setLoading(true);
-      const allProjects = await projectService.getAllProjects();
-      setProjects(allProjects);
-    } catch (err) {
-      setError('프로젝트를 불러오는데 실패했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [apiCategories]);
 
   const handleCreateProject = async () => {
     if (!newProject.id.trim() || !newProject.name.trim() || !newProject.description.trim() || !newProject.category.trim()) {
@@ -77,7 +57,7 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId: _t
     }
 
     try {
-      const createdProject = await projectService.createProject({
+      const success = await createProject({
         id: newProject.id.trim(),
         name: newProject.name.trim(),
         description: newProject.description.trim(),
@@ -87,15 +67,12 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId: _t
         }
       });
       
-      // categoryId를 프로젝트에 직접 추가
-      const projectWithCategoryId = {
-        ...createdProject,
-        categoryId: newProject.categoryId
-      };
-      
-      setProjects(prev => [...prev, projectWithCategoryId]);
-      setShowCreateModal(false);
-      setNewProject({ id: '', name: '', description: '', category: '', categoryId: '' });
+      if (success) {
+        setShowCreateModal(false);
+        setNewProject({ id: '', name: '', description: '', category: '', categoryId: '' });
+      } else {
+        alert('프로젝트 생성에 실패했습니다.');
+      }
     } catch (err) {
       console.error('프로젝트 생성 에러:', err);
       const errorMessage = err instanceof Error ? err.message : '프로젝트 생성에 실패했습니다.';
@@ -141,14 +118,17 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId: _t
   const handleDeleteProject = async (projectId: string, projectName: string) => {
     if (window.confirm(`정말로 프로젝트 "${projectName}"을(를) 완전히 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, 프로젝트가 완전히 제거됩니다.`)) {
       try {
-        // Hard delete 사용 (완전 삭제)
-        await projectService.hardDeleteProject(projectId);
-        setProjects(prev => prev.filter(p => p.id !== projectId));
+        // API를 통한 삭제
+        const success = await deleteProject(projectId);
         
-        // 현재 선택된 프로젝트가 삭제된 경우 선택 해제
-        const currentSelectedId = localStorage.getItem('selectedProjectId');
-        if (currentSelectedId === projectId) {
-          localStorage.removeItem('selectedProjectId');
+        if (success) {
+          // 현재 선택된 프로젝트가 삭제된 경우 선택 해제
+          const currentSelectedId = localStorage.getItem('selectedProjectId');
+          if (currentSelectedId === projectId) {
+            localStorage.removeItem('selectedProjectId');
+          }
+        } else {
+          alert('프로젝트 삭제에 실패했습니다.');
         }
       } catch (err) {
         alert('프로젝트 삭제에 실패했습니다.');

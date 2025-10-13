@@ -4,7 +4,7 @@ import { Header, AppType, LoginView, Sidebar } from '@inno-spec/ui-lib';
 import { TableManager, FieldManager, DatabaseManager, FunctionManager, VariableManager, ScreenManager, LnbManager, ProjectCategoryManager, screenService } from '@inno-spec/admin-app';
 import { ProjectDashboard, ProjectList as ProjectAppList } from '@inno-spec/project-app';
 import { ScreenRuntimeView } from '@inno-spec/designer-app';
-import { Project, Bridge, LNBConfig, ProjectService, LocalStorageProjectProvider } from '@inno-spec/shared';
+import { Project, Bridge, LNBConfig } from '@inno-spec/shared';
 import { TenantProvider, useTenant } from '@inno-spec/core';
 import { APIProvider, useAPI } from '@inno-spec/core';
 import { useURLRouting } from '@inno-spec/core';
@@ -168,7 +168,7 @@ const adminLNBConfig: LNBConfig[] = [
 
 function AppContent() {
   const { currentTenant, currentUser, isAuthenticated, logout, login, isLoading } = useTenant();
-  const { } = useAPI();
+  const { projects: apiProjects, createProject, updateProject, deleteProject, refreshProjects } = useAPI();
   const [selectedApp, setSelectedApp] = useState<AppType>('PROJECT');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedBridge, setSelectedBridge] = useState<Bridge | null>(null);
@@ -180,41 +180,29 @@ function AppContent() {
   const location = useLocation();
   const { navigateToScreen } = useURLRouting();
 
-  // ProjectService 인스턴스
-  const [projectService] = useState(() => new ProjectService(new LocalStorageProjectProvider()));
-
-  // 프로젝트 목록 로드
+  // API에서 프로젝트 목록 가져오기
   useEffect(() => {
-    const loadProjects = async () => {
-      try {
-        const allProjects = await projectService.getAllProjects();
-        setProjects(allProjects);
-        
-        // localStorage에서 선택된 프로젝트 복원
-        const savedProjectId = localStorage.getItem('selectedProjectId');
-        if (savedProjectId) {
-          const savedProject = allProjects.find(p => p.id === savedProjectId);
-          if (savedProject) {
-            setSelectedProject(savedProject);
-          } else if (allProjects.length > 0) {
-            // 저장된 프로젝트를 찾을 수 없으면 첫 번째 프로젝트 선택
-            setSelectedProject(allProjects[0]);
-            localStorage.setItem('selectedProjectId', allProjects[0].id);
-          }
-        } else if (allProjects.length > 0 && !selectedProject) {
-          // 저장된 프로젝트가 없으면 첫 번째 프로젝트 선택
-          setSelectedProject(allProjects[0]);
-          localStorage.setItem('selectedProjectId', allProjects[0].id);
+    if (apiProjects && apiProjects.length > 0) {
+      setProjects(apiProjects);
+      
+      // localStorage에서 선택된 프로젝트 복원
+      const savedProjectId = localStorage.getItem('selectedProjectId');
+      if (savedProjectId) {
+        const savedProject = apiProjects.find(p => p.id === savedProjectId);
+        if (savedProject) {
+          setSelectedProject(savedProject);
+        } else if (apiProjects.length > 0) {
+          // 저장된 프로젝트를 찾을 수 없으면 첫 번째 프로젝트 선택
+          setSelectedProject(apiProjects[0]);
+          localStorage.setItem('selectedProjectId', apiProjects[0].id);
         }
-      } catch (error) {
-        console.error('Failed to load projects:', error);
+      } else if (apiProjects.length > 0 && !selectedProject) {
+        // 저장된 프로젝트가 없으면 첫 번째 프로젝트 선택
+        setSelectedProject(apiProjects[0]);
+        localStorage.setItem('selectedProjectId', apiProjects[0].id);
       }
-    };
-    
-    if (currentTenant) {
-      loadProjects();
     }
-  }, [currentTenant]);
+  }, [apiProjects]);
 
   // DESIGNER LNB 설정 로드 및 초기 메뉴 설정
   useEffect(() => {
@@ -519,9 +507,8 @@ function AppContent() {
                   onProjectChange={handleProjectSelect}
                   onBridgeChange={setSelectedBridge}
                   onProjectUpdate={async (updatedProject) => {
-                    await projectService.updateProject(updatedProject);
-                    const allProjects = await projectService.getAllProjects();
-                    setProjects(allProjects);
+                    await updateProject(updatedProject.id, updatedProject);
+                    await refreshProjects();
                     setSelectedProject(updatedProject);
                   }}
                   onLNBMenuClick={handleProjectMenuClick}
@@ -544,9 +531,8 @@ function AppContent() {
                   onProjectChange={handleProjectSelect}
                   onBridgeChange={setSelectedBridge}
                   onProjectUpdate={async (updatedProject) => {
-                    await projectService.updateProject(updatedProject);
-                    const allProjects = await projectService.getAllProjects();
-                    setProjects(allProjects);
+                    await updateProject(updatedProject.id, updatedProject);
+                    await refreshProjects();
                     setSelectedProject(updatedProject);
                   }}
                   onLNBMenuClick={handleProjectMenuClick}

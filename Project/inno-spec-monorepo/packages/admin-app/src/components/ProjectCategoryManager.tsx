@@ -1,21 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Save, X, Search, GripVertical } from 'lucide-react';
 import { PageLayout, Modal } from '@inno-spec/ui-lib';
-
-interface ProjectCategory {
-  id: string;
-  name: string;
-  displayName: string;
-  description: string;
-  color: string;
-  icon: string;
-  order: number;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { ProjectCategory } from '@inno-spec/shared';
+import { useAPI } from '@inno-spec/core';
 
 const ProjectCategoryManager: React.FC = () => {
+  const { 
+    projectCategories: apiCategories, 
+    createProjectCategory, 
+    updateProjectCategory, 
+    deleteProjectCategory,
+    reorderProjectCategories,
+    loading: apiLoading 
+  } = useAPI();
+  
   const [categories, setCategories] = useState<ProjectCategory[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -33,27 +31,12 @@ const ProjectCategoryManager: React.FC = () => {
     isActive: true
   });
 
-  // 로컬 스토리지에서 카테고리 로드
+  // API에서 카테고리 로드
   useEffect(() => {
-    loadCategories();
-  }, []);
-
-  const loadCategories = () => {
-    const stored = localStorage.getItem('project-categories');
-    if (stored) {
-      const parsedCategories = JSON.parse(stored).map((cat: any) => ({
-        ...cat,
-        createdAt: new Date(cat.createdAt),
-        updatedAt: new Date(cat.updatedAt)
-      }));
-      setCategories(parsedCategories);
+    if (apiCategories) {
+      setCategories(apiCategories);
     }
-  };
-
-  const saveCategories = (newCategories: ProjectCategory[]) => {
-    localStorage.setItem('project-categories', JSON.stringify(newCategories));
-    setCategories(newCategories);
-  };
+  }, [apiCategories]);
 
   const handleAddCategory = () => {
     setEditingCategory(null);
@@ -83,69 +66,95 @@ const ProjectCategoryManager: React.FC = () => {
     setShowModal(true);
   };
 
-  const handleSaveCategory = () => {
+  const handleSaveCategory = async () => {
     if (!formData.name || !formData.displayName) {
       alert('카테고리 이름과 표시명을 입력해주세요.');
       return;
     }
 
-    const now = new Date();
+    try {
+      if (editingCategory) {
+        // 기존 카테고리 수정
+        const success = await updateProjectCategory(editingCategory.id, {
+          id: editingCategory.id,
+          name: formData.name,
+          displayName: formData.displayName,
+          description: formData.description || '',
+          color: formData.color || '#3B82F6',
+          icon: formData.icon || 'Folder',
+          order: formData.order || 0,
+          isActive: formData.isActive
+        });
+        
+        if (!success) {
+          alert('카테고리 수정에 실패했습니다.');
+          return;
+        }
+      } else {
+        // 새 카테고리 추가
+        const success = await createProjectCategory({
+          name: formData.name,
+          displayName: formData.displayName,
+          description: formData.description || '',
+          color: formData.color || '#3B82F6',
+          icon: formData.icon || 'Folder',
+          order: formData.order || categories.length + 1,
+          isActive: formData.isActive !== undefined ? formData.isActive : true
+        });
+        
+        if (!success) {
+          alert('카테고리 생성에 실패했습니다.');
+          return;
+        }
+      }
 
-    if (editingCategory) {
-      // 기존 카테고리 수정
-      const updatedCategories = categories.map(cat =>
-        cat.id === editingCategory.id
-          ? {
-              ...cat,
-              ...formData,
-              updatedAt: now
-            } as ProjectCategory
-          : cat
-      );
-      saveCategories(updatedCategories);
-    } else {
-      // 새 카테고리 추가
-      const newCategory: ProjectCategory = {
-        id: `cat-${Date.now()}`,
-        name: formData.name!,
-        displayName: formData.displayName!,
-        description: formData.description || '',
-        color: formData.color || '#3B82F6',
-        icon: formData.icon || 'Folder',
-        order: formData.order || categories.length + 1,
-        isActive: formData.isActive !== undefined ? formData.isActive : true,
-        createdAt: now,
-        updatedAt: now
-      };
-      saveCategories([...categories, newCategory]);
+      setShowModal(false);
+      setFormData({
+        name: '',
+        displayName: '',
+        description: '',
+        color: '#3B82F6',
+        icon: 'Folder',
+        order: 0,
+        isActive: true
+      });
+    } catch (error) {
+      console.error('Error saving category:', error);
+      alert('카테고리 저장 중 오류가 발생했습니다.');
     }
-
-    setShowModal(false);
-    setFormData({
-      name: '',
-      displayName: '',
-      description: '',
-      color: '#3B82F6',
-      icon: 'Folder',
-      order: 0,
-      isActive: true
-    });
   };
 
-  const handleDeleteCategory = (categoryId: string) => {
+  const handleDeleteCategory = async (categoryId: string) => {
     if (window.confirm('이 카테고리를 삭제하시겠습니까?')) {
-      const updatedCategories = categories.filter(cat => cat.id !== categoryId);
-      saveCategories(updatedCategories);
+      try {
+        const success = await deleteProjectCategory(categoryId);
+        if (!success) {
+          alert('카테고리 삭제에 실패했습니다.');
+        }
+      } catch (error) {
+        console.error('Error deleting category:', error);
+        alert('카테고리 삭제 중 오류가 발생했습니다.');
+      }
     }
   };
 
-  const handleToggleActive = (categoryId: string) => {
-    const updatedCategories = categories.map(cat =>
-      cat.id === categoryId
-        ? { ...cat, isActive: !cat.isActive, updatedAt: new Date() }
-        : cat
-    );
-    saveCategories(updatedCategories);
+  const handleToggleActive = async (categoryId: string) => {
+    try {
+      const category = categories.find(cat => cat.id === categoryId);
+      if (category) {
+        const success = await updateProjectCategory(categoryId, {
+          id: categoryId,
+          isActive: !category.isActive
+        });
+        
+        if (!success) {
+          alert('카테고리 상태 변경에 실패했습니다.');
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling category:', error);
+      alert('카테고리 상태 변경 중 오류가 발생했습니다.');
+    }
   };
 
   // 드래그 앤 드롭 핸들러
@@ -165,7 +174,7 @@ const ProjectCategoryManager: React.FC = () => {
     setDraggedOverItem(null);
   };
 
-  const handleDrop = (e: React.DragEvent, targetCategory: ProjectCategory) => {
+  const handleDrop = async (e: React.DragEvent, targetCategory: ProjectCategory) => {
     e.preventDefault();
     
     if (!draggedItem || draggedItem.id === targetCategory.id) {
@@ -174,26 +183,38 @@ const ProjectCategoryManager: React.FC = () => {
       return;
     }
 
-    // 카테고리 순서 재정렬
-    const sortedCategories = [...categories].sort((a, b) => a.order - b.order);
-    const draggedIndex = sortedCategories.findIndex(cat => cat.id === draggedItem.id);
-    const targetIndex = sortedCategories.findIndex(cat => cat.id === targetCategory.id);
+    try {
+      // 카테고리 순서 재정렬
+      const sortedCategories = [...categories].sort((a, b) => a.order - b.order);
+      const draggedIndex = sortedCategories.findIndex(cat => cat.id === draggedItem.id);
+      const targetIndex = sortedCategories.findIndex(cat => cat.id === targetCategory.id);
 
-    // 배열에서 드래그된 아이템 제거
-    const [removedItem] = sortedCategories.splice(draggedIndex, 1);
-    // 타겟 위치에 삽입
-    sortedCategories.splice(targetIndex, 0, removedItem);
+      // 배열에서 드래그된 아이템 제거
+      const [removedItem] = sortedCategories.splice(draggedIndex, 1);
+      // 타겟 위치에 삽입
+      sortedCategories.splice(targetIndex, 0, removedItem);
 
-    // 새로운 순서로 order 값 업데이트 (1부터 시작)
-    const updatedCategories = sortedCategories.map((cat, index) => ({
-      ...cat,
-      order: index + 1,
-      updatedAt: new Date()
-    }));
+      // 새로운 순서로 order 값 업데이트 (1부터 시작)
+      const categoryOrders = sortedCategories.map((cat, index) => ({
+        id: cat.id,
+        order: index + 1
+      }));
 
-    saveCategories(updatedCategories);
-    setDraggedItem(null);
-    setDraggedOverItem(null);
+      // API로 순서 업데이트
+      const success = await reorderProjectCategories(categoryOrders);
+      
+      if (!success) {
+        alert('카테고리 순서 변경에 실패했습니다.');
+      }
+      
+      setDraggedItem(null);
+      setDraggedOverItem(null);
+    } catch (error) {
+      console.error('Error reordering categories:', error);
+      alert('카테고리 순서 변경 중 오류가 발생했습니다.');
+      setDraggedItem(null);
+      setDraggedOverItem(null);
+    }
   };
 
   const handleDragEnd = () => {
