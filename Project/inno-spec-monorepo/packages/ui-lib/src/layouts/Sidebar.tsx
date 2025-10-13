@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import { Settings, ChevronDown, Image, Building2, Anchor, BarChart3, Database, Variable, Table, FolderOpen, Tag, Component, Code, Layout, Menu, Type, Monitor, Layers } from 'lucide-react';
+import { Settings, ChevronDown, Image, Building2, Anchor, BarChart3, Database, Variable, Table, FolderOpen, Tag, Component, Code, Layout, Menu, Type, Monitor, Layers, Home, FileText, Users, Grid, Boxes, ListTree, FileStack, FileCode, BookOpen, Columns, Rows, LayoutGrid, Ruler, Calculator, Activity, TrendingUp, TrendingDown, Compass, PenTool, Scissors, Box, Package, Hammer, Wrench, MapPin, Map, Navigation, Shield, AlertTriangle, CheckCircle, Construction, GitBranch, Maximize2, Move, Hexagon, Square, Circle, Triangle, Minus, Plus as PlusIcon, Equal, ArrowUpDown, Split, Merge } from 'lucide-react';
 import { Project, Bridge as BridgeType, LNBConfig } from '@inno-spec/shared';
 
 export interface SidebarProps {
@@ -13,6 +13,7 @@ export interface SidebarProps {
   onLNBMenuClick?: (menuId: string) => void;
   lnbConfigs?: LNBConfig[];
   showProjectSelector?: boolean;
+  ignoreCategoryFilter?: boolean; // 카테고리 필터링 무시 (PROJECT 앱 등에서 사용)
 }
 
 const Sidebar: React.FC<SidebarProps> = React.memo(({ 
@@ -25,7 +26,8 @@ const Sidebar: React.FC<SidebarProps> = React.memo(({
   onBridgeChange: _onBridgeChange,
   onLNBMenuClick,
   lnbConfigs = [],
-  showProjectSelector = true
+  showProjectSelector = true,
+  ignoreCategoryFilter = false
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
   const [expandedCategories, setExpandedCategories] = React.useState<Set<string>>(new Set());
@@ -48,11 +50,29 @@ const Sidebar: React.FC<SidebarProps> = React.memo(({
     });
   }, []);
 
-  // LNBConfig를 메뉴 아이템으로 변환
-  const convertLNBConfigToMenuItems = React.useCallback((configs: LNBConfig[]): LNBConfig[] => {
+  // LNBConfig를 메뉴 아이템으로 변환 (선택된 프로젝트의 카테고리에 맞는 것만)
+  const convertLNBConfigToMenuItems = React.useCallback((configs: LNBConfig[], projectCategoryId?: string, ignoreFilter?: boolean): LNBConfig[] => {
     console.log('Converting LNB configs:', configs);
+    console.log('Project category ID:', projectCategoryId);
+    console.log('Ignore category filter:', ignoreFilter);
+    
     const filtered = configs
-      .filter(config => config.isActive)
+      .filter(config => {
+        // 활성 상태가 아니면 제외
+        if (!config.isActive) return false;
+        
+        // 카테고리 필터링을 무시하는 경우 (PROJECT 앱 등)
+        if (ignoreFilter) return true;
+        
+        // 프로젝트에 categoryId가 있는 경우
+        if (projectCategoryId) {
+          // LNB에도 categoryId가 있어야 하고, 일치해야 함
+          return config.categoryId === projectCategoryId;
+        }
+        
+        // 프로젝트에 categoryId가 없으면 categoryId가 없는 LNB만 표시 (하위 호환성)
+        return !config.categoryId;
+      })
       .sort((a, b) => a.order - b.order);
     console.log('Filtered menu items:', filtered);
     return filtered;
@@ -61,8 +81,14 @@ const Sidebar: React.FC<SidebarProps> = React.memo(({
   console.log('Sidebar received lnbConfigs prop:', lnbConfigs);
   console.log('Sidebar lnbConfigs type:', typeof lnbConfigs);
   console.log('Sidebar lnbConfigs length:', lnbConfigs?.length);
+  console.log('Selected project:', selectedProject);
+  console.log('Selected project categoryId:', selectedProject?.categoryId);
+  console.log('Ignore category filter:', ignoreCategoryFilter);
   
-  const menuItems = React.useMemo(() => convertLNBConfigToMenuItems(lnbConfigs), [lnbConfigs, convertLNBConfigToMenuItems]);
+  const menuItems = React.useMemo(() => 
+    convertLNBConfigToMenuItems(lnbConfigs, selectedProject?.categoryId, ignoreCategoryFilter), 
+    [lnbConfigs, selectedProject?.categoryId, ignoreCategoryFilter, convertLNBConfigToMenuItems]
+  );
   console.log('Sidebar - lnbConfigs:', lnbConfigs);
   console.log('Sidebar - menuItems:', menuItems);
 
@@ -127,26 +153,80 @@ const Sidebar: React.FC<SidebarProps> = React.memo(({
     
     // Lucide 아이콘 매핑
     const iconMap: Record<string, React.ComponentType<any>> = {
+      // 기본 아이콘
       'BarChart3': BarChart3,
-      'Building2': Building2,
       'Database': Database,
-      'Image': Image,
-      'Anchor': Anchor,
-      'Settings': Settings,
       'Table': Table,
-      'Variable': Variable,
       'FolderOpen': FolderOpen,
       'Tag': Tag,
       'Component': Component,
       'Code': Code,
-      'Layout': Layout,
-      'Menu': Menu,
+      'Variable': Variable,
       'Type': Type,
       'Monitor': Monitor,
       'Layers': Layers,
-      'screen': Image, // 화면 아이콘
-      'menu': Menu, // 메뉴 아이콘
-      'function': Code, // 함수 아이콘
+      'Layout': Layout,
+      'Menu': Menu,
+      'Home': Home,
+      'FileText': FileText,
+      'Settings': Settings,
+      'Users': Users,
+      'Grid': Grid,
+      'Boxes': Boxes,
+      'ListTree': ListTree,
+      'FileStack': FileStack,
+      'FileCode': FileCode,
+      'BookOpen': BookOpen,
+      'Columns': Columns,
+      'Rows': Rows,
+      'LayoutGrid': LayoutGrid,
+      // 토목/건설 관련
+      'Building2': Building2,
+      'Construction': Construction,
+      'Anchor': Anchor,
+      'Image': Image,
+      // 측정/계산 관련
+      'Ruler': Ruler,
+      'Calculator': Calculator,
+      'Activity': Activity,
+      'TrendingUp': TrendingUp,
+      'TrendingDown': TrendingDown,
+      // 설계/도구 관련
+      'Compass': Compass,
+      'PenTool': PenTool,
+      'Scissors': Scissors,
+      'Hammer': Hammer,
+      'Wrench': Wrench,
+      // 공간/위치 관련
+      'MapPin': MapPin,
+      'Map': Map,
+      'Navigation': Navigation,
+      // 구조/도형 관련
+      'Box': Box,
+      'Package': Package,
+      'Hexagon': Hexagon,
+      'Square': Square,
+      'Circle': Circle,
+      'Triangle': Triangle,
+      // 분기/연결 관련
+      'GitBranch': GitBranch,
+      'Split': Split,
+      'Merge': Merge,
+      // 크기/이동 관련
+      'Maximize2': Maximize2,
+      'Move': Move,
+      'ArrowUpDown': ArrowUpDown,
+      // 기타 유틸리티
+      'Shield': Shield,
+      'AlertTriangle': AlertTriangle,
+      'CheckCircle': CheckCircle,
+      'Minus': Minus,
+      'PlusIcon': PlusIcon,
+      'Equal': Equal,
+      // 하위 호환성
+      'screen': Image,
+      'menu': Menu,
+      'function': Code,
     };
     
     // 아이콘이 없는 경우 displayName을 기반으로 기본 아이콘 선택

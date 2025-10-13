@@ -221,24 +221,42 @@ function AppContent() {
     // 기본 LNB 구성이 없으면 생성
     screenService.createDefaultLNBConfig();
     
-    const lnbConfigs = screenService.getLNBConfigs();
-    setDesignerLNBConfigs(lnbConfigs);
-    
-    // 첫 번째 활성 LNB 메뉴를 초기 메뉴로 설정
-    if (lnbConfigs.length > 0) {
-      const firstMenu = lnbConfigs.find(config => config.isActive);
-      if (firstMenu) {
-        // 첫 번째 메뉴가 부모 메뉴인 경우 첫 번째 자식을 선택
-        if (firstMenu.children && firstMenu.children.length > 0) {
-          const firstChild = firstMenu.children.find(child => child.isActive);
-          if (firstChild) {
-            setActiveDesignerMenu(firstChild.id);
+    const loadLNBConfigs = () => {
+      const lnbConfigs = screenService.getLNBConfigs();
+      console.log('Loading all LNB configs:', lnbConfigs);
+      setDesignerLNBConfigs(lnbConfigs);
+      
+      // 첫 번째 활성 LNB 메뉴를 초기 메뉴로 설정
+      if (lnbConfigs.length > 0) {
+        const firstMenu = lnbConfigs.find(config => config.isActive);
+        if (firstMenu) {
+          // 첫 번째 메뉴가 부모 메뉴인 경우 첫 번째 자식을 선택
+          if (firstMenu.children && firstMenu.children.length > 0) {
+            const firstChild = firstMenu.children.find(child => child.isActive);
+            if (firstChild) {
+              setActiveDesignerMenu(firstChild.id);
+            }
+          } else {
+            setActiveDesignerMenu(firstMenu.id);
           }
-        } else {
-          setActiveDesignerMenu(firstMenu.id);
         }
       }
-    }
+    };
+    
+    loadLNBConfigs();
+    
+    // LNB 구성 업데이트 이벤트 리스너 등록
+    const handleLNBConfigUpdate = (event: CustomEvent) => {
+      console.log('LNB config updated event received:', event.detail);
+      loadLNBConfigs();
+    };
+    
+    window.addEventListener('lnb-config-updated', handleLNBConfigUpdate as EventListener);
+    
+    // 클린업
+    return () => {
+      window.removeEventListener('lnb-config-updated', handleLNBConfigUpdate as EventListener);
+    };
   }, []);
 
   // URL 기반 앱 선택 및 메뉴 활성화
@@ -274,9 +292,7 @@ function AppContent() {
           break;
         case 'lnb-config':
           setActiveAdminMenu('admin-lnb-config');
-          // LNB 설정이 변경될 수 있으므로 DESIGNER LNB도 다시 로드
-          const lnbConfigs = screenService.getLNBConfigs();
-          setDesignerLNBConfigs(lnbConfigs);
+          // LNB 설정 변경은 lnb-config-updated 이벤트로 처리됨
           break;
         default:
           setActiveAdminMenu('admin-db');
@@ -326,11 +342,13 @@ function AppContent() {
     
     // 현재 앱에 따라 다른 동작
     if (selectedApp === 'DESIGNER') {
-      // DESIGNER 앱에서는 첫 번째 LNB 메뉴로 이동
-      const firstMenuId = getFirstActiveMenu(designerLNBConfigs);
+      // DESIGNER 앱에서는 해당 카테고리의 첫 번째 LNB 메뉴로 이동
+      const firstMenuId = getFirstActiveMenu(designerLNBConfigs, project.categoryId);
       if (firstMenuId) {
         navigateToScreen({ type: firstMenuId as any, module: 'designer', projectId: project.id });
+        setActiveDesignerMenu(firstMenuId);
       } else {
+        // 카테고리에 맞는 LNB가 없으면 dashboard로 fallback
         navigateToScreen({ type: 'dashboard', module: 'designer', projectId: project.id });
       }
     } else {
@@ -395,12 +413,26 @@ function AppContent() {
     });
   };
 
-  // 첫 번째 LNB 메뉴 찾기 헬퍼 함수
-  const getFirstActiveMenu = (lnbConfigs: LNBConfig[]): string | null => {
+  // 첫 번째 LNB 메뉴 찾기 헬퍼 함수 (카테고리별 필터링 적용)
+  const getFirstActiveMenu = (lnbConfigs: LNBConfig[], projectCategoryId?: string): string | null => {
     if (lnbConfigs.length === 0) return null;
     
-    const firstMenu = lnbConfigs.find(config => config.isActive);
-    if (!firstMenu) return null;
+    // 프로젝트 카테고리에 맞는 LNB만 필터링
+    const filteredConfigs = lnbConfigs.filter(config => {
+      if (!config.isActive) return false;
+      
+      // 카테고리 ID가 있는 경우 일치하는 것만
+      if (projectCategoryId) {
+        return config.categoryId === projectCategoryId;
+      }
+      
+      // 카테고리 ID가 없으면 categoryId가 없는 LNB만 (하위 호환성)
+      return !config.categoryId;
+    });
+    
+    if (filteredConfigs.length === 0) return null;
+    
+    const firstMenu = filteredConfigs[0];
     
     // 부모 메뉴인 경우 첫 번째 자식 반환
     if (firstMenu.children && firstMenu.children.length > 0) {
@@ -423,10 +455,11 @@ function AppContent() {
       case 'DESIGNER':
         // DESIGNER 앱으로 이동 (프로젝트가 선택된 경우)
         if (selectedProject) {
-          // 첫 번째 LNB 메뉴로 이동
-          const firstMenuId = getFirstActiveMenu(designerLNBConfigs);
+          // 해당 카테고리의 첫 번째 LNB 메뉴로 이동
+          const firstMenuId = getFirstActiveMenu(designerLNBConfigs, selectedProject.categoryId);
           if (firstMenuId) {
             navigateToScreen({ type: firstMenuId as any, module: 'designer', projectId: selectedProject.id });
+            setActiveDesignerMenu(firstMenuId);
           } else {
             // LNB 설정이 없으면 dashboard로 fallback
           navigateToScreen({ type: 'dashboard', module: 'designer', projectId: selectedProject.id });
@@ -462,6 +495,7 @@ function AppContent() {
         onLogout={logout}
         selectedApp={selectedApp}
         onAppChange={handleAppChange}
+        hasProjects={projects.length > 0}
       />
       
       <main className="flex-1 overflow-hidden">

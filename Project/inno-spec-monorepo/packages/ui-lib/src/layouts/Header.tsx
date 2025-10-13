@@ -12,9 +12,10 @@ export interface HeaderProps {
   onLogout: () => void;
   selectedApp: AppType;
   onAppChange: (app: AppType) => void;
+  hasProjects?: boolean; // 프로젝트가 있는지 여부 (DESIGNER 활성화 조건)
 }
 
-const Header: React.FC<HeaderProps> = ({ currentView: _currentView, onNavigate: _onNavigate, currentTenant, currentUser, onLogout, selectedApp, onAppChange }) => {
+const Header: React.FC<HeaderProps> = ({ currentView: _currentView, onNavigate: _onNavigate, currentTenant, currentUser, onLogout, selectedApp, onAppChange, hasProjects = true }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   const apps: { value: AppType; label: string }[] = [
@@ -99,28 +100,36 @@ const Header: React.FC<HeaderProps> = ({ currentView: _currentView, onNavigate: 
 
             {/* 앱 선택 버튼들 */}
             <div className="flex items-center space-x-1" style={{ marginLeft: '72px' }}>
-              {apps.map((app) => (
-                <button
-                  key={app.value}
-                  onClick={() => onAppChange(app.value)}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                    selectedApp === app.value
-                      ? 'text-white shadow-lg'
-                      : 'text-gray-700 hover:text-gray-800 hover:bg-gray-100'
-                  }`}
-                  style={selectedApp === app.value 
-                    ? { 
-                        background: 'linear-gradient(to right, #1f2937, #000000)',
-                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
-                      }
-                    : {
-                        background: 'transparent'
-                      }
-                  }
-                >
-                  {app.label}
-                </button>
-              ))}
+              {apps.map((app) => {
+                const isDisabled = app.value === 'DESIGNER' && !hasProjects;
+                
+                return (
+                  <button
+                    key={app.value}
+                    onClick={() => !isDisabled && onAppChange(app.value)}
+                    disabled={isDisabled}
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                      isDisabled
+                        ? 'text-gray-400 bg-gray-50 cursor-not-allowed'
+                        : selectedApp === app.value
+                        ? 'text-white shadow-lg'
+                        : 'text-gray-700 hover:text-gray-800 hover:bg-gray-100'
+                    }`}
+                    style={!isDisabled && selectedApp === app.value 
+                      ? { 
+                          background: 'linear-gradient(to right, #1f2937, #000000)',
+                          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                        }
+                      : {
+                          background: 'transparent'
+                        }
+                    }
+                    title={isDisabled ? '프로젝트를 먼저 생성하세요' : undefined}
+                  >
+                    {app.label}
+                  </button>
+                );
+              })}
             </div>
             
           </div>

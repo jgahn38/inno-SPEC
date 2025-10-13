@@ -371,6 +371,7 @@ const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         onBridgeChange={onBridgeChange}
         onLNBMenuClick={onLNBMenuClick}
         lnbConfigs={projectLNBConfig}
+        ignoreCategoryFilter={true}
       />
       <div className="flex-1 bg-gray-50 overflow-auto">
         {/* 교량 선택 헤더 - 대시보드와 프로젝트 설정 메뉴일 때는 표시하지 않음 */}

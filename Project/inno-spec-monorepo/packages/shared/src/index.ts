@@ -86,6 +86,7 @@ export interface LNBConfig {
   description?: string; // 메뉴 설명
   icon?: string;
   order: number;
+  categoryId?: string; // 프로젝트 카테고리 ID (카테고리별 LNB 구성)
   screenId?: string; // 연결된 화면 ID (사용자 생성 화면인 경우)
   systemScreenType?: SystemScreenType; // 시스템 화면 타입 (시스템 화면인 경우)
   children?: LNBConfig[]; // 하위 메뉴

@@ -31,7 +31,8 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId: _t
     id: '',
     name: '',
     description: '',
-    category: ''
+    category: '',
+    categoryId: ''
   });
 
   const projectService = new ProjectService(new LocalStorageProjectProvider());
@@ -80,12 +81,21 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId: _t
         id: newProject.id.trim(),
         name: newProject.name.trim(),
         description: newProject.description.trim(),
-        category: newProject.category
+        category: newProject.category,
+        metadata: {
+          categoryId: newProject.categoryId
+        }
       });
       
-      setProjects(prev => [...prev, createdProject]);
+      // categoryId를 프로젝트에 직접 추가
+      const projectWithCategoryId = {
+        ...createdProject,
+        categoryId: newProject.categoryId
+      };
+      
+      setProjects(prev => [...prev, projectWithCategoryId]);
       setShowCreateModal(false);
-      setNewProject({ id: '', name: '', description: '', category: '' });
+      setNewProject({ id: '', name: '', description: '', category: '', categoryId: '' });
     } catch (err) {
       console.error('프로젝트 생성 에러:', err);
       const errorMessage = err instanceof Error ? err.message : '프로젝트 생성에 실패했습니다.';
@@ -129,12 +139,20 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId: _t
 
   // 프로젝트 삭제 기능
   const handleDeleteProject = async (projectId: string, projectName: string) => {
-    if (window.confirm(`정말로 프로젝트 "${projectName}"을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
+    if (window.confirm(`정말로 프로젝트 "${projectName}"을(를) 완전히 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없으며, 프로젝트가 완전히 제거됩니다.`)) {
       try {
-        await projectService.deleteProject(projectId);
+        // Hard delete 사용 (완전 삭제)
+        await projectService.hardDeleteProject(projectId);
         setProjects(prev => prev.filter(p => p.id !== projectId));
+        
+        // 현재 선택된 프로젝트가 삭제된 경우 선택 해제
+        const currentSelectedId = localStorage.getItem('selectedProjectId');
+        if (currentSelectedId === projectId) {
+          localStorage.removeItem('selectedProjectId');
+        }
       } catch (err) {
         alert('프로젝트 삭제에 실패했습니다.');
+        console.error(err);
       }
     }
   };
@@ -331,13 +349,20 @@ const ProjectList: React.FC<ProjectListProps> = ({ onProjectSelect, tenantId: _t
                   카테고리
                 </label>
                 <select
-                  value={newProject.category}
-                  onChange={(e) => setNewProject(prev => ({ ...prev, category: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={newProject.categoryId}
+                  onChange={(e) => {
+                    const selectedCategory = categories.find(cat => cat.id === e.target.value);
+                    setNewProject(prev => ({ 
+                      ...prev, 
+                      categoryId: e.target.value,
+                      category: selectedCategory?.name || ''
+                    }));
+                  }}
+                  className="w-full pl-3 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMS41TDYgNi41TDExIDEuNSIgc3Ryb2tlPSIjNkI3MjgwIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==')] bg-[right_0.5rem_center] bg-no-repeat"
                 >
                   <option value="">카테고리를 선택하세요</option>
                   {categories.map((category) => (
-                    <option key={category.id} value={category.name}>
+                    <option key={category.id} value={category.id}>
                       {category.displayName}
                     </option>
                   ))}

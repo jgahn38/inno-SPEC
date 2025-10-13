@@ -12,7 +12,13 @@ export class LocalStorageProjectProvider implements IProjectDataProvider {
   private getProjectsFromStorage(): Project[] {
     try {
       const data = localStorage.getItem(this.STORAGE_KEY);
-      return data ? JSON.parse(data) : [];
+      const projects = data ? JSON.parse(data) : [];
+      
+      // metadata에서 categoryId를 추출하여 프로젝트에 추가 (하위 호환성)
+      return projects.map((project: Project) => ({
+        ...project,
+        categoryId: project.categoryId || project.metadata?.categoryId
+      }));
     } catch (error) {
       console.error('Failed to parse projects from localStorage:', error);
       return [];
@@ -58,6 +64,7 @@ export class LocalStorageProjectProvider implements IProjectDataProvider {
       updatedAt: now,
       status: 'active',
       category: request.category,
+      categoryId: request.metadata?.categoryId, // metadata에서 categoryId 추출
       tags: request.tags || [],
       metadata: request.metadata || {},
       createdBy: 'default-user', // 기본 사용자 ID

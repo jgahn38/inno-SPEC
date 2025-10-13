@@ -1,8 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { PageLayout, Modal } from '@inno-spec/ui-lib';
-import { Plus, Save, X, GripVertical, BarChart3, Building2, Image, Anchor, Database, Variable } from 'lucide-react';
+import { Plus, X, GripVertical, BarChart3, Building2, Image, Anchor, Database, Variable, Table, FolderOpen, Tag, Component, Code, Layout, Menu, Type, Monitor, Layers, Home, FileText, Settings, Users, Grid, Boxes, ListTree, FileStack, FileCode, BookOpen, Columns, Rows, LayoutGrid, Ruler, Calculator, Activity, TrendingUp, TrendingDown, Compass, PenTool, Scissors, Box, Package, Hammer, Wrench, MapPin, Map, Navigation, Shield, AlertTriangle, CheckCircle, Construction, GitBranch, Maximize2, Move, Hexagon, Square, Circle, Triangle, Minus, Plus as PlusIcon, Equal, ArrowUpDown, Split, Merge } from 'lucide-react';
 import { screenService } from '../services/ScreenService';
 import { ScreenConfig, LNBConfig, SystemScreenType } from '@inno-spec/shared';
+
+interface ProjectCategory {
+  id: string;
+  name: string;
+  displayName: string;
+  description: string;
+  color: string;
+  icon: string;
+  order: number;
+  isActive: boolean;
+}
 
 const LnbManager: React.FC = () => {
   const [lnbConfigs, setLnbConfigs] = useState<LNBConfig[]>([]);
@@ -23,20 +34,53 @@ const LnbManager: React.FC = () => {
     systemScreenType: undefined as SystemScreenType | undefined
   });
 
-  // LNB 구성 변경 감지
-  const [hasLnbConfigChanges, setHasLnbConfigChanges] = useState<boolean>(false);
+  // 프로젝트 카테고리 상태
+  const [categories, setCategories] = useState<ProjectCategory[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+
+  // 드래그 앤 드롭 상태
+  const [draggedItem, setDraggedItem] = useState<string | null>(null);
+  const [draggedChildItem, setDraggedChildItem] = useState<{ parentId: string; childId: string } | null>(null);
 
   useEffect(() => {
-    loadData(true);
+    loadCategories();
+    loadData();
     // 기본 LNB 구성이 없으면 생성
     if (lnbConfigs.length === 0) {
       screenService.createDefaultLNBConfig();
-      loadData(true);
+      loadData();
     }
   }, []);
 
-  const loadData = (resetChanges = false) => {
-    const lnbData = screenService.getLNBConfigs();
+  // 선택된 카테고리가 변경되면 해당 카테고리의 LNB 로드
+  useEffect(() => {
+    if (selectedCategoryId) {
+      loadData();
+    }
+  }, [selectedCategoryId]);
+
+  const loadCategories = () => {
+    const stored = localStorage.getItem('project-categories');
+    if (stored) {
+      const parsedCategories = JSON.parse(stored).map((cat: any) => ({
+        ...cat,
+        createdAt: new Date(cat.createdAt),
+        updatedAt: new Date(cat.updatedAt)
+      }));
+      setCategories(parsedCategories.filter((cat: ProjectCategory) => cat.isActive));
+      
+      // 첫 번째 카테고리를 기본 선택
+      if (parsedCategories.length > 0 && !selectedCategoryId) {
+        setSelectedCategoryId(parsedCategories[0].id);
+      }
+    }
+  };
+
+  const loadData = () => {
+    // 선택된 카테고리의 LNB만 로드
+    const lnbData = selectedCategoryId 
+      ? screenService.getLNBConfigsByCategory(selectedCategoryId)
+      : screenService.getLNBConfigs();
     
     // 기존 데이터에 type 필드가 없으면 자동으로 설정
     const migratedLnbData = lnbData.map(lnb => {
@@ -49,10 +93,6 @@ const LnbManager: React.FC = () => {
     
     setLnbConfigs(migratedLnbData);
     setScreens(screenService.getScreens());
-    
-    if (resetChanges) {
-      setHasLnbConfigChanges(false);
-    }
   };
 
   const getSystemScreenDisplayName = (systemScreenType: SystemScreenType): string => {
@@ -67,19 +107,96 @@ const LnbManager: React.FC = () => {
   };
 
   const getIconComponent = (iconName?: string) => {
+    // 이모지인 경우 직접 표시
+    if (iconName && /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(iconName)) {
+      return <span className="text-lg flex items-center justify-center">{iconName}</span>;
+    }
+    
+    // Lucide 아이콘 매핑
     const iconMap: Record<string, React.ReactNode> = {
+      // 기본 아이콘
       'BarChart3': <BarChart3 className="h-4 w-4" />,
-      'Building2': <Building2 className="h-4 w-4" />,
       'Database': <Database className="h-4 w-4" />,
-      'Image': <Image className="h-4 w-4" />,
+      'Table': <Table className="h-4 w-4" />,
+      'FolderOpen': <FolderOpen className="h-4 w-4" />,
+      'Tag': <Tag className="h-4 w-4" />,
+      'Component': <Component className="h-4 w-4" />,
+      'Code': <Code className="h-4 w-4" />,
+      'Variable': <Variable className="h-4 w-4" />,
+      'Type': <Type className="h-4 w-4" />,
+      'Monitor': <Monitor className="h-4 w-4" />,
+      'Layers': <Layers className="h-4 w-4" />,
+      'Layout': <Layout className="h-4 w-4" />,
+      'Menu': <Menu className="h-4 w-4" />,
+      'Home': <Home className="h-4 w-4" />,
+      'FileText': <FileText className="h-4 w-4" />,
+      'Settings': <Settings className="h-4 w-4" />,
+      'Users': <Users className="h-4 w-4" />,
+      'Grid': <Grid className="h-4 w-4" />,
+      'Boxes': <Boxes className="h-4 w-4" />,
+      'ListTree': <ListTree className="h-4 w-4" />,
+      'FileStack': <FileStack className="h-4 w-4" />,
+      'FileCode': <FileCode className="h-4 w-4" />,
+      'BookOpen': <BookOpen className="h-4 w-4" />,
+      'Columns': <Columns className="h-4 w-4" />,
+      'Rows': <Rows className="h-4 w-4" />,
+      'LayoutGrid': <LayoutGrid className="h-4 w-4" />,
+      // 토목/건설 관련
+      'Building2': <Building2 className="h-4 w-4" />,
+      'Construction': <Construction className="h-4 w-4" />,
       'Anchor': <Anchor className="h-4 w-4" />,
-      'Settings': <Variable className="h-4 w-4" />
+      'Image': <Image className="h-4 w-4" />,
+      // 측정/계산 관련
+      'Ruler': <Ruler className="h-4 w-4" />,
+      'Calculator': <Calculator className="h-4 w-4" />,
+      'Activity': <Activity className="h-4 w-4" />,
+      'TrendingUp': <TrendingUp className="h-4 w-4" />,
+      'TrendingDown': <TrendingDown className="h-4 w-4" />,
+      // 설계/도구 관련
+      'Compass': <Compass className="h-4 w-4" />,
+      'PenTool': <PenTool className="h-4 w-4" />,
+      'Scissors': <Scissors className="h-4 w-4" />,
+      'Hammer': <Hammer className="h-4 w-4" />,
+      'Wrench': <Wrench className="h-4 w-4" />,
+      // 공간/위치 관련
+      'MapPin': <MapPin className="h-4 w-4" />,
+      'Map': <Map className="h-4 w-4" />,
+      'Navigation': <Navigation className="h-4 w-4" />,
+      // 구조/도형 관련
+      'Box': <Box className="h-4 w-4" />,
+      'Package': <Package className="h-4 w-4" />,
+      'Hexagon': <Hexagon className="h-4 w-4" />,
+      'Square': <Square className="h-4 w-4" />,
+      'Circle': <Circle className="h-4 w-4" />,
+      'Triangle': <Triangle className="h-4 w-4" />,
+      // 분기/연결 관련
+      'GitBranch': <GitBranch className="h-4 w-4" />,
+      'Split': <Split className="h-4 w-4" />,
+      'Merge': <Merge className="h-4 w-4" />,
+      // 크기/이동 관련
+      'Maximize2': <Maximize2 className="h-4 w-4" />,
+      'Move': <Move className="h-4 w-4" />,
+      'ArrowUpDown': <ArrowUpDown className="h-4 w-4" />,
+      // 기타 유틸리티
+      'Shield': <Shield className="h-4 w-4" />,
+      'AlertTriangle': <AlertTriangle className="h-4 w-4" />,
+      'CheckCircle': <CheckCircle className="h-4 w-4" />,
+      'Minus': <Minus className="h-4 w-4" />,
+      'PlusIcon': <PlusIcon className="h-4 w-4" />,
+      'Equal': <Equal className="h-4 w-4" />
     };
-    return iconMap[iconName || ''] || <Variable className="h-4 w-4" />;
+    return iconMap[iconName || ''] || <Database className="h-4 w-4" />;
   };
 
   const handleAddLNB = () => {
     if (newLNB.name && newLNB.displayName) {
+      if (!selectedCategoryId) {
+        alert('프로젝트 카테고리를 먼저 선택하세요.');
+        return;
+      }
+
+      // 현재 선택된 카테고리 내에서 최대 순서 값을 찾아 새 순서 계산
+      // (lnbConfigs는 이미 선택된 카테고리로 필터링된 상태)
       const maxOrder = lnbConfigs.length > 0 ? Math.max(...lnbConfigs.map(lnb => lnb.order)) : 0;
       const newOrder = Math.floor(maxOrder) + 1;
       
@@ -99,6 +216,7 @@ const LnbManager: React.FC = () => {
           order: childOrder,
           isActive: newLNB.isActive,
           type: 'child',
+          categoryId: selectedCategoryId,
           screenId: newLNB.screenId || undefined,
           systemScreenType: undefined,
           createdAt: new Date(),
@@ -110,6 +228,7 @@ const LnbManager: React.FC = () => {
           ...newLNB, 
           order: newOrder, 
           type: newLNB.type, 
+          categoryId: selectedCategoryId,
           children: newLNB.type === 'parent' ? [] : [],
           screenId: newLNB.type === 'parent' ? undefined : (newLNB.screenId || undefined),
           systemScreenType: undefined
@@ -118,7 +237,7 @@ const LnbManager: React.FC = () => {
       setNewLNB({ name: '', displayName: '', description: '', icon: '', order: 0, isActive: true, parentId: '', isParent: false, type: 'independent', screenId: '', systemScreenType: undefined });
       setShowLNBModal(false);
       loadData();
-      setHasLnbConfigChanges(true);
+      autoSaveLnbConfig(); // 실시간 저장
     }
   };
 
@@ -168,7 +287,7 @@ const LnbManager: React.FC = () => {
       setNewLNB({ name: '', displayName: '', description: '', icon: '', order: 0, isActive: true, parentId: '', isParent: false, type: 'independent', screenId: '', systemScreenType: undefined });
       setShowLNBModal(false);
       loadData();
-      setHasLnbConfigChanges(true);
+      autoSaveLnbConfig(); // 실시간 저장
     }
   };
 
@@ -176,16 +295,18 @@ const LnbManager: React.FC = () => {
     if (window.confirm('이 LNB 메뉴를 삭제하시겠습니까?')) {
       screenService.deleteLNBConfig(id);
       
-      // 삭제 후 순서 재정렬
-      const updatedConfigs = screenService.getLNBConfigs();
-      updatedConfigs
-        .filter(config => config.id !== id)
-        .forEach((config, index) => {
-          screenService.updateLNBConfig(config.id, { order: index + 1 });
-        });
+      // 삭제 후 순서 재정렬 (해당 카테고리 내에서만)
+      if (selectedCategoryId) {
+        const categoryConfigs = screenService.getLNBConfigsByCategory(selectedCategoryId);
+        categoryConfigs
+          .filter(config => config.id !== id)
+          .forEach((config, index) => {
+            screenService.updateLNBConfig(config.id, { order: index + 1 });
+          });
+      }
       
       loadData();
-      setHasLnbConfigChanges(true);
+      autoSaveLnbConfig(); // 실시간 저장
     }
   };
 
@@ -221,7 +342,7 @@ const LnbManager: React.FC = () => {
         
         screenService.updateLNBConfig(parentId, { children: reorderedChildren });
         loadData();
-        setHasLnbConfigChanges(true);
+        autoSaveLnbConfig(); // 실시간 저장
       }
     }
   };
@@ -231,18 +352,15 @@ const LnbManager: React.FC = () => {
     setEditingLNB(null);
   };
 
-  const handleSaveLnbConfig = () => {
-    console.log('LNB 구성 저장:', lnbConfigs);
+  // LNB 구성 자동 저장 (실시간 저장)
+  const autoSaveLnbConfig = () => {
+    const currentLnbConfigs = screenService.getLNBConfigs();
+    console.log('LNB 구성 자동 저장:', currentLnbConfigs);
     
+    // DESIGNER 앱에 변경 사항 알림
     window.dispatchEvent(new CustomEvent('lnb-config-updated', {
-      detail: { lnbConfigs }
+      detail: { lnbConfigs: currentLnbConfigs }
     }));
-    
-    setHasLnbConfigChanges(false);
-    // setOriginalLnbConfigs(lnbConfigs);
-    loadData(true);
-    
-    alert('LNB 구성이 저장되었습니다. DESIGNER의 LNB 메뉴가 업데이트됩니다.');
   };
 
   return (
@@ -250,20 +368,33 @@ const LnbManager: React.FC = () => {
       title="LNB 구성"
       description="좌측 네비게이션 바의 메뉴 구조를 설정하여 내진성능평가 시스템을 맞춤형으로 구성할 수 있습니다."
       actions={
-        <div className="flex space-x-3">
-          {hasLnbConfigChanges && (
-            <button
-              onClick={handleSaveLnbConfig}
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-              title="LNB 구성을 저장하고 DESIGNER에 적용"
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
+            <label htmlFor="category-select" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+              프로젝트 카테고리:
+            </label>
+            <select
+              id="category-select"
+              value={selectedCategoryId}
+              onChange={(e) => setSelectedCategoryId(e.target.value)}
+              className="pl-3 pr-8 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMS41TDYgNi41TDExIDEuNSIgc3Ryb2tlPSIjNkI3MjgwIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==')] bg-[right_0.5rem_center] bg-no-repeat"
+              disabled={categories.length === 0}
             >
-              <Save className="h-4 w-4" />
-              <span>LNB 구성 저장</span>
-            </button>
-          )}
+              {categories.length === 0 ? (
+                <option value="">카테고리 없음</option>
+              ) : (
+                categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.displayName}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
           <button
             onClick={() => setShowLNBModal(true)}
             className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            disabled={!selectedCategoryId}
           >
             <Plus className="h-4 w-4" />
             <span>LNB 메뉴 추가</span>
@@ -271,19 +402,19 @@ const LnbManager: React.FC = () => {
         </div>
       }
     >
-      {/* LNB 메뉴 구성 */}
       <div>
-        <div className="mb-6">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">LNB 메뉴 구성</h2>
-            <div className="text-sm text-gray-500 mt-1">
-              변경 상태: {hasLnbConfigChanges ? '변경됨' : '저장됨'} | 
-              순서 변경: 저장됨
-            </div>
+        {!selectedCategoryId ? (
+          <div className="bg-white shadow overflow-hidden sm:rounded-md p-12 text-center">
+            <p className="text-gray-500 text-lg">프로젝트 카테고리를 선택하세요.</p>
+            <p className="text-gray-400 text-sm mt-2">각 프로젝트 카테고리별로 LNB 메뉴를 구성할 수 있습니다.</p>
           </div>
-        </div>
-
-        <div className="bg-white shadow overflow-hidden sm:rounded-md">
+        ) : lnbConfigs.length === 0 ? (
+          <div className="bg-white shadow overflow-hidden sm:rounded-md p-12 text-center">
+            <p className="text-gray-500 text-lg">선택한 카테고리에 LNB 메뉴가 없습니다.</p>
+            <p className="text-gray-400 text-sm mt-2">"LNB 메뉴 추가" 버튼을 클릭하여 메뉴를 추가하세요.</p>
+          </div>
+        ) : (
+          <div className="bg-white shadow overflow-hidden sm:rounded-md">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -302,7 +433,36 @@ const LnbManager: React.FC = () => {
                   <React.Fragment key={lnb.id}>
                     {/* 상위 메뉴 */}
                     <tr 
-                      className="hover:bg-gray-50 cursor-pointer"
+                      className={`hover:bg-gray-50 cursor-pointer ${draggedItem === lnb.id ? 'opacity-50' : ''}`}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('text/plain', lnb.id);
+                        setDraggedItem(lnb.id);
+                      }}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const draggedLnbId = e.dataTransfer.getData('text/plain');
+                        const draggedIndex = lnbConfigs.findIndex(l => l.id === draggedLnbId);
+                        const dropIndex = lnbConfigs.findIndex(l => l.id === lnb.id);
+                        
+                        if (draggedIndex !== -1 && draggedIndex !== dropIndex) {
+                          const newOrder = [...lnbConfigs];
+                          const [draggedLnb] = newOrder.splice(draggedIndex, 1);
+                          newOrder.splice(dropIndex, 0, draggedLnb);
+                          
+                          // order 필드 업데이트 (현재 카테고리 내에서만)
+                          // lnbConfigs는 이미 선택된 카테고리로 필터링된 상태
+                          newOrder.forEach((item, index) => {
+                            screenService.updateLNBConfig(item.id, { order: index + 1 });
+                          });
+                          
+                          setLnbConfigs(newOrder);
+                          autoSaveLnbConfig(); // 실시간 저장
+                        }
+                        setDraggedItem(null);
+                      }}
+                      onDragEnd={() => setDraggedItem(null)}
                       onClick={() => handleEditLNB(lnb)}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -362,10 +522,47 @@ const LnbManager: React.FC = () => {
                     {/* 하위 메뉴 */}
                     {lnb.children && lnb.children.length > 0 && lnb.children
                       .sort((a, b) => (a.order || 0) - (b.order || 0))
-                      .map((child) => (
+                      .map((child, childIndex) => (
                       <tr
                         key={child.id || `${lnb.id}-${child.name}`}
-                        className="hover:bg-gray-50 bg-gray-50 cursor-pointer"
+                        className={`hover:bg-gray-50 bg-gray-50 cursor-pointer ${
+                          draggedChildItem?.childId === child.id && draggedChildItem?.parentId === lnb.id ? 'opacity-50' : ''
+                        }`}
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.setData('text/plain', JSON.stringify({ parentId: lnb.id, childId: child.id }));
+                          setDraggedChildItem({ parentId: lnb.id, childId: child.id });
+                        }}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
+                          
+                          // 같은 부모 내에서만 드래그 앤 드롭 허용
+                          if (dragData.parentId === lnb.id) {
+                            const sortedChildren = [...(lnb.children || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
+                            const draggedIndex = sortedChildren.findIndex(c => c.id === dragData.childId);
+                            const dropIndex = childIndex;
+                            
+                            if (draggedIndex !== -1 && draggedIndex !== dropIndex) {
+                              const newOrder = [...sortedChildren];
+                              const [draggedChild] = newOrder.splice(draggedIndex, 1);
+                              newOrder.splice(dropIndex, 0, draggedChild);
+                              
+                              // order 필드 업데이트
+                              const reorderedChildren = newOrder.map((c, index) => ({
+                                ...c,
+                                order: index + 1
+                              }));
+                              
+                              screenService.updateLNBConfig(lnb.id, { children: reorderedChildren });
+                              loadData();
+                              autoSaveLnbConfig(); // 실시간 저장
+                            }
+                          }
+                          setDraggedChildItem(null);
+                        }}
+                        onDragEnd={() => setDraggedChildItem(null)}
                         onClick={() => handleEditChildLNB(lnb.id, child)}
                       >
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -424,7 +621,8 @@ const LnbManager: React.FC = () => {
               </tbody>
             </table>
           </div>
-        </div>
+        )}
+      </div>
 
         {/* LNB 메뉴 추가/수정 모달 */}
         <Modal
@@ -448,10 +646,9 @@ const LnbManager: React.FC = () => {
               </button>
               <button
                 onClick={editingLNB ? handleUpdateLNB : handleAddLNB}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
-                <Save className="h-4 w-4" />
-                <span>{editingLNB ? '저장' : '추가'}</span>
+                {editingLNB ? '저장' : '추가'}
               </button>
             </div>
           }
@@ -506,7 +703,7 @@ const LnbManager: React.FC = () => {
                       <select
                         value={newLNB.parentId}
                         onChange={(e) => setNewLNB({ ...newLNB, parentId: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMS41TDYgNi41TDExIDEuNSIgc3Ryb2tlPSIjNkI3MjgwIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==')] bg-[right_0.5rem_center] bg-no-repeat"
                         disabled={!!editingLNB}
                       >
                         <option value="">상위 메뉴를 선택하세요</option>
@@ -574,7 +771,7 @@ const LnbManager: React.FC = () => {
                       <select
                         value={newLNB.screenId}
                         onChange={(e) => setNewLNB({ ...newLNB, screenId: e.target.value, systemScreenType: undefined })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMS41TDYgNi41TDExIDEuNSIgc3Ryb2tlPSIjNkI3MjgwIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==')] bg-[right_0.5rem_center] bg-no-repeat"
                       >
                         <option value="">화면 없음</option>
                         {screens.map(screen => (
@@ -604,84 +801,105 @@ const LnbManager: React.FC = () => {
                         </button>
                         
                         {[
-                          { value: 'LayoutDashboard', icon: '📊', name: '대시보드' },
-                          { value: 'Building', icon: '🏢', name: '건물' },
-                          { value: 'Database', icon: '🗄️', name: '데이터베이스' },
-                          { value: 'Zap', icon: '⚡', name: '번개' },
-                          { value: 'Shield', icon: '🛡️', name: '방패' },
-                          { value: 'Settings', icon: '⚙️', name: '설정' },
-                          { value: 'Home', icon: '🏠', name: '홈' },
-                          { value: 'User', icon: '👤', name: '사용자' },
-                          { value: 'Users', icon: '👥', name: '사용자들' },
-                          { value: 'FileText', icon: '📄', name: '문서' },
-                          { value: 'Folder', icon: '📁', name: '폴더' },
-                          { value: 'Search', icon: '🔍', name: '검색' },
-                          { value: 'BarChart', icon: '📈', name: '차트' },
-                          { value: 'PieChart', icon: '🥧', name: '파이차트' },
-                          { value: 'LineChart', icon: '📉', name: '라인차트' },
-                          { value: 'Calendar', icon: '📅', name: '캘린더' },
-                          { value: 'Clock', icon: '🕐', name: '시계' },
-                          { value: 'Bell', icon: '🔔', name: '알림' },
-                          { value: 'Mail', icon: '✉️', name: '메일' },
-                          { value: 'Phone', icon: '📞', name: '전화' },
-                          { value: 'MapPin', icon: '📍', name: '위치' },
-                          { value: 'Globe', icon: '🌍', name: '지구' },
-                          { value: 'Star', icon: '⭐', name: '별' },
-                          { value: 'Heart', icon: '❤️', name: '하트' },
-                          { value: 'ThumbsUp', icon: '👍', name: '좋아요' },
-                          { value: 'CheckCircle', icon: '✅', name: '체크' },
-                          { value: 'XCircle', icon: '❌', name: '취소' },
-                          { value: 'AlertCircle', icon: '⚠️', name: '경고' },
-                          { value: 'Info', icon: 'ℹ️', name: '정보' },
-                          { value: 'HelpCircle', icon: '❓', name: '도움말' },
-                          { value: 'Lock', icon: '🔒', name: '잠금' },
-                          { value: 'Unlock', icon: '🔓', name: '잠금해제' },
-                          { value: 'Key', icon: '🔑', name: '키' },
-                          { value: 'Tool', icon: '🔧', name: '도구' },
-                          { value: 'Wrench', icon: '🔨', name: '렌치' },
-                          { value: 'Cog', icon: '⚙️', name: '톱니바퀴' },
-                          { value: 'Monitor', icon: '🖥️', name: '모니터' },
-                          { value: 'Smartphone', icon: '📱', name: '스마트폰' },
-                          { value: 'Tablet', icon: '📱', name: '태블릿' },
-                          { value: 'Printer', icon: '🖨️', name: '프린터' },
-                          { value: 'Camera', icon: '📷', name: '카메라' },
-                          { value: 'Video', icon: '📹', name: '비디오' },
-                          { value: 'Music', icon: '🎵', name: '음악' },
-                          { value: 'Image', icon: '🖼️', name: '이미지' },
-                          { value: 'Download', icon: '⬇️', name: '다운로드' },
-                          { value: 'Upload', icon: '⬆️', name: '업로드' },
-                          { value: 'Share', icon: '📤', name: '공유' },
-                          { value: 'Link', icon: '🔗', name: '링크' },
-                          { value: 'ExternalLink', icon: '🔗', name: '외부링크' },
-                          { value: 'Copy', icon: '📋', name: '복사' },
-                          { value: 'Edit', icon: '✏️', name: '편집' },
-                          { value: 'Trash', icon: '🗑️', name: '삭제' },
-                          { value: 'Archive', icon: '📦', name: '보관' },
-                          { value: 'Tag', icon: '🏷️', name: '태그' },
-                          { value: 'Filter', icon: '🔍', name: '필터' },
-                          { value: 'Sort', icon: '↕️', name: '정렬' },
-                          { value: 'Refresh', icon: '🔄', name: '새로고침' },
-                          { value: 'RotateCcw', icon: '🔄', name: '되돌리기' },
-                          { value: 'Play', icon: '▶️', name: '재생' },
-                          { value: 'Pause', icon: '⏸️', name: '일시정지' },
-                          { value: 'Stop', icon: '⏹️', name: '정지' },
-                          { value: 'SkipBack', icon: '⏮️', name: '이전' },
-                          { value: 'SkipForward', icon: '⏭️', name: '다음' }
-                        ].map((iconItem) => (
-                          <button
-                            key={iconItem.value}
-                            type="button"
-                            onClick={() => setNewLNB({ ...newLNB, icon: iconItem.value })}
-                            className={`w-10 h-10 flex items-center justify-center rounded-md border-2 transition-all ${
-                              newLNB.icon === iconItem.value 
-                                ? 'border-blue-500 bg-blue-100' 
-                                : 'border-gray-300 bg-white hover:border-gray-400'
-                            }`}
-                            title={iconItem.name}
-                          >
-                            <span className="text-lg">{iconItem.icon}</span>
-                          </button>
-                        ))}
+                          // 기본/일반
+                          { value: 'Home', component: Home, name: '홈', category: '기본' },
+                          { value: 'BarChart3', component: BarChart3, name: '차트', category: '기본' },
+                          { value: 'Settings', component: Settings, name: '설정', category: '기본' },
+                          { value: 'Database', component: Database, name: '데이터베이스', category: '기본' },
+                          { value: 'Table', component: Table, name: '테이블', category: '기본' },
+                          { value: 'FileText', component: FileText, name: '문서', category: '기본' },
+                          { value: 'FolderOpen', component: FolderOpen, name: '폴더', category: '기본' },
+                          { value: 'Users', component: Users, name: '사용자', category: '기본' },
+                          
+                          // 구조물/건설
+                          { value: 'Building2', component: Building2, name: '구조물', category: '건설' },
+                          { value: 'Construction', component: Construction, name: '공사', category: '건설' },
+                          { value: 'Anchor', component: Anchor, name: '지점/받침', category: '건설' },
+                          { value: 'Box', component: Box, name: '박스', category: '건설' },
+                          { value: 'Package', component: Package, name: '패키지', category: '건설' },
+                          { value: 'Boxes', component: Boxes, name: '부재', category: '건설' },
+                          
+                          // 측정/분석
+                          { value: 'Ruler', component: Ruler, name: '측정', category: '측정' },
+                          { value: 'Calculator', component: Calculator, name: '계산', category: '측정' },
+                          { value: 'Activity', component: Activity, name: '활동/파형', category: '측정' },
+                          { value: 'TrendingUp', component: TrendingUp, name: '증가 추세', category: '측정' },
+                          { value: 'TrendingDown', component: TrendingDown, name: '감소 추세', category: '측정' },
+                          
+                          // 설계/도면
+                          { value: 'Compass', component: Compass, name: '나침반/방향', category: '설계' },
+                          { value: 'PenTool', component: PenTool, name: '펜/설계', category: '설계' },
+                          { value: 'Image', component: Image, name: '단면/이미지', category: '설계' },
+                          { value: 'Layers', component: Layers, name: '레이어', category: '설계' },
+                          { value: 'Layout', component: Layout, name: '레이아웃', category: '설계' },
+                          
+                          // 위치/경로
+                          { value: 'MapPin', component: MapPin, name: '위치', category: '위치' },
+                          { value: 'Map', component: Map, name: '지도', category: '위치' },
+                          { value: 'Navigation', component: Navigation, name: '내비게이션', category: '위치' },
+                          
+                          // 도형/형상
+                          { value: 'Circle', component: Circle, name: '원형', category: '도형' },
+                          { value: 'Square', component: Square, name: '사각형', category: '도형' },
+                          { value: 'Triangle', component: Triangle, name: '삼각형', category: '도형' },
+                          { value: 'Hexagon', component: Hexagon, name: '육각형', category: '도형' },
+                          
+                          // 연결/분기
+                          { value: 'GitBranch', component: GitBranch, name: '분기', category: '연결' },
+                          { value: 'Split', component: Split, name: '분할', category: '연결' },
+                          { value: 'Merge', component: Merge, name: '병합', category: '연결' },
+                          
+                          // 크기/변형
+                          { value: 'Maximize2', component: Maximize2, name: '확대', category: '변형' },
+                          { value: 'Move', component: Move, name: '이동', category: '변형' },
+                          { value: 'ArrowUpDown', component: ArrowUpDown, name: '상하', category: '변형' },
+                          
+                          // 도구
+                          { value: 'Hammer', component: Hammer, name: '해머', category: '도구' },
+                          { value: 'Wrench', component: Wrench, name: '렌치', category: '도구' },
+                          { value: 'Scissors', component: Scissors, name: '가위', category: '도구' },
+                          
+                          // 데이터 구조
+                          { value: 'Component', component: Component, name: '컴포넌트', category: '데이터' },
+                          { value: 'Code', component: Code, name: '코드', category: '데이터' },
+                          { value: 'Variable', component: Variable, name: '변수', category: '데이터' },
+                          { value: 'Type', component: Type, name: '타입', category: '데이터' },
+                          { value: 'Grid', component: Grid, name: '그리드', category: '데이터' },
+                          { value: 'Columns', component: Columns, name: '컬럼', category: '데이터' },
+                          { value: 'Rows', component: Rows, name: '행', category: '데이터' },
+                          { value: 'LayoutGrid', component: LayoutGrid, name: '그리드 레이아웃', category: '데이터' },
+                          
+                          // 검증/상태
+                          { value: 'Shield', component: Shield, name: '안전/보호', category: '상태' },
+                          { value: 'AlertTriangle', component: AlertTriangle, name: '경고', category: '상태' },
+                          { value: 'CheckCircle', component: CheckCircle, name: '검증 완료', category: '상태' },
+                          
+                          // 기타
+                          { value: 'Tag', component: Tag, name: '태그', category: '기타' },
+                          { value: 'Monitor', component: Monitor, name: '모니터', category: '기타' },
+                          { value: 'Menu', component: Menu, name: '메뉴', category: '기타' },
+                          { value: 'BookOpen', component: BookOpen, name: '매뉴얼', category: '기타' },
+                          { value: 'ListTree', component: ListTree, name: '트리', category: '기타' },
+                          { value: 'FileStack', component: FileStack, name: '파일', category: '기타' },
+                          { value: 'FileCode', component: FileCode, name: '코드파일', category: '기타' }
+                        ].map((iconItem) => {
+                          const IconComponent = iconItem.component;
+                          return (
+                            <button
+                              key={iconItem.value}
+                              type="button"
+                              onClick={() => setNewLNB({ ...newLNB, icon: iconItem.value })}
+                              className={`w-10 h-10 flex items-center justify-center rounded-md border-2 transition-all ${
+                                newLNB.icon === iconItem.value 
+                                  ? 'border-blue-500 bg-blue-100' 
+                                  : 'border-gray-300 bg-white hover:border-gray-400'
+                              }`}
+                              title={`${iconItem.name} (${iconItem.category})`}
+                            >
+                              <IconComponent className="h-5 w-5 text-gray-700" />
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>

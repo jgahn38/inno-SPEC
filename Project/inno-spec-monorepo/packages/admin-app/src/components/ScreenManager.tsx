@@ -125,13 +125,8 @@ const ScreenManager: React.FC = () => {
         </button>
       }
     >
-      {/* 화면 목록 */}
       <div>
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">화면 목록</h2>
-        </div>
-
-            <div className="bg-white shadow overflow-hidden sm:rounded-md">
+        <div className="bg-white shadow overflow-hidden sm:rounded-md">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -294,7 +289,7 @@ const ScreenManager: React.FC = () => {
                     <select
                       value={newScreen.dataStructure}
                       onChange={(e) => setNewScreen({ ...newScreen, dataStructure: e.target.value as UserScreenDataStructure })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full pl-3 pr-8 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgMS41TDYgNi41TDExIDEuNSIgc3Ryb2tlPSIjNkI3MjgwIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjwvc3ZnPg==')] bg-[right_0.5rem_center] bg-no-repeat"
                     >
                       <option value="project">프로젝트 (모든 구조물에 공통 적용)</option>
                       <option value="bridge">교량 (교량별 개별 데이터)</option>

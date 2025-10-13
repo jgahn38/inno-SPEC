@@ -17,6 +17,13 @@ class ScreenService {
     return this.lnbConfigs.sort((a, b) => a.order - b.order);
   }
 
+  // 카테고리별 LNB 구성 조회
+  getLNBConfigsByCategory(categoryId: string): LNBConfig[] {
+    return this.lnbConfigs
+      .filter(config => config.categoryId === categoryId)
+      .sort((a, b) => a.order - b.order);
+  }
+
   createLNBConfig(config: Omit<LNBConfig, 'id' | 'createdAt' | 'updatedAt'>): LNBConfig {
     const newConfig: LNBConfig = {
       ...config,
