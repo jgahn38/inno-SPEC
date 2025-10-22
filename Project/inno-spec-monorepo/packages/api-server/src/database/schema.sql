@@ -96,6 +96,39 @@ CREATE TABLE IF NOT EXISTS lnb_configs (
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
 );
 
+-- 필드 정의 테이블
+CREATE TABLE IF NOT EXISTS field_definitions (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    description TEXT,
+    type TEXT NOT NULL CHECK (type IN ('text', 'number', 'date', 'boolean', 'decimal', 'integer', 'list', 'db')),
+    options TEXT, -- JSON 문자열로 저장 (list 타입일 때)
+    default_value TEXT, -- JSON 문자열로 저장
+    db_category TEXT, -- db 타입일 때 사용
+    order_index INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT 1,
+    tenant_id TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+);
+
+-- 테이블 스키마 테이블
+CREATE TABLE IF NOT EXISTS table_schemas (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    description TEXT,
+    fields TEXT NOT NULL, -- JSON 문자열로 저장 (TableField 배열)
+    validation_rules TEXT, -- JSON 문자열로 저장 (ValidationRule 배열)
+    is_active BOOLEAN DEFAULT 1,
+    tenant_id TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+);
+
 -- 인덱스 생성
 CREATE INDEX IF NOT EXISTS idx_users_tenant_id ON users(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_projects_tenant_id ON projects(tenant_id);
@@ -105,3 +138,6 @@ CREATE INDEX IF NOT EXISTS idx_screen_components_screen_id ON screen_components(
 CREATE INDEX IF NOT EXISTS idx_lnb_configs_tenant_id ON lnb_configs(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_lnb_configs_parent_id ON lnb_configs(parent_id);
 CREATE INDEX IF NOT EXISTS idx_lnb_configs_order ON lnb_configs(order_index);
+CREATE INDEX IF NOT EXISTS idx_field_definitions_tenant_id ON field_definitions(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_field_definitions_order ON field_definitions(order_index);
+CREATE INDEX IF NOT EXISTS idx_table_schemas_tenant_id ON table_schemas(tenant_id);

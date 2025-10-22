@@ -4,13 +4,23 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import compression from 'compression';
 import { join } from 'path';
+import { createServer } from 'http';
+import { WebSocketService } from './services/websocket.js';
 
 // Routes
 import screensRouter from './routes/screens.js';
 import lnbRouter from './routes/lnb.js';
+import fieldDefinitionsRouter from './routes/field-definitions.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// HTTP 서버 생성
+const httpServer = createServer(app);
+
+// WebSocket 서비스 초기화
+const wsService = WebSocketService.getInstance();
+wsService.initialize(httpServer);
 
 // 미들웨어 설정
 app.use(helmet());
@@ -50,6 +60,7 @@ app.get('/health', (req, res) => {
 // API 라우트
 app.use('/api/screens', screensRouter);
 app.use('/api/lnb', lnbRouter);
+app.use('/api/field-definitions', fieldDefinitionsRouter);
 
 // 404 핸들러
 app.use('*', (req, res) => {
@@ -69,10 +80,11 @@ app.use((error: any, req: express.Request, res: express.Response, next: express.
 });
 
 // 서버 시작
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`🚀 API Server running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`🔗 API Base URL: http://localhost:${PORT}/api`);
+  console.log(`🔌 WebSocket enabled for real-time updates`);
 });
 
 export default app;

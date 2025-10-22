@@ -1,12 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { TableField, FieldType, DatabaseCategory, BridgeDatabase } from '@inno-spec/shared';
 import { PageLayout, Modal } from '@inno-spec/ui-lib';
-import { TableSchemaService } from '../TableSchemaService';
+import { useAPI } from '@inno-spec/core';
 import { DatabaseService } from '../DatabaseService';
 import { Plus, Save, X, Search, GripVertical, FileSpreadsheet } from 'lucide-react';
 import ExcelFieldImporter from './ExcelFieldImporter';
 
 const FieldManager: React.FC = () => {
+  const { 
+    fieldDefinitions: apiFields, 
+    createFieldDefinition, 
+    updateFieldDefinition, 
+    deleteFieldDefinition,
+    updateFieldDefinitionOrder,
+    loading: apiLoading 
+  } = useAPI();
+  
   const [fields, setFields] = useState<TableField[]>([]);
   const [schemas, setSchemas] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -28,23 +37,24 @@ const FieldManager: React.FC = () => {
     dbCategory: ''
   });
 
-  const tableSchemaService = TableSchemaService.getInstance();
   const databaseService = DatabaseService.getInstance();
   
   // DB 관련 상태
   const [availableDatabases, setAvailableDatabases] = useState<BridgeDatabase[]>([]);
   const [filteredDatabases, setFilteredDatabases] = useState<BridgeDatabase[]>([]);
 
-  const loadFields = useCallback(() => {
-    // 독립적으로 정의된 필드들을 로드
-    const allFields = tableSchemaService.getAllFields();
-    setFields(allFields);
-  }, [tableSchemaService]);
+  // API에서 필드 정의 로드
+  useEffect(() => {
+    if (apiFields) {
+      setFields(apiFields);
+    }
+  }, [apiFields]);
 
   const loadSchemas = useCallback(() => {
-    const allSchemas = tableSchemaService.getAllSchemas();
+    // 스키마는 로컬에서 관리 (필요시 API로 확장)
+    const allSchemas = JSON.parse(localStorage.getItem('inno_spec_table_schemas') || '[]');
     setSchemas(allSchemas);
-  }, [tableSchemaService]);
+  }, []);
 
   // DB 목록 로드
   const loadDatabases = useCallback(() => {
@@ -53,10 +63,9 @@ const FieldManager: React.FC = () => {
   }, [databaseService]);
 
   useEffect(() => {
-    loadFields();
     loadSchemas();
     loadDatabases();
-  }, [loadFields, loadSchemas, loadDatabases]);
+  }, [loadSchemas, loadDatabases]);
 
   // DB 카테고리 변경 시 필터링
   const handleDbCategoryChange = (category: DatabaseCategory | '') => {
@@ -87,15 +96,13 @@ const FieldManager: React.FC = () => {
     }
   };
 
-  const handleAddField = () => {
+  const handleAddField = async () => {
     if (!newField.name || !newField.displayName) {
       alert('필드명과 표시명은 필수 입력 항목입니다.');
       return;
     }
       
-    const field: TableField = {
-      ...newField,
-      id: `field-${Date.now()}`,
+    const field: Omit<TableField, 'id' | 'createdAt' | 'updatedAt'> = {
       name: newField.name!,
       displayName: newField.displayName!,
       description: newField.description || '',
@@ -103,17 +110,21 @@ const FieldManager: React.FC = () => {
       options: newField.type === 'list' ? (newField.options || []) : undefined,
       defaultValue: newField.defaultValue,
       dbCategory: newField.type === 'db' ? newField.dbCategory : undefined
-    } as TableField;
+    };
 
-    // 서비스를 통해 필드 추가 및 저장
-    tableSchemaService.addField(field);
-    
-    // 로컬 상태 업데이트
-    setFields([...fields, field]);
-    
-    // 폼 초기화 및 모달 닫기
-    resetFieldForm();
-    setShowFieldModal(false);
+    try {
+      const success = await createFieldDefinition(field);
+      if (success) {
+        // 폼 초기화 및 모달 닫기
+        resetFieldForm();
+        setShowFieldModal(false);
+      } else {
+        alert('필드 추가에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('Error adding field:', error);
+      alert('필드 추가 중 오류가 발생했습니다.');
+    }
   };
 
   const handleEditField = (field: TableField) => {
@@ -130,14 +141,13 @@ const FieldManager: React.FC = () => {
     setShowFieldModal(true);
   };
 
-  const handleUpdateField = () => {
+  const handleUpdateField = async () => {
     if (!editingField || !newField.name || !newField.displayName) {
       alert('필드명과 표시명은 필수 입력 항목입니다.');
       return;
     }
 
-    const updatedField: TableField = {
-      ...editingField,
+    const updatedField: Partial<TableField> = {
       name: newField.name!,
       displayName: newField.displayName!,
       description: newField.description || '',
@@ -147,61 +157,59 @@ const FieldManager: React.FC = () => {
       dbCategory: newField.type === 'db' ? newField.dbCategory : undefined
     };
 
-    // 서비스를 통해 필드 업데이트 및 저장
-    tableSchemaService.updateField(editingField.id, updatedField);
-
-    // 독립적으로 정의된 필드 업데이트
-    const updatedFields = fields.map(f => 
-      f.id === editingField.id ? updatedField : f
-    );
-    setFields(updatedFields);
-
-    // 이 필드를 사용하는 모든 테이블 스키마도 업데이트
-    const updatedSchemas = schemas.map(schema => ({
-      ...schema,
-      fields: schema.fields.map((f: TableField) => 
-        f.id === editingField.id ? updatedField : f
-      ),
-      updatedAt: new Date()
-    }));
-    setSchemas(updatedSchemas);
-    
-    // 폼 초기화 및 모달 닫기
-    resetFieldForm();
-    setEditingField(null);
-    setShowFieldModal(false);
+    try {
+      const success = await updateFieldDefinition(editingField.id, updatedField);
+      if (success) {
+        // 폼 초기화 및 모달 닫기
+        resetFieldForm();
+        setEditingField(null);
+        setShowFieldModal(false);
+      } else {
+        alert('필드 수정에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('Error updating field:', error);
+      alert('필드 수정 중 오류가 발생했습니다.');
+    }
   };
 
-  const handleDeleteField = (fieldId: string) => {
+  const handleDeleteField = async (fieldId: string) => {
     if (confirm('정말로 이 필드를 삭제하시겠습니까? 이 필드를 사용하는 테이블들도 영향을 받습니다.')) {
-      // 서비스를 통해 필드 삭제 및 저장
-      tableSchemaService.deleteField(fieldId);
-      
-      // 독립적으로 정의된 필드에서 삭제
-      setFields(fields.filter(f => f.id !== fieldId));
-      
-      // 이 필드를 사용하는 모든 테이블 스키마에서도 제거
-      const updatedSchemas = schemas.map(schema => ({
-        ...schema,
-        fields: schema.fields.filter((f: TableField) => f.id !== fieldId),
-        updatedAt: new Date()
-      }));
-      setSchemas(updatedSchemas);
+      try {
+        const success = await deleteFieldDefinition(fieldId);
+        if (!success) {
+          alert('필드 삭제에 실패했습니다.');
+        }
+      } catch (error) {
+        console.error('Error deleting field:', error);
+        alert('필드 삭제 중 오류가 발생했습니다.');
+      }
     }
   };
 
   // 엑셀에서 필드 일괄 등록
-  const handleExcelImport = (importedFields: TableField[]) => {
-    // 서비스를 통해 필드들 추가 및 저장
-    importedFields.forEach(field => {
-      tableSchemaService.addField(field);
-    });
-    
-    // 로컬 상태 업데이트
-    setFields([...fields, ...importedFields]);
-    
-    // 모달 닫기
-    setShowExcelImporter(false);
+  const handleExcelImport = async (importedFields: TableField[]) => {
+    try {
+      // API를 통해 필드들 추가
+      for (const field of importedFields) {
+        const fieldData: Omit<TableField, 'id' | 'createdAt' | 'updatedAt'> = {
+          name: field.name,
+          displayName: field.displayName,
+          description: field.description,
+          type: field.type,
+          options: field.options,
+          defaultValue: field.defaultValue,
+          dbCategory: field.dbCategory
+        };
+        await createFieldDefinition(fieldData);
+      }
+      
+      // 모달 닫기
+      setShowExcelImporter(false);
+    } catch (error) {
+      console.error('Error importing fields:', error);
+      alert('필드 가져오기 중 오류가 발생했습니다.');
+    }
   };
 
   const resetFieldForm = () => {
@@ -299,18 +307,12 @@ const FieldManager: React.FC = () => {
                       const [draggedItem] = newOrder.splice(draggedIndex, 1);
                       newOrder.splice(dropIndex, 0, draggedItem);
                       
-                      // 순서 속성 추가
-                      const updatedFields = newOrder.map((field, idx) => ({
-                        ...field,
-                        order: idx
-                      }));
-                      
-                      setFields(updatedFields);
-                      
-                      // 서비스를 통해 각 필드 업데이트
-                      updatedFields.forEach(field => {
-                        tableSchemaService.updateField(field.id, field);
-                      });
+                      // API를 통해 순서 업데이트
+                      updateFieldDefinitionOrder(draggedItem.id, dropIndex)
+                        .catch(error => {
+                          console.error('Error updating field order:', error);
+                          alert('필드 순서 변경 중 오류가 발생했습니다.');
+                        });
                     }
                     setDraggedItem(null);
                   }}

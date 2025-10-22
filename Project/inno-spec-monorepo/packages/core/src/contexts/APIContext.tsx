@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { apiService } from '@inno-spec/shared';
-import { ScreenConfig, LNBConfig, Project, BridgeDatabase, TableSchema, VariableDefinition, ProjectCategory, CreateProjectRequest, UpdateProjectRequest, CreateDatabaseRequest, UpdateDatabaseRequest, CreateProjectCategoryRequest, UpdateProjectCategoryRequest } from '@inno-spec/shared';
+import { ScreenConfig, LNBConfig, Project, BridgeDatabase, TableSchema, VariableDefinition, ProjectCategory, CreateProjectRequest, UpdateProjectRequest, CreateDatabaseRequest, UpdateDatabaseRequest, CreateProjectCategoryRequest, UpdateProjectCategoryRequest, TableField } from '@inno-spec/shared';
 
 export interface APIContextType {
   screens: ScreenConfig[];
@@ -10,6 +10,7 @@ export interface APIContextType {
   tableSchemas: TableSchema[];
   variables: VariableDefinition[];
   projectCategories: ProjectCategory[];
+  fieldDefinitions: TableField[];
   loading: boolean;
   error: string | null;
   
@@ -55,6 +56,13 @@ export interface APIContextType {
   updateProjectCategory: (id: string, category: UpdateProjectCategoryRequest) => Promise<boolean>;
   deleteProjectCategory: (id: string) => Promise<boolean>;
   reorderProjectCategories: (categoryOrders: { id: string; order: number }[]) => Promise<boolean>;
+  
+  // Field Definitions
+  refreshFieldDefinitions: () => Promise<void>;
+  createFieldDefinition: (field: Omit<TableField, 'id' | 'createdAt' | 'updatedAt'>) => Promise<boolean>;
+  updateFieldDefinition: (id: string, field: Partial<TableField>) => Promise<boolean>;
+  deleteFieldDefinition: (id: string) => Promise<boolean>;
+  updateFieldDefinitionOrder: (id: string, orderIndex: number) => Promise<boolean>;
 }
 
 const APIContext = createContext<APIContextType | undefined>(undefined);
@@ -79,6 +87,7 @@ export const APIProvider: React.FC<APIProviderProps> = ({ children }) => {
   const [tableSchemas, setTableSchemas] = useState<TableSchema[]>([]);
   const [variables, setVariables] = useState<VariableDefinition[]>([]);
   const [projectCategories, setProjectCategories] = useState<ProjectCategory[]>([]);
+  const [fieldDefinitions, setFieldDefinitions] = useState<TableField[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -565,6 +574,89 @@ export const APIProvider: React.FC<APIProviderProps> = ({ children }) => {
     }
   };
 
+  // Field Definitions CRUD
+  const refreshFieldDefinitions = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await apiService.getFieldDefinitions();
+      if (response.success && response.data) {
+        setFieldDefinitions(response.data);
+      } else {
+        setError(response.error || 'Failed to load field definitions');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createFieldDefinition = async (field: Omit<TableField, 'id' | 'createdAt' | 'updatedAt'>): Promise<boolean> => {
+    try {
+      const response = await apiService.createFieldDefinition(field);
+      if (response.success) {
+        await refreshFieldDefinitions();
+        return true;
+      } else {
+        setError(response.error || 'Failed to create field definition');
+        return false;
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return false;
+    }
+  };
+
+  const updateFieldDefinition = async (id: string, field: Partial<TableField>): Promise<boolean> => {
+    try {
+      const response = await apiService.updateFieldDefinition(id, field);
+      if (response.success) {
+        await refreshFieldDefinitions();
+        return true;
+      } else {
+        setError(response.error || 'Failed to update field definition');
+        return false;
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return false;
+    }
+  };
+
+  const deleteFieldDefinition = async (id: string): Promise<boolean> => {
+    try {
+      const response = await apiService.deleteFieldDefinition(id);
+      if (response.success) {
+        await refreshFieldDefinitions();
+        return true;
+      } else {
+        setError(response.error || 'Failed to delete field definition');
+        return false;
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return false;
+    }
+  };
+
+  const updateFieldDefinitionOrder = async (id: string, orderIndex: number): Promise<boolean> => {
+    try {
+      const response = await apiService.updateFieldDefinitionOrder(id, orderIndex);
+      if (response.success) {
+        await refreshFieldDefinitions();
+        return true;
+      } else {
+        setError(response.error || 'Failed to update field definition order');
+        return false;
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      return false;
+    }
+  };
+
   // 초기 데이터 로드
   useEffect(() => {
     refreshScreens();
@@ -574,6 +666,7 @@ export const APIProvider: React.FC<APIProviderProps> = ({ children }) => {
     refreshTableSchemas();
     refreshVariables();
     refreshProjectCategories();
+    refreshFieldDefinitions();
   }, []);
 
   // lnbConfigs가 비어있을 때 localStorage의 기본 구성 사용
@@ -603,6 +696,7 @@ export const APIProvider: React.FC<APIProviderProps> = ({ children }) => {
     tableSchemas,
     variables,
     projectCategories,
+    fieldDefinitions,
     loading,
     error,
     
@@ -641,6 +735,12 @@ export const APIProvider: React.FC<APIProviderProps> = ({ children }) => {
     updateProjectCategory,
     deleteProjectCategory,
     reorderProjectCategories,
+    
+    refreshFieldDefinitions,
+    createFieldDefinition,
+    updateFieldDefinition,
+    deleteFieldDefinition,
+    updateFieldDefinitionOrder,
   };
 
   return (

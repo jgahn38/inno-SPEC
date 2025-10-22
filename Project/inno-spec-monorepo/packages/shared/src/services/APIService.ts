@@ -1,4 +1,4 @@
-import { ScreenConfig, LNBConfig, Project, CreateProjectRequest, UpdateProjectRequest, BridgeDatabase, DatabaseRecord, CreateDatabaseRequest, UpdateDatabaseRequest, TableSchema, VariableDefinition, ProjectCategory, CreateProjectCategoryRequest, UpdateProjectCategoryRequest } from '@inno-spec/shared';
+import { ScreenConfig, LNBConfig, Project, CreateProjectRequest, UpdateProjectRequest, BridgeDatabase, DatabaseRecord, CreateDatabaseRequest, UpdateDatabaseRequest, TableSchema, VariableDefinition, ProjectCategory, CreateProjectCategoryRequest, UpdateProjectCategoryRequest, TableField } from '@inno-spec/shared';
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -341,6 +341,42 @@ class APIService {
     return this.request<void>('/project-categories/reorder', {
       method: 'POST',
       body: JSON.stringify({ categoryOrders }),
+    });
+  }
+
+  // 필드 정의 관련 API
+  async getFieldDefinitions(): Promise<ApiResponse<TableField[]>> {
+    return this.request<TableField[]>('/field-definitions');
+  }
+
+  async getFieldDefinitionById(id: string): Promise<ApiResponse<TableField>> {
+    return this.request<TableField>(`/field-definitions/${id}`);
+  }
+
+  async createFieldDefinition(field: Omit<TableField, 'id' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<TableField>> {
+    return this.request<TableField>('/field-definitions', {
+      method: 'POST',
+      body: JSON.stringify(field),
+    });
+  }
+
+  async updateFieldDefinition(id: string, field: Partial<TableField>): Promise<ApiResponse<TableField>> {
+    return this.request<TableField>(`/field-definitions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(field),
+    });
+  }
+
+  async deleteFieldDefinition(id: string): Promise<ApiResponse<void>> {
+    return this.request<void>(`/field-definitions/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async updateFieldDefinitionOrder(id: string, orderIndex: number): Promise<ApiResponse<void>> {
+    return this.request<void>(`/field-definitions/${id}/order`, {
+      method: 'PUT',
+      body: JSON.stringify({ order_index: orderIndex }),
     });
   }
 }
