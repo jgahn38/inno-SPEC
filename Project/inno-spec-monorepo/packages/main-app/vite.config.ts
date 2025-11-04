@@ -12,6 +12,7 @@ export default defineConfig({
       '@inno-spec/designer-app': path.resolve(__dirname, '../designer-app/src'),
       '@inno-spec/project-app': path.resolve(__dirname, '../project-app/src'),
       '@inno-spec/admin-app': path.resolve(__dirname, '../admin-app/src'),
+      '@inno-spec/test-app': path.resolve(__dirname, '../test-app/src'),
     },
   },
   server: {

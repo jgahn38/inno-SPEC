@@ -38,21 +38,25 @@ const PageLayout: React.FC<PageLayoutProps> = ({
     <div className="min-h-full bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* 헤더 */}
-        <div className="mb-8">
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">{title}</h1>
-              {description && (
-                <p className="text-gray-600">{description}</p>
+        {(title || description || actions) && (
+          <div className="mb-8">
+            <div className="flex justify-between items-start">
+              <div>
+                {title && (
+                  <h1 className="text-3xl font-bold text-gray-900 mb-2">{title}</h1>
+                )}
+                {description && (
+                  <p className="text-gray-600">{description}</p>
+                )}
+              </div>
+              {actions && (
+                <div className="flex-shrink-0">
+                  {actions}
+                </div>
               )}
             </div>
-            {actions && (
-              <div className="flex-shrink-0">
-                {actions}
-              </div>
-            )}
           </div>
-        </div>
+        )}
         
         {/* 콘텐츠 */}
         {children}

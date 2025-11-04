@@ -3,8 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useTenant } from '@inno-spec/core';
 
 export interface ScreenRoute {
-  type: 'projects' | 'dashboard' | 'screens' | 'user-screen' | 'lnb-menu' | 'settings' | 'illustration' | 'project-settings' | 'no-screen' | 'tables' | 'sync' | 'functions' | 'modeler' | 'viewer' | 'admin-db' | 'admin-project-category' | 'admin-field-definition' | 'admin-table-definition' | 'admin-variable-definition' | 'admin-function-definition' | 'admin-lnb-config' | 'admin-screen-config';
-  module?: 'project' | 'designer' | 'modeler' | 'viewer' | 'admin';
+  type: 'projects' | 'dashboard' | 'screens' | 'user-screen' | 'lnb-menu' | 'settings' | 'illustration' | 'project-settings' | 'no-screen' | 'tables' | 'sync' | 'functions' | 'modeler' | 'viewer' | 'admin-db' | 'admin-project-category' | 'admin-field-definition' | 'admin-table-definition' | 'admin-variable-definition' | 'admin-function-definition' | 'admin-lnb-config' | 'admin-screen-config' | 'test-dashboard' | 'test-section';
+  module?: 'project' | 'designer' | 'modeler' | 'viewer' | 'admin' | 'test';
   tenantId?: string;
   screenId?: string;
   menuId?: string;
@@ -61,7 +61,7 @@ export const useURLRouting = () => {
       console.log('GNB routing - tenantId:', tenantId, 'module:', module, 'page:', page);
       
       // GNB 화면들 (프로젝트 공통)
-      if (module === 'project' || module === 'designer' || module === 'modeler' || module === 'viewer') {
+      if (module === 'project' || module === 'designer' || module === 'modeler' || module === 'viewer' || module === 'test') {
         switch (module) {
           case 'project':
             switch (page) {
@@ -91,6 +91,15 @@ export const useURLRouting = () => {
             return { type: 'modeler', module: 'modeler', tenantId };
           case 'viewer':
             return { type: 'viewer', module: 'viewer', tenantId };
+          case 'test':
+            switch (page) {
+              case 'dashboard':
+                return { type: 'test-dashboard', module: 'test', tenantId };
+              case 'section':
+                return { type: 'test-section', module: 'test', tenantId };
+              default:
+                return { type: 'test-dashboard', module: 'test', tenantId };
+            }
           default:
             return { type: 'projects', module: 'project', tenantId };
         }
@@ -321,6 +330,12 @@ export const useURLRouting = () => {
           case 'viewer':
             navigate(buildURL(''));
             break;
+          case 'test-dashboard':
+            navigate(buildURL('/dashboard'));
+            break;
+          case 'test-section':
+            navigate(buildURL('/section'));
+            break;
           case 'dashboard':
             // DESIGNER 모듈의 기본 화면은 LNB 순서 기반으로 결정
             if (route.module === 'designer' && !route.projectId) {
@@ -361,7 +376,10 @@ export const useURLRouting = () => {
       default:
         // 동적 LNB 메뉴 ID 처리 (사용자 정의 화면 등)
         // type이 인식되지 않는 경우, LNB 메뉴 ID로 간주하고 동적 라우트 사용
-        if (projectId) {
+        if (route.module === 'test') {
+          // TEST 모듈은 특별 처리
+          navigate(buildURL('/dashboard'));
+        } else if (projectId) {
           navigate(buildURL(`/${route.type}`, true));
         } else {
           navigate(buildURL('/projects'));

@@ -4,6 +4,7 @@ import { Header, AppType, LoginView, Sidebar } from '@inno-spec/ui-lib';
 import { TableManager, FieldManager, DatabaseManager, FunctionManager, VariableManager, ScreenManager, LnbManager, ProjectCategoryManager, screenService } from '@inno-spec/admin-app';
 import { ProjectDashboard, ProjectList as ProjectAppList } from '@inno-spec/project-app';
 import { ScreenRuntimeView } from '@inno-spec/designer-app';
+import { SectionView } from '@inno-spec/test-app';
 import { Project, Bridge, LNBConfig } from '@inno-spec/shared';
 import { TenantProvider, useTenant } from '@inno-spec/core';
 import { APIProvider, useAPI } from '@inno-spec/core';
@@ -166,6 +167,23 @@ const adminLNBConfig: LNBConfig[] = [
   }
 ];
 
+// TEST LNB 메뉴 설정
+const testLNBConfig: LNBConfig[] = [
+  {
+    id: 'test-section',
+    name: 'test-section',
+    displayName: '앵커 삽도',
+    description: '2D 삽도 생성 테스트',
+    icon: 'Ruler',
+    order: 1,
+    isActive: true,
+    type: 'independent',
+    children: [],
+    createdAt: new Date(),
+    updatedAt: new Date()
+  }
+];
+
 function AppContent() {
   const { currentTenant, currentUser, isAuthenticated, logout, login, isLoading } = useTenant();
   const { projects: apiProjects, createProject, updateProject, deleteProject, refreshProjects } = useAPI();
@@ -176,6 +194,7 @@ function AppContent() {
   const [activeProjectMenu, setActiveProjectMenu] = useState<string>('dashboard');
   const [activeAdminMenu, setActiveAdminMenu] = useState<string>('admin-db');
   const [activeDesignerMenu, setActiveDesignerMenu] = useState<string>('dashboard');
+  const [activeTestMenu, setActiveTestMenu] = useState<string>('test-section');
   const [designerLNBConfigs, setDesignerLNBConfigs] = useState<LNBConfig[]>([]);
   const location = useLocation();
   const { navigateToScreen } = useURLRouting();
@@ -317,6 +336,20 @@ function AppContent() {
         case 'viewer':
           setSelectedApp('VIEWER');
           break;
+        case 'test':
+          setSelectedApp('TEST');
+          // TEST 모듈에서 URL 기반 메뉴 활성화
+          if (pathSegments.length >= 3) {
+            const page = pathSegments[2];
+            switch (page) {
+              case 'section':
+                setActiveTestMenu('test-section');
+                break;
+              default:
+                setActiveTestMenu('test-section');
+            }
+          }
+          break;
         default:
           setSelectedApp('PROJECT');
       }
@@ -401,6 +434,19 @@ function AppContent() {
     });
   };
 
+  // TEST LNB 메뉴 클릭 처리
+  const handleTestMenuClick = (menuId: string) => {
+    setActiveTestMenu(menuId);
+    
+    switch (menuId) {
+      case 'test-section':
+        navigateToScreen({ type: 'test-section', module: 'test' });
+        break;
+      default:
+        navigateToScreen({ type: 'test-section', module: 'test' });
+    }
+  };
+
   // 첫 번째 LNB 메뉴 찾기 헬퍼 함수 (카테고리별 필터링 적용)
   const getFirstActiveMenu = (lnbConfigs: LNBConfig[], projectCategoryId?: string): string | null => {
     if (lnbConfigs.length === 0) return null;
@@ -464,6 +510,11 @@ function AppContent() {
         break;
       case 'VIEWER':
         navigateToScreen({ type: 'viewer', module: 'viewer' });
+        break;
+      case 'TEST':
+        navigateToScreen({ type: 'test-section', module: 'test' });
+        setActiveTestMenu('test-section');
+        // TEST 앱은 프로젝트 선택이 필요 없으므로 기본적으로 section으로 이동
         break;
     }
   };
@@ -788,6 +839,34 @@ function AppContent() {
                 <p className="text-gray-600">뷰어 화면이 여기에 표시됩니다.</p>
               </div>
             </div>
+          } />
+
+          {/* TEST 앱 라우트 */}
+          <Route path="/:tenantId/test/section" element={
+            <div className="flex h-full">
+              <Sidebar
+                activeMenu={activeTestMenu}
+                onMenuSelect={handleTestMenuClick}
+                selectedProject={null}
+                selectedBridge={null}
+                projects={[]}
+                onProjectChange={() => {}}
+                onBridgeChange={() => {}}
+                lnbConfigs={testLNBConfig}
+                showProjectSelector={false}
+                ignoreCategoryFilter={true}
+              />
+              <div className="flex-1 overflow-y-auto">
+                <SectionView />
+              </div>
+            </div>
+          } />
+          {/* TEST 앱 기본 라우트 (section으로 리다이렉트) */}
+          <Route path="/:tenantId/test" element={
+            <Navigate to={`/${currentTenant?.id}/test/section`} replace />
+          } />
+          <Route path="/:tenantId/test/dashboard" element={
+            <Navigate to={`/${currentTenant?.id}/test/section`} replace />
           } />
 
           {/* 기본 라우트 */}

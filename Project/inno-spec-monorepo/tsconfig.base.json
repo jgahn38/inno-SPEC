@@ -28,6 +28,9 @@
     },
     {
       "path": "./packages/ui-lib"
+    },
+    {
+      "path": "./packages/test-app"
     }
   ]
 }

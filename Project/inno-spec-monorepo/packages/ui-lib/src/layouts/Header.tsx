@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User, LogOut, ChevronDown, Zap } from 'lucide-react';
 import { Tenant, User as UserType } from '@inno-spec/shared';
 
-export type AppType = 'PROJECT' | 'DESIGNER' | 'MODELER' | 'VIEWER' | 'ADMIN';
+export type AppType = 'PROJECT' | 'DESIGNER' | 'MODELER' | 'VIEWER' | 'ADMIN' | 'TEST';
 
 export interface HeaderProps {
   currentView: string;
@@ -23,7 +23,8 @@ const Header: React.FC<HeaderProps> = ({ currentView: _currentView, onNavigate: 
     { value: 'DESIGNER', label: 'DESIGNER' },
     { value: 'MODELER', label: 'MODELER' },
     { value: 'VIEWER', label: 'VIEWER' },
-    { value: 'ADMIN', label: 'ADMIN' }
+    { value: 'ADMIN', label: 'ADMIN' },
+    { value: 'TEST', label: 'TEST' }
   ];
 
   return (

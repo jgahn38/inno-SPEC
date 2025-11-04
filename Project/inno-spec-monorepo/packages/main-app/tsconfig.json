@@ -13,7 +13,8 @@
       "@inno-spec/core": ["../core/src"],
       "@inno-spec/designer-app": ["../designer-app/src"],
       "@inno-spec/project-app": ["../project-app/src"],
-      "@inno-spec/admin-app": ["../admin-app/src"]
+      "@inno-spec/admin-app": ["../admin-app/src"],
+      "@inno-spec/test-app": ["../test-app/src"]
     }
   },
   "include": ["src/**/*", "index.html"],

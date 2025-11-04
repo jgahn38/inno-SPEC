@@ -336,6 +336,15 @@ const Sidebar: React.FC<SidebarProps> = React.memo(({
               order: m.order 
             })));
             
+            if (menuItems.length === 0) {
+              console.warn('No menu items to render!', { lnbConfigs, menuItems, ignoreCategoryFilter, selectedProject });
+              return (
+                <div className="text-center text-gray-500 text-sm p-4">
+                  메뉴가 없습니다
+                </div>
+              );
+            }
+            
             return menuItems.map((item) => {
               // 독립 메뉴인지 확인
               const isIndependent = !item.children || item.children.length === 0;

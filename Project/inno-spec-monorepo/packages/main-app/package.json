@@ -11,6 +11,7 @@
     "@inno-spec/designer-app": "*",
     "@inno-spec/project-app": "*",
     "@inno-spec/admin-app": "*",
+    "@inno-spec/test-app": "*",
     "@inno-spec/shared": "*",
     "@inno-spec/ui-lib": "*",
     "@inno-spec/core": "*",
