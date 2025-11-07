@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { PageLayout } from '@inno-spec/ui-lib';
 import { Ruler, Download, Eye, X } from 'lucide-react';
 
@@ -22,6 +22,56 @@ interface Point {
   anchorGapAxial: number; // 앵커간격(교축) (mm)
   anchorGapVertical: number; // 앵커간격(교직) (mm)
 }
+
+type NumericInputProps = {
+  inputKey: string;
+  value: number;
+  onValueChange: (value: number) => void;
+  fallbackValue?: number;
+  pendingInputs: Record<string, string>;
+  handleNumericInputChange: (key: string, rawValue: string, commit: (value: number) => void) => void;
+  handleNumericInputBlur: (key: string, fallbackValue: number, commit: (value: number) => void) => void;
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'>;
+
+const NumericInput = React.memo(
+  ({
+    pendingInputs,
+    handleNumericInputChange,
+    handleNumericInputBlur,
+    inputKey,
+    value,
+    onValueChange,
+    fallbackValue,
+    onBlur,
+    className,
+    inputMode,
+    ...rest
+  }: NumericInputProps) => {
+    const hasPendingValue = Object.prototype.hasOwnProperty.call(pendingInputs, inputKey);
+    const displayValue = hasPendingValue
+      ? pendingInputs[inputKey]
+      : Number.isFinite(value)
+        ? String(value)
+        : '';
+
+    const spinnerHiddenClass = 'appearance-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-inner-spin-button]:m-0 [MozAppearance:textfield]';
+    const combinedClassName = className ? `${className} ${spinnerHiddenClass}` : spinnerHiddenClass;
+
+    return (
+      <input
+        {...rest}
+        value={displayValue}
+        className={combinedClassName}
+        inputMode={inputMode ?? 'decimal'}
+        onChange={(event) => handleNumericInputChange(inputKey, event.target.value, onValueChange)}
+        onBlur={(event) => {
+          handleNumericInputBlur(inputKey, fallbackValue ?? value, onValueChange);
+          onBlur?.(event);
+        }}
+      />
+    );
+  }
+);
 
 // 색상 및 선 굵기 상수 정의
 const SECTION_STROKE_COLOR = '#000000';
@@ -113,6 +163,86 @@ const SectionView: React.FC = () => {
   const [svgPath, setSvgPath] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isSectionDimensionModalOpen, setIsSectionDimensionModalOpen] = useState<boolean>(false);
+  const [pendingInputs, setPendingInputs] = useState<Record<string, string>>({});
+
+  const isIntermediateNumericValue = useCallback((value: string) => {
+    return value === '' || value === '-' || value === '.' || value === '-.';
+  }, []);
+
+  const handleNumericInputChange = useCallback(
+    (key: string, rawValue: string, commit: (value: number) => void) => {
+      setPendingInputs(prev => {
+        const existing = prev[key];
+        if (existing === rawValue) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [key]: rawValue
+        };
+      });
+
+      if (isIntermediateNumericValue(rawValue)) {
+        return;
+      }
+
+      const parsed = Number(rawValue);
+      if (!Number.isNaN(parsed)) {
+        commit(parsed);
+      }
+    },
+    [isIntermediateNumericValue]
+  );
+
+  const handleNumericInputBlur = useCallback(
+    (key: string, fallbackValue: number, commit: (value: number) => void) => {
+      setPendingInputs(prev => {
+        const { [key]: rawValue, ...rest } = prev;
+
+        if (rawValue === undefined) {
+          return prev;
+        }
+
+        if (isIntermediateNumericValue(rawValue)) {
+          commit(fallbackValue);
+        } else {
+          const parsed = Number(rawValue);
+          if (!Number.isNaN(parsed)) {
+            commit(parsed);
+          } else {
+            commit(fallbackValue);
+          }
+        }
+
+        return rest;
+      });
+    },
+    [isIntermediateNumericValue]
+  );
+
+  const numericInputSharedProps = useMemo(
+    () => ({
+      pendingInputs,
+      handleNumericInputChange,
+      handleNumericInputBlur
+    }),
+    [pendingInputs, handleNumericInputChange, handleNumericInputBlur]
+  );
+
+  const numericInputGlobalStyle = useMemo(
+    () => `
+      input[type="number"]::-webkit-outer-spin-button,
+      input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      input[type="number"] {
+        -moz-appearance: textfield;
+      }
+    `,
+    []
+  );
 
   // params 변경 시 localStorage에 저장
   useEffect(() => {
@@ -223,6 +353,7 @@ const SectionView: React.FC = () => {
       x: number; 
       y: number; 
       isFrontRow: boolean; // 전열 여부
+      supportIndex: number;
     }> = [];
     const anchorRects: Array<{ 
       x: number; 
@@ -233,6 +364,7 @@ const SectionView: React.FC = () => {
       baseY: number; // 받침 중심점 Y
       pointId: string;
     }> = [];
+    const planDimensionMap = new Map<number, { anchorY: number; isFrontRow: boolean; minX: number; maxX: number }>();
 
     customPoints.forEach((point, index) => {
       const isFrontRow = index < params.frontRowCount;
@@ -289,7 +421,7 @@ const SectionView: React.FC = () => {
             // Y축 방향에는 교축 간격 사용
             const anchorY = startY + j * point.anchorGapAxial;
             
-            anchorPoints.push({ x: anchorX, y: anchorY, isFrontRow: isFrontRow });
+            anchorPoints.push({ x: anchorX, y: anchorY, isFrontRow: isFrontRow, supportIndex: index });
           }
         }
       }
@@ -495,42 +627,132 @@ const SectionView: React.FC = () => {
             line2 = getLineIntersection(-slope, anchor.x, anchor.y, false);  // (-X, +Y)
           }
 
+          const groupElements: React.ReactNode[] = [];
+
+          if (line1) {
+            groupElements.push(
+              <line
+                key={`anchor-line1-${idx}`}
+                x1={line1.x1}
+                y1={line1.y1}
+                x2={line1.x2}
+                y2={line1.y2}
+                stroke={ANCHOR_STROKE_COLOR}
+                strokeWidth="1"
+                strokeOpacity={0.5}
+                strokeDasharray="2,2"
+                vectorEffect="non-scaling-stroke"
+              />
+            );
+          }
+
+          if (line2) {
+            groupElements.push(
+              <line
+                key={`anchor-line2-${idx}`}
+                x1={line2.x1}
+                y1={line2.y1}
+                x2={line2.x2}
+                y2={line2.y2}
+                stroke={ANCHOR_STROKE_COLOR}
+                strokeWidth="1"
+                strokeOpacity={0.5}
+                strokeDasharray="2,2"
+                vectorEffect="non-scaling-stroke"
+              />
+            );
+          }
+
+          const intersectionXs: number[] = [];
+
+          if (sectionViewType === 'axial-plan') {
+            if (!planDimensionMap.has(anchor.supportIndex)) {
+              planDimensionMap.set(anchor.supportIndex, {
+                anchorY: anchor.y,
+                isFrontRow: anchor.isFrontRow,
+                minX: Infinity,
+                maxX: -Infinity
+              });
+            }
+            const entry = planDimensionMap.get(anchor.supportIndex)!;
+            entry.anchorY = anchor.y;
+            entry.isFrontRow = anchor.isFrontRow;
+            if (line1) {
+              entry.minX = Math.min(entry.minX, line1.x2);
+              entry.maxX = Math.max(entry.maxX, line1.x2);
+            }
+            if (line2) {
+              entry.minX = Math.min(entry.minX, line2.x2);
+              entry.maxX = Math.max(entry.maxX, line2.x2);
+            }
+          }
+
           return (
             <g key={`anchor-line-group-${idx}`}>
-              {/* 직선 1 */}
-              {line1 && (
-                <line
-                  x1={line1.x1}
-                  y1={line1.y1}
-                  x2={line1.x2}
-                  y2={line1.y2}
-                  stroke={ANCHOR_STROKE_COLOR}
-                  strokeWidth="1"
-                  strokeOpacity={0.5}
-                  strokeDasharray="2,2"
-                  vectorEffect="non-scaling-stroke"
-                />
-              )}
-              {/* 직선 2 */}
-              {line2 && (
-                <line
-                  x1={line2.x1}
-                  y1={line2.y1}
-                  x2={line2.x2}
-                  y2={line2.y2}
-                  stroke={ANCHOR_STROKE_COLOR}
-                  strokeWidth="1"
-                  strokeOpacity={0.5}
-                  strokeDasharray="2,2"
-                  vectorEffect="non-scaling-stroke"
-                />
-              )}
+              {groupElements}
+            </g>
+          );
+        })}
+        {sectionViewType === 'axial-plan' && Array.from(planDimensionMap.entries()).map(([supportIndex, data]) => {
+          const { minX, maxX } = data;
+
+          if (!Number.isFinite(minX) || !Number.isFinite(maxX) || Math.abs(maxX - minX) < 1e-6) {
+            return null;
+          }
+
+          const dimensionY = data.isFrontRow ? data.anchorY - 150 : data.anchorY + 150;
+          const labelY = data.isFrontRow ? dimensionY - 80 : dimensionY + 80;
+          const tickHalf = 20;
+          const dimensionText = Math.round(maxX - minX).toLocaleString();
+
+          return (
+            <g key={`axial-plan-dimension-${supportIndex}`}>
+              <line
+                x1={minX}
+                y1={dimensionY}
+                x2={maxX}
+                y2={dimensionY}
+                stroke={SECTION_STROKE_COLOR}
+                strokeWidth="2"
+                strokeOpacity={1}
+                markerStart="url(#arrowhead-start)"
+                markerEnd="url(#arrowhead-end)"
+              />
+              <line
+                x1={minX}
+                y1={dimensionY - tickHalf}
+                x2={minX}
+                y2={dimensionY + tickHalf}
+                stroke={SECTION_STROKE_COLOR}
+                strokeWidth="2"
+                strokeOpacity={1}
+              />
+              <line
+                x1={maxX}
+                y1={dimensionY - tickHalf}
+                x2={maxX}
+                y2={dimensionY + tickHalf}
+                stroke={SECTION_STROKE_COLOR}
+                strokeWidth="2"
+                strokeOpacity={1}
+              />
+              <text
+                x={(minX + maxX) / 2}
+                y={labelY}
+                fill={SECTION_STROKE_COLOR}
+                fontSize="60"
+                fontWeight="bold"
+                textAnchor="middle"
+                dominantBaseline="middle"
+              >
+                {dimensionText}
+              </text>
             </g>
           );
         })}
       </g>
     );
-  }, [customPoints, params.height, params.width, params.frontRowCount]);
+  }, [customPoints, params.height, params.width, params.frontRowCount, sectionViewType]);
 
   // 삽도 미리보기 옵션별 렌더링 (useMemo로 메모이제이션)
   // 교축(정면)에서 받침 중심 위치 및 앵커 렌더링
@@ -1286,6 +1508,89 @@ const SectionView: React.FC = () => {
     return absolutePoints;
   };
 
+const ARC_TOLERANCE = 1e-8;
+
+const calculateArcCenter = (
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number,
+  radius: number
+): { centerX: number; centerY: number } | null => {
+  const dx = endX - startX;
+  const dy = endY - startY;
+  const chordLength = Math.sqrt(dx * dx + dy * dy);
+
+  if (chordLength < ARC_TOLERANCE) {
+    return null;
+  }
+
+  const absRadius = Math.abs(radius);
+  const halfChord = chordLength / 2;
+
+  if (absRadius < halfChord - ARC_TOLERANCE) {
+    return null;
+  }
+
+  let hSquared = absRadius * absRadius - halfChord * halfChord;
+
+  if (hSquared < 0 && Math.abs(hSquared) <= ARC_TOLERANCE) {
+    hSquared = 0;
+  }
+
+  if (hSquared < 0) {
+    return null;
+  }
+
+  const h = Math.sqrt(hSquared);
+  const midX = (startX + endX) / 2;
+  const midY = (startY + endY) / 2;
+
+  const perpX = -dy / chordLength;
+  const perpY = dx / chordLength;
+
+  const centerOptions = [
+    { x: midX + perpX * h, y: midY + perpY * h },
+    { x: midX - perpX * h, y: midY - perpY * h }
+  ];
+
+  const radiusSign = radius >= 0 ? 1 : -1;
+  const desiredCrossSign = radiusSign >= 0 ? -1 : 1;
+
+  const chooseCenter = () => {
+    let fallback = centerOptions[0];
+    let fallbackCross = 0;
+
+    for (const option of centerOptions) {
+      const startToCenterX = option.x - startX;
+      const startToCenterY = option.y - startY;
+      const cross = dx * startToCenterY - dy * startToCenterX;
+
+      if (fallback === centerOptions[0]) {
+        fallback = option;
+        fallbackCross = cross;
+      }
+
+      if (Math.abs(cross) <= ARC_TOLERANCE) {
+        return option;
+      }
+
+      if (Math.sign(cross) === desiredCrossSign) {
+        return option;
+      }
+    }
+
+    return fallbackCross !== 0 ? fallback : centerOptions[0];
+  };
+
+  const chosenCenter = chooseCenter();
+
+  return {
+    centerX: chosenCenter.x,
+    centerY: chosenCenter.y
+  };
+};
+
   // 테이블에서 입력받은 값을 저장 형식으로 변환하는 함수
   // 모든 입력값은 상대 좌표로 그대로 저장
   const convertInputToStorage = (
@@ -1571,6 +1876,8 @@ const SectionView: React.FC = () => {
     // 형상의 중심점 계산 (flipY가 적용된 좌표 기준)
     const sectionCenterX = (minX + maxX) / 2;
     const sectionCenterY = (minY + maxY) / 2;
+    const originalMinX = Math.min(...absolutePoints.map(p => p.x));
+    const originalMaxX = Math.max(...absolutePoints.map(p => p.x));
     
     // viewBox의 중심점 계산
     // viewBox는 viewBox={`${viewBoxX} ${viewBoxY} ${adjustedViewBoxWidth} ${adjustedViewBoxHeight}`}
@@ -1799,6 +2106,7 @@ const SectionView: React.FC = () => {
             let intersectionX: number | null = null;
             let intersectionY: number | null = null;
             let minDistance = Infinity;
+            let foundIntersection = false;
             
             // 디버깅: 조건 확인
             console.log('점선 그리기 조건 확인:', {
@@ -1871,6 +2179,7 @@ const SectionView: React.FC = () => {
               const distance = Math.sqrt(dx1 * dx1 + dy1 * dy1);
               const shouldTreatAsLine = Math.abs(r) < 1e-10 || 
                                        (Math.abs(r) > 1e-10 && Math.abs(r) < distance / 2);
+              let shouldProcessLine = shouldTreatAsLine;
               
               // 디버깅: 처리 방식 결정
               if (j >= 3 && j <= 12) {
@@ -1886,39 +2195,35 @@ const SectionView: React.FC = () => {
               if (Math.abs(r) > 1e-10 && !shouldTreatAsLine) {
                 // Arc로 처리 (반지름이 충분히 큰 경우)
                 const absRadius = Math.abs(r);
-                // Arc의 중심점 계산
-                const midX = (p1.x + p2.x) / 2;
-                const midY = (p1.y + p2.y) / 2;
-                const perpX = -dy1 / distance;
-                const perpY = dx1 / distance;
-                const h = absRadius - Math.sqrt(absRadius * absRadius - (distance / 2) * (distance / 2));
-                const centerX = midX + perpX * h;
-                const centerY = midY + perpY * h;
+                const arcCenter = calculateArcCenter(p1.x, p1.y, p2.x, p2.y, r);
+
+                if (arcCenter) {
+                  const { centerX, centerY } = arcCenter;
                   
-                // 직선과 원의 교차점 계산
-                // 직선: y = slope * x + intercept
-                // 원: (x - centerX)^2 + (y - centerY)^2 = absRadius^2
-                // 원의 방정식에 직선을 대입: (x - centerX)^2 + (slope * x + intercept - centerY)^2 = absRadius^2
-                const a = 1 + slope * slope;
-                const b = -2 * centerX + 2 * slope * (intercept - centerY);
-                const c = centerX * centerX + (intercept - centerY) * (intercept - centerY) - absRadius * absRadius;
-                
-                const discriminant = b * b - 4 * a * c;
-                
-                if (discriminant >= 0) {
-                  const sqrtDiscriminant = Math.sqrt(discriminant);
-                  const x1 = (-b + sqrtDiscriminant) / (2 * a);
-                  const x2 = (-b - sqrtDiscriminant) / (2 * a);
-                  const y1 = slope * x1 + intercept;
-                  const y2 = slope * x2 + intercept;
+                  // 직선과 원의 교차점 계산
+                  // 직선: y = slope * x + intercept
+                  // 원: (x - centerX)^2 + (y - centerY)^2 = absRadius^2
+                  // 원의 방정식에 직선을 대입: (x - centerX)^2 + (slope * x + intercept - centerY)^2 = absRadius^2
+                  const a = 1 + slope * slope;
+                  const b = -2 * centerX + 2 * slope * (intercept - centerY);
+                  const c = centerX * centerX + (intercept - centerY) * (intercept - centerY) - absRadius * absRadius;
                   
-                  // 두 교차점 중 Arc 위에 있는 점 찾기
-                  const candidates = [
-                    { x: x1, y: y1 },
-                    { x: x2, y: y2 }
-                  ];
+                  const discriminant = b * b - 4 * a * c;
                   
-                  for (const candidate of candidates) {
+                  if (discriminant >= 0) {
+                    const sqrtDiscriminant = Math.sqrt(discriminant);
+                    const x1 = (-b + sqrtDiscriminant) / (2 * a);
+                    const x2 = (-b - sqrtDiscriminant) / (2 * a);
+                    const y1 = slope * x1 + intercept;
+                    const y2 = slope * x2 + intercept;
+                    
+                    // 두 교차점 중 Arc 위에 있는 점 찾기
+                    const candidates = [
+                      { x: x1, y: y1 },
+                      { x: x2, y: y2 }
+                    ];
+                    
+                    for (const candidate of candidates) {
                     // Arc 위에 있는지 확인 (createArcPath 로직과 동일)
                     // 시작점과 끝점에서 중심까지의 벡터
                     const startToCenterX = centerX - p1.x;
@@ -1942,9 +2247,6 @@ const SectionView: React.FC = () => {
                     let sweepFlag = angleDiff > 0 ? 1 : 0;
                     
                     // R이 음수면 sweepFlag를 반대로 설정
-                    if (r < 0) {
-                      sweepFlag = sweepFlag === 1 ? 0 : 1;
-                    }
                     
                     // Arc 위에 있는지 확인
                     // 각도 정규화
@@ -2008,10 +2310,11 @@ const SectionView: React.FC = () => {
                         const distance = Math.sqrt(Math.pow(deltaX, 2) + Math.pow(deltaY, 2));
                         // 거리가 0이면 앵커가 Arc 위에 있는 경우이므로 교차점으로 인정하지 않음
                         // 앵커에서 시작해서 형상 외곽선의 다른 부분과 만나는 점을 찾아야 함
-                        if (distance < minDistance && distance > 1e-10) {
+                        if (distance > 1e-10 && distance < minDistance) {
                           minDistance = distance;
                           intersectionX = candidate.x;
                           intersectionY = candidate.y;
+                          foundIntersection = true;
                           console.log(`Arc 선분 ${j}에서 교차점 발견:`, { 
                             x: candidate.x, 
                             y: candidate.y, 
@@ -2060,12 +2363,22 @@ const SectionView: React.FC = () => {
                       }
                     }
                   }
+                  }
+                } else {
+                  shouldProcessLine = true;
+                  if (j < 3) {
+                    console.log(`Arc 선분 ${j}에서 중심 계산 실패:`, {
+                      p1,
+                      p2,
+                      r
+                    });
+                  }
                 }
               }
               
               // R 값이 0이거나 Arc 계산에서 처리되지 않은 경우 직선으로 처리
               // shouldTreatAsLine은 위에서 이미 계산됨
-              if (shouldTreatAsLine) {
+              if (shouldProcessLine) {
                 // 디버깅: 직선 처리 블록 진입
                 if (j >= 3 && j <= 12) {
                   console.log(`선분 ${j} 직선 처리 블록 진입`);
@@ -2138,10 +2451,11 @@ const SectionView: React.FC = () => {
                     const distance = Math.sqrt(Math.pow(deltaX, 2) + Math.pow(deltaY, 2));
                     // 거리가 0이면 앵커가 선분 위에 있는 경우이므로 교차점으로 인정하지 않음
                     // 앵커에서 시작해서 형상 외곽선의 다른 부분과 만나는 점을 찾아야 함
-                    if (distance < minDistance && distance > 1e-10) {
+                    if (distance > 1e-10 && distance < minDistance) {
                       minDistance = distance;
                       intersectionX = x;
                       intersectionY = y;
+                      foundIntersection = true;
                       console.log(`수직 선분 ${j}에서 교차점 발견:`, { x, y, deltaX, deltaY, distance, isDirectionValid });
                     } else {
                       if (j < 3) {
@@ -2244,10 +2558,11 @@ const SectionView: React.FC = () => {
                     const distance = Math.sqrt(Math.pow(deltaX, 2) + Math.pow(deltaY, 2));
                     // 거리가 0이면 앵커가 선분 위에 있는 경우이므로 교차점으로 인정하지 않음
                     // 앵커에서 시작해서 형상 외곽선의 다른 부분과 만나는 점을 찾아야 함
-                    if (distance < minDistance && distance > 1e-10) {
+                    if (distance > 1e-10 && distance < minDistance) {
                       minDistance = distance;
                       intersectionX = x;
                       intersectionY = y;
+                      foundIntersection = true;
                       console.log(`일반 선분 ${j}에서 교차점 발견:`, { x, y, deltaX, deltaY, distance, isDirectionValid, isOnSegment });
                     } else {
                       if (j >= 3 && j <= 12) {
@@ -2276,6 +2591,7 @@ const SectionView: React.FC = () => {
               intersectionX,
               intersectionY,
               minDistance,
+              foundIntersection,
               isNull: intersectionX === null || intersectionY === null,
               isInfinity: minDistance === Infinity,
               isTooSmall: minDistance <= 1e-10,
@@ -2288,7 +2604,8 @@ const SectionView: React.FC = () => {
             let lineEndY: number;
             
             // 교차점이 실제로 설정되었는지 확인 (null이 아니고, 거리가 0이 아닌 경우)
-            const hasValidIntersection = intersectionX !== null && 
+            const hasValidIntersection = foundIntersection &&
+                                        intersectionX !== null && 
                                         intersectionY !== null && 
                                         minDistance !== Infinity &&
                                         minDistance > 1e-10;
@@ -2442,7 +2759,6 @@ const SectionView: React.FC = () => {
               }
             }
             
-            // 빨간색 점선 그리기 (lineEndX, lineEndY는 이 시점에서 항상 값이 있음)
             elements.push(
               <line
                 key={`vertical-front-dashed-line-${index}`}
@@ -2456,6 +2772,127 @@ const SectionView: React.FC = () => {
                 strokeOpacity={1}
               />
             );
+
+            if (hasValidIntersection) {
+              const dimensionOffsetLeft = 100;
+              const dimensionOffsetRight = 200;
+              const dimensionLineX = directionX === -1
+                ? originalMinX - dimensionOffsetLeft
+                : originalMaxX + dimensionOffsetRight;
+              const dimensionYStart = targetAnchorY;
+              const dimensionYEnd = lineEndY;
+              const dimensionYTop = Math.min(dimensionYStart, dimensionYEnd);
+              const dimensionYBottom = Math.max(dimensionYStart, dimensionYEnd);
+              const dimensionDistance = Math.abs(dimensionYEnd - dimensionYStart);
+              const textOffset = 100;
+              const textX = directionX === -1
+                ? dimensionLineX - textOffset
+                : dimensionLineX + textOffset;
+              const textY = (dimensionYStart + dimensionYEnd) / 2;
+              const tickHalfWidth = 20;
+
+              elements.push(
+                <line
+                  key={`vertical-front-dimension-guide-start-${index}`}
+                  x1={targetAnchorX}
+                  y1={dimensionYStart}
+                  x2={dimensionLineX}
+                  y2={dimensionYStart}
+                  stroke={SECTION_STROKE_COLOR}
+                  strokeWidth="1"
+                  strokeOpacity={0.5}
+                />
+              );
+
+              elements.push(
+                <line
+                  key={`vertical-front-dimension-guide-end-${index}`}
+                  x1={lineEndX}
+                  y1={dimensionYEnd}
+                  x2={dimensionLineX}
+                  y2={dimensionYEnd}
+                  stroke={SECTION_STROKE_COLOR}
+                  strokeWidth="1"
+                  strokeOpacity={0.5}
+                />
+              );
+
+              elements.push(
+                <line
+                  key={`vertical-front-dimension-line-${index}`}
+                  x1={dimensionLineX}
+                  y1={dimensionYTop}
+                  x2={dimensionLineX}
+                  y2={dimensionYBottom}
+                  stroke={SECTION_STROKE_COLOR}
+                  strokeWidth="2"
+                  strokeOpacity={1}
+                  markerStart="url(#arrowhead-start)"
+                  markerEnd="url(#arrowhead-end)"
+                />
+              );
+
+              elements.push(
+                <line
+                  key={`vertical-front-dimension-tick-top-${index}`}
+                  x1={dimensionLineX - tickHalfWidth}
+                  y1={dimensionYTop}
+                  x2={dimensionLineX + tickHalfWidth}
+                  y2={dimensionYTop}
+                  stroke={SECTION_STROKE_COLOR}
+                  strokeWidth="2"
+                  strokeOpacity={1}
+                />
+              );
+
+              elements.push(
+                <line
+                  key={`vertical-front-dimension-tick-bottom-${index}`}
+                  x1={dimensionLineX - tickHalfWidth}
+                  y1={dimensionYBottom}
+                  x2={dimensionLineX + tickHalfWidth}
+                  y2={dimensionYBottom}
+                  stroke={SECTION_STROKE_COLOR}
+                  strokeWidth="2"
+                  strokeOpacity={1}
+                />
+              );
+
+              const baselineFontSize = 100;
+              const adjustedFontSize = baselineFontSize;
+              const adjustedTextY = textY;
+
+              elements.push(
+                <text
+                  key={`vertical-front-dimension-text-${index}`}
+                  x={textX}
+                  y={adjustedTextY}
+                  fill={SECTION_STROKE_COLOR}
+                  fontSize={adjustedFontSize}
+                  fontWeight="bold"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  transform={`rotate(-90 ${textX} ${adjustedTextY})`}
+                >
+                  {Math.round(dimensionDistance).toLocaleString()}
+                </text>
+              );
+            } else {
+              // 빨간색 점선 (교차점이 없을 때는 선만 표시)
+              elements.push(
+                <line
+                  key={`vertical-front-dashed-line-${index}`}
+                  x1={targetAnchorX}
+                  y1={targetAnchorY}
+                  x2={lineEndX}
+                  y2={lineEndY}
+                  stroke={ANCHOR_STROKE_COLOR}
+                  strokeWidth="2"
+                  strokeDasharray="5,5"
+                  strokeOpacity={1}
+                />
+              );
+            }
           }
         }
       }
@@ -2506,6 +2943,30 @@ const SectionView: React.FC = () => {
               y1: transformedY1,
               x2: transformedX2,
               y2: transformedY2,
+              key: element.key
+            });
+          } else if (element.type === 'text' && props.x !== undefined && props.y !== undefined) {
+            const rawX = Array.isArray(props.x) ? props.x[0] : props.x;
+            const rawY = Array.isArray(props.y) ? props.y[0] : props.y;
+            const transformedX = rawX * scale + translateX;
+            const transformedY = flipY(rawY) * scale + translateY;
+
+            const transformString = typeof props.transform === 'string' ? props.transform : '';
+            const rotateMatch = transformString.match(/rotate\((-?\d+(?:\.\d+)?)(?:\s+(-?\d+(?:\.\d+)?))?(?:\s+(-?\d+(?:\.\d+)?))?\)/);
+            const rotation = rotateMatch ? rotateMatch[1] : null;
+            const adjustedTransform = rotation ? `rotate(${rotation} ${transformedX} ${transformedY})` : undefined;
+
+            const baseFontSize = props.fontSize !== undefined
+              ? parseFloat(props.fontSize as string)
+              : 100;
+            const adjustedFontSize = baseFontSize;
+
+            return React.cloneElement(element, {
+              ...props,
+              x: transformedX,
+              y: transformedY,
+              fontSize: adjustedFontSize,
+              transform: adjustedTransform,
               key: element.key
             });
           } else if (props.x !== undefined && props.y !== undefined && props.width !== undefined && props.height !== undefined) {
@@ -2719,6 +3180,7 @@ const SectionView: React.FC = () => {
 
   return (
     <PageLayout title="">
+      <style>{numericInputGlobalStyle}</style>
       <div className="p-6">
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
@@ -2789,10 +3251,12 @@ const SectionView: React.FC = () => {
                     <label className="text-sm font-medium text-gray-700 whitespace-nowrap w-32">
                       폭 (mm)
                     </label>
-                    <input
+                    <NumericInput
+                      {...numericInputSharedProps}
+                      inputKey="params-width"
                       type="number"
                       value={params.width}
-                      onChange={(e) => handleParamChange('width', Number(e.target.value))}
+                      onValueChange={(val) => handleParamChange('width', val)}
                       className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       min="100"
                       max="5000"
@@ -2804,10 +3268,12 @@ const SectionView: React.FC = () => {
                     <label className="text-sm font-medium text-gray-700 whitespace-nowrap w-32">
                       길이 (mm)
                     </label>
-                    <input
+                    <NumericInput
+                      {...numericInputSharedProps}
+                      inputKey="params-height"
                       type="number"
                       value={params.height}
-                      onChange={(e) => handleParamChange('height', Number(e.target.value))}
+                      onValueChange={(val) => handleParamChange('height', val)}
                       className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       min="100"
                       max="3000"
@@ -2828,10 +3294,12 @@ const SectionView: React.FC = () => {
                         단차 위치 (mm)
                       </label>
                     </div>
-                    <input
+                    <NumericInput
+                      {...numericInputSharedProps}
+                      inputKey="params-stepValue"
                       type="number"
                       value={params.stepValue}
-                      onChange={(e) => handleParamChange('stepValue', Number(e.target.value))}
+                      onValueChange={(val) => handleParamChange('stepValue', val)}
                       disabled={!params.hasStep}
                       className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                       min="0"
@@ -2845,10 +3313,12 @@ const SectionView: React.FC = () => {
                     <label className="text-sm font-medium text-gray-700 whitespace-nowrap w-32">
                       높이(전열) (mm)
                     </label>
-                    <input
+                    <NumericInput
+                      {...numericInputSharedProps}
+                      inputKey="params-heightFront"
                       type="number"
                       value={params.heightFront}
-                      onChange={(e) => handleParamChange('heightFront', Number(e.target.value))}
+                      onValueChange={(val) => handleParamChange('heightFront', val)}
                       className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       min="100"
                       max="3000"
@@ -2859,10 +3329,12 @@ const SectionView: React.FC = () => {
                     <label className="text-sm font-medium text-gray-700 whitespace-nowrap w-32">
                       높이(후열) (mm)
                     </label>
-                    <input
+                    <NumericInput
+                      {...numericInputSharedProps}
+                      inputKey="params-heightBack"
                       type="number"
                       value={params.heightBack}
-                      onChange={(e) => handleParamChange('heightBack', Number(e.target.value))}
+                      onValueChange={(val) => handleParamChange('heightBack', val)}
                       disabled={!params.hasStep}
                       className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                       min="100"
@@ -3069,10 +3541,12 @@ const SectionView: React.FC = () => {
                         <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
                           전열
                         </label>
-                        <input
+                        <NumericInput
+                          {...numericInputSharedProps}
+                          inputKey="params-frontRowCount"
                           type="number"
                           value={params.frontRowCount}
-                          onChange={(e) => handleParamChange('frontRowCount', Number(e.target.value))}
+                          onValueChange={(val) => handleParamChange('frontRowCount', val)}
                           className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           min="0"
                           max="100"
@@ -3084,10 +3558,12 @@ const SectionView: React.FC = () => {
                         <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
                           후열
                         </label>
-                        <input
+                        <NumericInput
+                          {...numericInputSharedProps}
+                          inputKey="params-backRowCount"
                           type="number"
                           value={params.backRowCount}
-                          onChange={(e) => handleParamChange('backRowCount', Number(e.target.value))}
+                          onValueChange={(val) => handleParamChange('backRowCount', val)}
                           className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           min="0"
                           max="100"
@@ -3133,57 +3609,69 @@ const SectionView: React.FC = () => {
                               <td className="px-3 py-2 text-gray-700">{index + 1}</td>
                               <td className="px-3 py-2 text-gray-700">{isFrontRow ? '전열' : '후열'}</td>
                               <td className="px-3 py-2">
-                                <input
+                                <NumericInput
+                                  {...numericInputSharedProps}
+                                  inputKey={`custom-${point.id}-offsetX`}
                                   type="number"
                                   value={point.offsetX}
-                                  onChange={(e) => updatePoint(point.id, 'offsetX', Number(e.target.value))}
+                                  onValueChange={(val) => updatePoint(point.id, 'offsetX', val)}
                                   className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                                   step="1"
                                 />
                               </td>
                               <td className="px-3 py-2">
-                                <input
+                                <NumericInput
+                                  {...numericInputSharedProps}
+                                  inputKey={`custom-${point.id}-offsetY`}
                                   type="number"
                                   value={point.offsetY}
-                                  onChange={(e) => updatePoint(point.id, 'offsetY', Number(e.target.value))}
+                                  onValueChange={(val) => updatePoint(point.id, 'offsetY', val)}
                                   className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                                   step="1"
                                 />
                               </td>
                               <td className="px-3 py-2">
-                                <input
+                                <NumericInput
+                                  {...numericInputSharedProps}
+                                  inputKey={`custom-${point.id}-anchorRowCountAxial`}
                                   type="number"
                                   value={point.anchorRowCountAxial}
-                                  onChange={(e) => updatePoint(point.id, 'anchorRowCountAxial', Number(e.target.value))}
+                                  onValueChange={(val) => updatePoint(point.id, 'anchorRowCountAxial', val)}
                                   className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                                   step="1"
                                   min="0"
                                 />
                               </td>
                               <td className="px-3 py-2">
-                                <input
+                                <NumericInput
+                                  {...numericInputSharedProps}
+                                  inputKey={`custom-${point.id}-anchorRowCountVertical`}
                                   type="number"
                                   value={point.anchorRowCountVertical}
-                                  onChange={(e) => updatePoint(point.id, 'anchorRowCountVertical', Number(e.target.value))}
+                                  onValueChange={(val) => updatePoint(point.id, 'anchorRowCountVertical', val)}
                                   className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                                   step="1"
                                   min="0"
                                 />
                               </td>
                               <td className="px-3 py-2">
-                                <input
+                                <NumericInput
+                                  {...numericInputSharedProps}
+                                  inputKey={`custom-${point.id}-anchorGapAxial`}
                                   type="number"
                                   value={point.anchorGapAxial}
-                                  onChange={(e) => updatePoint(point.id, 'anchorGapAxial', Number(e.target.value))}
+                                  onValueChange={(val) => updatePoint(point.id, 'anchorGapAxial', val)}
                                   className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                                   step="1"
                                 />
                               </td>
                               <td className="px-3 py-2">
-                                <input
+                                <NumericInput
+                                  {...numericInputSharedProps}
+                                  inputKey={`custom-${point.id}-anchorGapVertical`}
                                   type="number"
                                   value={point.anchorGapVertical}
-                                  onChange={(e) => updatePoint(point.id, 'anchorGapVertical', Number(e.target.value))}
+                                  onValueChange={(val) => updatePoint(point.id, 'anchorGapVertical', val)}
                                   className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                                   step="1"
                                 />
@@ -3645,14 +4133,13 @@ const SectionView: React.FC = () => {
                       <div>
                         <div className="flex justify-end items-center gap-2 mb-2">
                           <label className="text-sm text-gray-700">행 개수:</label>
-                          <input
+                          <NumericInput
+                            {...numericInputSharedProps}
+                            inputKey="sectionPoints-front-count"
                             type="number"
                             min="0"
                             value={sectionPointCountFront}
-                            onChange={(e) => {
-                              const count = parseInt(e.target.value) || 0;
-                              setSectionPointCountFront(count);
-                            }}
+                            onValueChange={(val) => setSectionPointCountFront(Math.max(0, Math.floor(val)))}
                             className="w-20 px-2 py-1 border border-gray-300 rounded-md text-sm"
                           />
                         </div>
@@ -3725,12 +4212,13 @@ const SectionView: React.FC = () => {
                                 <tr key={point.id} className="hover:bg-gray-50 border-b border-gray-200">
                                   <td className="px-3 py-2 text-gray-700">{index + 1}</td>
                                   <td className="px-3 py-2">
-                                    <input
+                                    <NumericInput
+                                      {...numericInputSharedProps}
+                                      inputKey={`section-front-${point.id}-x`}
                                       type="number"
                                       value={point.x}
-                                      onChange={(e) => {
-                                        const newValue = Number(e.target.value);
-                                        const updated = convertInputToStorage(sectionPointsFront, index, newValue, point.y);
+                                      onValueChange={(val) => {
+                                        const updated = convertInputToStorage(sectionPointsFront, index, val, point.y);
                                         setSectionPointsFront(updated);
                                       }}
                                       className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -3738,12 +4226,13 @@ const SectionView: React.FC = () => {
                                     />
                                   </td>
                                   <td className="px-3 py-2">
-                                    <input
+                                    <NumericInput
+                                      {...numericInputSharedProps}
+                                      inputKey={`section-front-${point.id}-y`}
                                       type="number"
                                       value={point.y}
-                                      onChange={(e) => {
-                                        const newValue = Number(e.target.value);
-                                        const updated = convertInputToStorage(sectionPointsFront, index, point.x, newValue);
+                                      onValueChange={(val) => {
+                                        const updated = convertInputToStorage(sectionPointsFront, index, point.x, val);
                                         setSectionPointsFront(updated);
                                       }}
                                       className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -3751,12 +4240,13 @@ const SectionView: React.FC = () => {
                                     />
                                   </td>
                                   <td className="px-3 py-2">
-                                    <input
+                                    <NumericInput
+                                      {...numericInputSharedProps}
+                                      inputKey={`section-front-${point.id}-r`}
                                       type="number"
                                       value={point.r}
-                                      onChange={(e) => {
-                                        const newValue = Number(e.target.value);
-                                        const updated = convertInputToStorage(sectionPointsFront, index, point.x, point.y, newValue);
+                                      onValueChange={(val) => {
+                                        const updated = convertInputToStorage(sectionPointsFront, index, point.x, point.y, val);
                                         setSectionPointsFront(updated);
                                       }}
                                       className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -3777,14 +4267,13 @@ const SectionView: React.FC = () => {
                       <div>
                         <div className="flex justify-end items-center gap-2 mb-2">
                           <label className="text-sm text-gray-700">행 개수:</label>
-                          <input
+                          <NumericInput
+                            {...numericInputSharedProps}
+                            inputKey="sectionPoints-back-count"
                             type="number"
                             min="0"
                             value={sectionPointCountBack}
-                            onChange={(e) => {
-                              const count = parseInt(e.target.value) || 0;
-                              setSectionPointCountBack(count);
-                            }}
+                            onValueChange={(val) => setSectionPointCountBack(Math.max(0, Math.floor(val)))}
                             className="w-20 px-2 py-1 border border-gray-300 rounded-md text-sm"
                           />
                         </div>
@@ -3857,12 +4346,13 @@ const SectionView: React.FC = () => {
                                 <tr key={point.id} className="hover:bg-gray-50 border-b border-gray-200">
                                   <td className="px-3 py-2 text-gray-700">{index + 1}</td>
                                   <td className="px-3 py-2">
-                                    <input
+                                    <NumericInput
+                                      {...numericInputSharedProps}
+                                      inputKey={`section-back-${point.id}-x`}
                                       type="number"
                                       value={point.x}
-                                      onChange={(e) => {
-                                        const newValue = Number(e.target.value);
-                                        const updated = convertInputToStorage(sectionPointsBack, index, newValue, point.y);
+                                      onValueChange={(val) => {
+                                        const updated = convertInputToStorage(sectionPointsBack, index, val, point.y);
                                         setSectionPointsBack(updated);
                                       }}
                                       className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -3870,12 +4360,13 @@ const SectionView: React.FC = () => {
                                     />
                                   </td>
                                   <td className="px-3 py-2">
-                                    <input
+                                    <NumericInput
+                                      {...numericInputSharedProps}
+                                      inputKey={`section-back-${point.id}-y`}
                                       type="number"
                                       value={point.y}
-                                      onChange={(e) => {
-                                        const newValue = Number(e.target.value);
-                                        const updated = convertInputToStorage(sectionPointsBack, index, point.x, newValue);
+                                      onValueChange={(val) => {
+                                        const updated = convertInputToStorage(sectionPointsBack, index, point.x, val);
                                         setSectionPointsBack(updated);
                                       }}
                                       className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -3883,12 +4374,13 @@ const SectionView: React.FC = () => {
                                     />
                                   </td>
                                   <td className="px-3 py-2">
-                                    <input
+                                    <NumericInput
+                                      {...numericInputSharedProps}
+                                      inputKey={`section-back-${point.id}-r`}
                                       type="number"
                                       value={point.r}
-                                      onChange={(e) => {
-                                        const newValue = Number(e.target.value);
-                                        const updated = convertInputToStorage(sectionPointsBack, index, point.x, point.y, newValue);
+                                      onValueChange={(val) => {
+                                        const updated = convertInputToStorage(sectionPointsBack, index, point.x, point.y, val);
                                         setSectionPointsBack(updated);
                                       }}
                                       className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -3910,14 +4402,13 @@ const SectionView: React.FC = () => {
                   <div>
                     <div className="flex justify-end items-center gap-2 mb-2">
                       <label className="text-sm text-gray-700">행 개수:</label>
-                      <input
+                      <NumericInput
+                        {...numericInputSharedProps}
+                        inputKey="sectionPoints-all-count"
                         type="number"
                         min="0"
                         value={sectionPointCount}
-                        onChange={(e) => {
-                          const count = parseInt(e.target.value) || 0;
-                          setSectionPointCount(count);
-                        }}
+                        onValueChange={(val) => setSectionPointCount(Math.max(0, Math.floor(val)))}
                         className="w-20 px-2 py-1 border border-gray-300 rounded-md text-sm"
                       />
                     </div>
@@ -3990,12 +4481,13 @@ const SectionView: React.FC = () => {
                               <tr key={point.id} className="hover:bg-gray-50 border-b border-gray-200">
                                 <td className="px-3 py-2 text-gray-700">{index + 1}</td>
                                 <td className="px-3 py-2">
-                                  <input
+                                  <NumericInput
+                                    {...numericInputSharedProps}
+                                    inputKey={`section-${point.id}-x`}
                                     type="number"
                                     value={point.x}
-                                    onChange={(e) => {
-                                      const newValue = Number(e.target.value);
-                                      const updated = convertInputToStorage(sectionPoints, index, newValue, point.y);
+                                    onValueChange={(val) => {
+                                      const updated = convertInputToStorage(sectionPoints, index, val, point.y);
                                       setSectionPoints(updated);
                                     }}
                                     className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -4003,12 +4495,13 @@ const SectionView: React.FC = () => {
                                   />
                                 </td>
                                 <td className="px-3 py-2">
-                                  <input
+                                  <NumericInput
+                                    {...numericInputSharedProps}
+                                    inputKey={`section-${point.id}-y`}
                                     type="number"
                                     value={point.y}
-                                    onChange={(e) => {
-                                      const newValue = Number(e.target.value);
-                                      const updated = convertInputToStorage(sectionPoints, index, point.x, newValue);
+                                    onValueChange={(val) => {
+                                      const updated = convertInputToStorage(sectionPoints, index, point.x, val);
                                       setSectionPoints(updated);
                                     }}
                                     className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -4016,12 +4509,13 @@ const SectionView: React.FC = () => {
                                   />
                                 </td>
                                 <td className="px-3 py-2">
-                                  <input
+                                  <NumericInput
+                                    {...numericInputSharedProps}
+                                    inputKey={`section-${point.id}-r`}
                                     type="number"
                                     value={point.r}
-                                    onChange={(e) => {
-                                      const newValue = Number(e.target.value);
-                                      const updated = convertInputToStorage(sectionPoints, index, point.x, point.y, newValue);
+                                    onValueChange={(val) => {
+                                      const updated = convertInputToStorage(sectionPoints, index, point.x, point.y, val);
                                       setSectionPoints(updated);
                                     }}
                                     className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
