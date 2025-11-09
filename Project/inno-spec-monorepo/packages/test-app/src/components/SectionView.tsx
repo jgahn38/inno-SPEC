@@ -179,9 +179,7 @@ const SectionView: React.FC = () => {
   const [copingViewType, setCopingViewType] = useState<'plan' | 'side' | 'section'>(() => 
     loadFromStorage(STORAGE_KEYS.COPING_VIEW_TYPE, 'plan')
   );
-  const [sectionViewType, setSectionViewType] = useState<'axial-plan' | 'axial-front' | 'vertical-plan' | 'vertical-front'>(() => 
-    loadFromStorage(STORAGE_KEYS.SECTION_VIEW_TYPE, 'axial-plan')
-  );
+  const [sectionViewType, setSectionViewType] = useState<'axial-plan' | 'axial-front' | 'vertical-plan' | 'vertical-front' | 'flyout-front' | 'flyout-back'>(() => 'axial-plan');
   const [activeSectionTab, setActiveSectionTab] = useState<'front' | 'back'>(() => 
     loadFromStorage(STORAGE_KEYS.ACTIVE_SECTION_TAB, 'front')
   );
@@ -190,6 +188,9 @@ const SectionView: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isSectionDimensionModalOpen, setIsSectionDimensionModalOpen] = useState<boolean>(false);
   const [pendingInputs, setPendingInputs] = useState<Record<string, string>>({});
+const [isFrontSupportGroupEnabled, setIsFrontSupportGroupEnabled] = useState<boolean>(false);
+const [isBackSupportGroupEnabled, setIsBackSupportGroupEnabled] = useState<boolean>(false);
+const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
 
   const isIntermediateNumericValue = useCallback((value: string) => {
     return value === '' || value === '-' || value === '.' || value === '-.';
@@ -372,8 +373,26 @@ const SectionView: React.FC = () => {
   }, [customPoints, params.height, params.frontRowCount]);
 
   // 앵커 위치들과 사각형을 메모이제이션하여 렌더링
-  const renderedAnchors = useMemo(() => {
-    if (customPoints.length === 0) return null;
+  const {
+    anchorElements: renderedAnchors,
+    axialPlanVerticalElements,
+    axialPlanHorizontalElements,
+    axialPlanDimensionElements,
+    verticalPlanDimensionElements,
+    verticalPlanAdditionalHorizontalElements,
+    verticalPlanAdditionalVerticalElements
+  } = useMemo(() => {
+    if (customPoints.length === 0) {
+      return {
+        anchorElements: null,
+        axialPlanVerticalElements: [],
+        axialPlanHorizontalElements: [],
+        axialPlanDimensionElements: [],
+        verticalPlanDimensionElements: [],
+        verticalPlanAdditionalHorizontalElements: [],
+        verticalPlanAdditionalVerticalElements: []
+      };
+    }
 
     const anchorPoints: Array<{ 
       x: number; 
@@ -553,8 +572,30 @@ const SectionView: React.FC = () => {
       });
     };
 
-    customPoints.forEach((point, index) => {
-      const isFrontRow = index < params.frontRowCount;
+    type PointWithIndex = { point: (typeof customPoints)[number]; originalIndex: number };
+    const pointsForRendering: PointWithIndex[] = (() => {
+      if (sectionViewType === 'flyout-front') {
+        if (params.frontRowCount <= 0) {
+          return [] as PointWithIndex[];
+        }
+        const index = Math.min(Math.max(params.frontRowCount - 1, 0), customPoints.length - 1);
+        return index >= 0 ? [{ point: customPoints[index], originalIndex: index }] : [];
+      }
+      if (sectionViewType === 'flyout-back') {
+        if (params.backRowCount <= 0) {
+          return [] as PointWithIndex[];
+        }
+        const index = params.frontRowCount + params.backRowCount - 1;
+        if (index < 0 || index >= customPoints.length) {
+          return [] as PointWithIndex[];
+        }
+        return [{ point: customPoints[index], originalIndex: index }];
+      }
+      return customPoints.map((point, originalIndex) => ({ point, originalIndex }));
+    })();
+
+    pointsForRendering.forEach(({ point, originalIndex }) => {
+      const isFrontRow = originalIndex < params.frontRowCount;
       
       // 받침위치의 절대 좌표 계산
       const baseX = point.offsetX;
@@ -608,13 +649,45 @@ const SectionView: React.FC = () => {
             // Y축 방향에는 교축 간격 사용
             const anchorY = startY + j * point.anchorGapAxial;
             
-            anchorPoints.push({ x: anchorX, y: anchorY, isFrontRow: isFrontRow, supportIndex: index });
+            anchorPoints.push({ x: anchorX, y: anchorY, isFrontRow: isFrontRow, supportIndex: originalIndex });
           }
         }
       }
     });
 
-    if (anchorPoints.length === 0) return null;
+    if (anchorPoints.length === 0) {
+      return {
+        anchorElements: null,
+        axialPlanVerticalElements: [],
+        axialPlanHorizontalElements: [],
+        axialPlanDimensionElements: [],
+        verticalPlanDimensionElements: [],
+        verticalPlanAdditionalHorizontalElements: [],
+        verticalPlanAdditionalVerticalElements: []
+      };
+    }
+
+    if (
+      (sectionViewType === 'flyout-front' || sectionViewType === 'flyout-back') &&
+      anchorRects.length > 0
+    ) {
+      const targetCenterX = params.width / 2;
+      const targetCenterY = params.height / 2;
+      const shiftX = targetCenterX - anchorRects[0].baseX;
+      const shiftY = targetCenterY - anchorRects[0].baseY;
+
+      anchorRects.forEach(rect => {
+        rect.x += shiftX;
+        rect.y += shiftY;
+        rect.baseX += shiftX;
+        rect.baseY += shiftY;
+      });
+
+      anchorPoints.forEach(anchor => {
+        anchor.x += shiftX;
+        anchor.y += shiftY;
+      });
+    }
 
     // 전열과 후열로 분리
     const frontRowAnchors = anchorPoints.filter(a => a.isFrontRow);
@@ -726,16 +799,14 @@ const SectionView: React.FC = () => {
       }
     }
 
-    return (
+    const anchorElements = (
       <g key="anchor-points-group">
-        {/* 축선들 (받침중심 점에서 사각형까지) */}
         {anchorRects.map((rect) => {
           const rectEndX = rect.x + rect.width;
           const rectEndY = rect.y + rect.height;
-          
+
           return (
             <g key={`anchor-axes-${rect.pointId}`}>
-              {/* 가로 축 (수평선) - 받침 중심점에서 사각형 좌측에서 우측까지 */}
               <line
                 x1={rect.x}
                 y1={rect.baseY}
@@ -746,7 +817,6 @@ const SectionView: React.FC = () => {
                 strokeOpacity={1}
                 vectorEffect="non-scaling-stroke"
               />
-              {/* 세로 축 (수직선) - 받침 중심점에서 사각형 상단에서 하단까지 */}
               <line
                 x1={rect.baseX}
                 y1={rect.y}
@@ -760,7 +830,7 @@ const SectionView: React.FC = () => {
             </g>
           );
         })}
-        {/* 앵커 사각형들 */}
+
         {anchorRects.map((rect) => (
           <rect
             key={`anchor-rect-${rect.pointId}`}
@@ -775,10 +845,9 @@ const SectionView: React.FC = () => {
             vectorEffect="non-scaling-stroke"
           />
         ))}
-        {/* 앵커 점들 (모두 렌더링) */}
+
         {anchorPoints.map((anchor, idx) => (
           <g key={`anchor-point-${idx}`}>
-            {/* 앵커 점 주변 원 (배경) */}
             <circle
               cx={anchor.x}
               cy={anchor.y}
@@ -789,7 +858,6 @@ const SectionView: React.FC = () => {
               strokeOpacity={0.5}
               vectorEffect="non-scaling-stroke"
             />
-            {/* 앵커 점 */}
             <circle
               cx={anchor.x}
               cy={anchor.y}
@@ -803,7 +871,7 @@ const SectionView: React.FC = () => {
             />
           </g>
         ))}
-        {/* 직선은 선택된 앵커만 렌더링 */}
+
         {anchorsToDrawLines.map((anchor, idx) => {
           // 사각형 경계
           const rectLeft = 0;
@@ -842,6 +910,21 @@ const SectionView: React.FC = () => {
               const xAtBottom = anchorX + (rectBottom - anchorY) / slope;
               if (xAtBottom >= rectLeft && xAtBottom <= rectRight) {
                 intersections.push({ x: xAtBottom, y: rectBottom });
+              }
+            }
+            if (
+              sectionViewType === 'vertical-plan' &&
+              params.hasStep &&
+              params.stepValue > 0 &&
+              params.stepValue < params.height &&
+              slope !== 0
+            ) {
+              const stepY = params.stepValue;
+      if (Math.abs(stepY - anchorY) > 1e-6) {
+                const xAtStep = anchorX + (stepY - anchorY) / slope;
+                if (xAtStep >= rectLeft && xAtStep <= rectRight) {
+                  intersections.push({ x: xAtStep, y: stepY });
+                }
               }
             }
             
@@ -917,39 +1000,41 @@ const SectionView: React.FC = () => {
 
           const groupElements: React.ReactNode[] = [];
 
-          if (line1) {
-            groupElements.push(
-              <line
-                key={`anchor-line1-${idx}`}
-                x1={line1.x1}
-                y1={line1.y1}
-                x2={line1.x2}
-                y2={line1.y2}
-                stroke={ANCHOR_STROKE_COLOR}
-                strokeWidth="1"
-                strokeOpacity={0.5}
-                strokeDasharray="2,2"
-                vectorEffect="non-scaling-stroke"
-              />
-            );
-          }
+          if (sectionViewType !== 'flyout-front' && sectionViewType !== 'flyout-back') {
+            if (line1) {
+              groupElements.push(
+                <line
+                  key={`anchor-line1-${idx}`}
+                  x1={line1.x1}
+                  y1={line1.y1}
+                  x2={line1.x2}
+                  y2={line1.y2}
+                  stroke={ANCHOR_STROKE_COLOR}
+                  strokeWidth="1"
+                  strokeOpacity={0.5}
+                  strokeDasharray="2,2"
+                  vectorEffect="non-scaling-stroke"
+                />
+              );
+            }
 
-        if (line2) {
-          groupElements.push(
-            <line
-              key={`anchor-line2-${idx}`}
-              x1={line2.x1}
-              y1={line2.y1}
-              x2={line2.x2}
-              y2={line2.y2}
-              stroke={ANCHOR_STROKE_COLOR}
-              strokeWidth="1"
-              strokeOpacity={0.5}
-              strokeDasharray="2,2"
-              vectorEffect="non-scaling-stroke"
-            />
-          );
-        }
+            if (line2) {
+              groupElements.push(
+                <line
+                  key={`anchor-line2-${idx}`}
+                  x1={line2.x1}
+                  y1={line2.y1}
+                  x2={line2.x2}
+                  y2={line2.y2}
+                  stroke={ANCHOR_STROKE_COLOR}
+                  strokeWidth="1"
+                  strokeOpacity={0.5}
+                  strokeDasharray="2,2"
+                  vectorEffect="non-scaling-stroke"
+                />
+              );
+            }
+          }
 
         if (sectionViewType === 'vertical-plan') {
           const dimensionKey = anchor.isFrontRow ? 'front' : 'back';
@@ -989,8 +1074,12 @@ const SectionView: React.FC = () => {
             </g>
           );
         })}
-        {sectionViewType === 'axial-plan' &&
-          axialPlanVerticalDimensions.map(dimension => {
+      </g>
+    );
+
+    const axialPlanVerticalElements =
+      sectionViewType === 'axial-plan'
+        ? axialPlanVerticalDimensions.map(dimension => {
             const tickHalf = 20;
             const y1 = Math.min(dimension.anchorY, dimension.targetY);
             const y2 = Math.max(dimension.anchorY, dimension.targetY);
@@ -1041,9 +1130,12 @@ const SectionView: React.FC = () => {
                 </text>
               </g>
             );
-          })}
-        {sectionViewType === 'axial-plan' &&
-          axialPlanHorizontalDimensions.map(dimension => {
+          })
+        : [];
+
+    const axialPlanHorizontalElements =
+      sectionViewType === 'axial-plan'
+        ? axialPlanHorizontalDimensions.map(dimension => {
             const tickHalf = 20;
             const x1 = Math.min(dimension.anchorX, dimension.targetX);
             const x2 = Math.max(dimension.anchorX, dimension.targetX);
@@ -1098,69 +1190,133 @@ const SectionView: React.FC = () => {
                 </text>
               </g>
             );
-          })}
-        {sectionViewType === 'axial-plan' && Array.from(planDimensionMap.entries()).map(([supportIndex, data]) => {
-          const { minX, maxX } = data;
+          })
+        : [];
 
-          if (!Number.isFinite(minX) || !Number.isFinite(maxX) || Math.abs(maxX - minX) < 1e-6) {
-            return null;
-          }
+    const axialPlanDimensionElements =
+      sectionViewType === 'axial-plan'
+        ? (() => {
+            const entries = Array.from(planDimensionMap.entries()).map(([supportIndex, data]) => ({
+              key: supportIndex,
+              ...data
+            }));
 
-          const dimensionY = data.isFrontRow
-            ? params.height + PLAN_DIMENSION_LINE_OFFSET_FRONT
-            : -PLAN_DIMENSION_LINE_OFFSET_BACK;
-          const labelY = data.isFrontRow
-            ? dimensionY + PLAN_DIMENSION_TEXT_OFFSET_FRONT
-            : dimensionY - PLAN_DIMENSION_TEXT_OFFSET_BACK;
-          const tickHalf = 20;
-          const dimensionText = Math.round(maxX - minX).toLocaleString();
+            const dimensionEntries: Array<{
+              key: React.Key;
+              minX: number;
+              maxX: number;
+              isFrontRow: boolean;
+            }> = [];
 
-          return (
-            <g key={`axial-plan-dimension-${supportIndex}`}>
-              <line
-                x1={minX}
-                y1={dimensionY}
-                x2={maxX}
-                y2={dimensionY}
-                stroke={SECTION_STROKE_COLOR}
-                strokeWidth="2"
-                strokeOpacity={1}
-                markerStart="url(#arrowhead-start)"
-                markerEnd="url(#arrowhead-end)"
-              />
-              <line
-                x1={minX}
-                y1={dimensionY - tickHalf}
-                x2={minX}
-                y2={dimensionY + tickHalf}
-                stroke={SECTION_STROKE_COLOR}
-                strokeWidth="2"
-                strokeOpacity={1}
-              />
-              <line
-                x1={maxX}
-                y1={dimensionY - tickHalf}
-                x2={maxX}
-                y2={dimensionY + tickHalf}
-                stroke={SECTION_STROKE_COLOR}
-                strokeWidth="2"
-                strokeOpacity={1}
-              />
-              <text
-                x={(minX + maxX) / 2}
-                y={labelY}
-                fill={SECTION_STROKE_COLOR}
-                fontSize={PLAN_DIMENSION_TEXT_FONT_SIZE}
-                fontWeight="bold"
-                textAnchor="middle"
-                dominantBaseline="middle"
-              >
-                {dimensionText}
-              </text>
-            </g>
-          );
-        })}
-        {sectionViewType === 'vertical-plan' && (['front', 'back'] as const).map(key => {
+            const frontEntries = entries.filter(entry => entry.isFrontRow);
+            const backEntries = entries.filter(entry => !entry.isFrontRow);
+
+            const addEntries = (
+              groupEntries: typeof entries,
+              grouped: boolean,
+              groupKey: string,
+              isFrontRow: boolean
+            ) => {
+              if (groupEntries.length === 0) {
+                return;
+              }
+
+              if (grouped) {
+                const minX = Math.min(...groupEntries.map(entry => entry.minX));
+                const maxX = Math.max(...groupEntries.map(entry => entry.maxX));
+
+                if (!Number.isFinite(minX) || !Number.isFinite(maxX) || Math.abs(maxX - minX) < 1e-6) {
+                  return;
+                }
+
+                dimensionEntries.push({
+                  key: groupKey,
+                  minX,
+                  maxX,
+                  isFrontRow
+                });
+              } else {
+                groupEntries.forEach(entry => {
+                  if (
+                    Number.isFinite(entry.minX) &&
+                    Number.isFinite(entry.maxX) &&
+                    Math.abs(entry.maxX - entry.minX) >= 1e-6
+                  ) {
+                    dimensionEntries.push({
+                      key: entry.key,
+                      minX: entry.minX,
+                      maxX: entry.maxX,
+                      isFrontRow
+                    });
+                  }
+                });
+              }
+            };
+
+            addEntries(frontEntries, isFrontSupportGroupEnabled, 'front-group', true);
+            addEntries(backEntries, isBackSupportGroupEnabled, 'back-group', false);
+
+            return dimensionEntries.map(entry => {
+              const dimensionY = entry.isFrontRow
+                ? params.height + PLAN_DIMENSION_LINE_OFFSET_FRONT
+                : -PLAN_DIMENSION_LINE_OFFSET_BACK;
+              const labelY = entry.isFrontRow
+                ? dimensionY + PLAN_DIMENSION_TEXT_OFFSET_FRONT
+                : dimensionY - PLAN_DIMENSION_TEXT_OFFSET_BACK;
+              const tickHalf = 20;
+              const dimensionText = Math.round(entry.maxX - entry.minX).toLocaleString();
+
+              return (
+                <g key={`axial-plan-dimension-${entry.key}`}>
+                  <line
+                    x1={entry.minX}
+                    y1={dimensionY}
+                    x2={entry.maxX}
+                    y2={dimensionY}
+                    stroke={SECTION_STROKE_COLOR}
+                    strokeWidth="2"
+                    strokeOpacity={1}
+                    markerStart="url(#arrowhead-start)"
+                    markerEnd="url(#arrowhead-end)"
+                  />
+                  <line
+                    x1={entry.minX}
+                    y1={dimensionY - tickHalf}
+                    x2={entry.minX}
+                    y2={dimensionY + tickHalf}
+                    stroke={SECTION_STROKE_COLOR}
+                    strokeWidth="2"
+                    strokeOpacity={1}
+                  />
+                  <line
+                    x1={entry.maxX}
+                    y1={dimensionY - tickHalf}
+                    x2={entry.maxX}
+                    y2={dimensionY + tickHalf}
+                    stroke={SECTION_STROKE_COLOR}
+                    strokeWidth="2"
+                    strokeOpacity={1}
+                  />
+                  <text
+                    x={(entry.minX + entry.maxX) / 2}
+                    y={labelY}
+                    fill={SECTION_STROKE_COLOR}
+                    fontSize={PLAN_DIMENSION_TEXT_FONT_SIZE}
+                    fontWeight="bold"
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                  >
+                    {dimensionText}
+                  </text>
+                </g>
+              );
+            });
+          })()
+        : [];
+
+    const verticalPlanDimensionElements =
+      sectionViewType === 'vertical-plan'
+        ? (['front', 'back'] as const).map(key => {
           const data = verticalPlanDimensionMap.get(key);
           if (!data || !Number.isFinite(data.minY) || !Number.isFinite(data.maxY) || Math.abs(data.maxY - data.minY) < 1e-6) {
             return null;
@@ -1216,9 +1372,12 @@ const SectionView: React.FC = () => {
               </text>
             </g>
           );
-        })}
-        {sectionViewType === 'vertical-plan' &&
-          verticalPlanAdditionalHorizontalDimensions.map(dimension => {
+        })
+        : [];
+
+    const verticalPlanAdditionalHorizontalElements =
+      sectionViewType === 'vertical-plan'
+        ? verticalPlanAdditionalHorizontalDimensions.map(dimension => {
             const tickHalf = 20;
             const x1 = Math.min(dimension.anchorX, dimension.targetX);
             const x2 = Math.max(dimension.anchorX, dimension.targetX);
@@ -1268,9 +1427,12 @@ const SectionView: React.FC = () => {
                 </text>
               </g>
             );
-          })}
-        {sectionViewType === 'vertical-plan' &&
-          verticalPlanAdditionalVerticalDimensions.map(dimension => {
+          })
+        : [];
+
+    const verticalPlanAdditionalVerticalElements =
+      sectionViewType === 'vertical-plan'
+        ? verticalPlanAdditionalVerticalDimensions.map(dimension => {
             const tickHalf = 20;
             const y1 = Math.min(dimension.anchorY, dimension.targetY);
             const y2 = Math.max(dimension.anchorY, dimension.targetY);
@@ -1321,10 +1483,33 @@ const SectionView: React.FC = () => {
                 </text>
               </g>
             );
-          })}
-      </g>
-    );
-  }, [customPoints, params.height, params.width, params.frontRowCount, params.backRowCount, sectionViewType]);
+          })
+        : [];
+
+    return {
+      anchorElements,
+      axialPlanVerticalElements,
+      axialPlanHorizontalElements,
+      axialPlanDimensionElements,
+      verticalPlanDimensionElements,
+      verticalPlanAdditionalHorizontalElements,
+      verticalPlanAdditionalVerticalElements
+    };
+  }, [
+    sectionViewType,
+    customPoints,
+    params.width,
+    params.height,
+    params.heightFront,
+    params.heightBack,
+    params.frontRowCount,
+    params.backRowCount,
+    params.hasStep,
+    params.stepValue,
+    isFrontSupportGroupEnabled,
+    isBackSupportGroupEnabled,
+    viewOptionVersion
+  ]);
 
   // 삽도 미리보기 옵션별 렌더링 (useMemo로 메모이제이션)
   // 교축(정면)에서 받침 중심 위치 및 앵커 렌더링
@@ -3667,11 +3852,25 @@ const calculateArcCenter = (
         {supportAndAnchorElements}
       </g>
     );
-  }, [sectionViewType, sectionPathData, customPoints, params.width, params.height]);
+  }, [
+    sectionViewType,
+    sectionPathData,
+    customPoints,
+    params.width,
+    params.height,
+    isFrontSupportGroupEnabled,
+    isBackSupportGroupEnabled,
+    viewOptionVersion
+  ]);
 
   const renderedSectionPreview = useMemo(() => {
     const viewType = sectionViewType;
-    if (viewType === 'axial-plan' || viewType === 'vertical-plan') {
+    if (
+      viewType === 'axial-plan' ||
+      viewType === 'vertical-plan' ||
+      viewType === 'flyout-front' ||
+      viewType === 'flyout-back'
+    ) {
       // 교축(평면)과 교직(평면): 동일한 구현 (외곽 형상과 받침, 앵커 형상 동일)
       return renderedAnchors;
     } else if (viewType === 'axial-front') {
@@ -3681,7 +3880,21 @@ const calculateArcCenter = (
       // 교직(정면): 받침 중심위치 렌더링
       return renderedVerticalFrontSupports;
     }
-  }, [sectionViewType, customPoints, params.width, params.height, params.heightFront, params.heightBack, params.frontRowCount, renderedAnchors, renderedSupportCenters, renderedVerticalFrontSupports]);
+  }, [
+    sectionViewType,
+    customPoints,
+    params.width,
+    params.height,
+    params.heightFront,
+    params.heightBack,
+    params.frontRowCount,
+    renderedAnchors,
+    renderedSupportCenters,
+    renderedVerticalFrontSupports,
+    isFrontSupportGroupEnabled,
+    isBackSupportGroupEnabled,
+    viewOptionVersion
+  ]);
 
   // 단면 뷰 렌더링 (코핑 형상 미리보기용)
   const sectionViewContent = useMemo(() => {
@@ -3763,7 +3976,10 @@ const calculateArcCenter = (
               <p className="text-gray-600">입력한 값에 따라 앵커 삽도를 생성합니다.</p>
             </div>
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => {
+                setSectionViewType('axial-plan');
+                setIsModalOpen(true);
+              }}
               disabled={params.width <= 0 || params.height <= 0}
               className="flex items-center px-4 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
@@ -3781,7 +3997,7 @@ const calculateArcCenter = (
                 <h2 className="text-xl font-semibold text-gray-900">코핑 제원</h2>
                 <div className="flex items-center gap-4">
                   <label className="text-sm font-medium text-gray-700">코핑 형상 미리보기</label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 justify-center">
                     <button
                       onClick={() => setCopingViewType('plan')}
                       className={`px-3 py-1 text-sm rounded-md transition-colors ${
@@ -4265,14 +4481,14 @@ const calculateArcCenter = (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={() => setIsModalOpen(false)}>
             <div className="bg-white rounded-lg shadow-xl max-w-[95vw] max-h-[95vh] w-full h-full flex flex-col" onClick={(e) => e.stopPropagation()}>
               {/* 모달 헤더 */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 gap-4">
                 <h2 className="text-2xl font-semibold text-gray-900 flex items-center">
                   <Eye className="w-6 h-6 mr-2 text-blue-600" />
                   삽도 미리보기
                 </h2>
-                <div className="flex items-center gap-3">
+                <div className="flex-1 flex justify-center">
                   {/* 옵션 버튼 */}
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 justify-center">
                     <button
                       onClick={() => setSectionViewType('axial-plan')}
                       className={`px-3 py-1 text-sm rounded-md transition-colors ${
@@ -4313,7 +4529,29 @@ const calculateArcCenter = (
                     >
                       교직(정면)
                     </button>
+                    <button
+                      onClick={() => setSectionViewType('flyout-front')}
+                      className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                        sectionViewType === 'flyout-front'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      프라이아웃(전열)
+                    </button>
+                    <button
+                      onClick={() => setSectionViewType('flyout-back')}
+                      className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                        sectionViewType === 'flyout-back'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      프라이아웃(후열)
+                    </button>
                   </div>
+                </div>
+                <div className="flex items-center gap-3">
                   {params.width > 0 && params.height > 0 && (
                     <button
                       onClick={handleDownload}
@@ -4409,20 +4647,59 @@ const calculateArcCenter = (
                   const isValid = adjustedViewBoxWidth > 0 && adjustedViewBoxHeight > 0;
 
                   return isValid ? (
-                    <div className="flex items-center justify-center min-h-full">
-                      <svg
-                        id="section-svg"
-                        viewBox={`${viewBoxX} ${viewBoxY} ${adjustedViewBoxWidth} ${adjustedViewBoxHeight}`}
-                        className="max-w-full max-h-[85vh]"
-                        style={{ 
-                          width: 'auto',
-                          height: 'auto',
-                          maxWidth: '100%',
-                          maxHeight: '85vh'
-                        }}
-                        preserveAspectRatio="xMidYMid meet"
-                        key={`svg-${adjustedViewBoxWidth}-${adjustedViewBoxHeight}-${customPoints.length}-${sectionViewType}`}
-                      >
+                    <div className="flex flex-row gap-6 min-h-full w-full items-stretch">
+                      <aside className="w-80 flex-shrink-0">
+                        <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 h-full">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">뷰 옵션</h3>
+                          {sectionViewType === 'axial-plan' && (
+                            <div className="space-y-6">
+                              <section>
+                                <h4 className="text-sm(font-semibold text-gray-800 mb-3">받침 그룹(전단 파괴면)</h4>
+                                <div className="space-y-2">
+                                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                                    <input
+                                      type="checkbox"
+                                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                      checked={isFrontSupportGroupEnabled}
+                                    onChange={(event) => {
+                                      setIsFrontSupportGroupEnabled(event.target.checked);
+                                      setViewOptionVersion(prev => prev + 1);
+                                    }}
+                                    />
+                                    전열 받침
+                                  </label>
+                                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                                    <input
+                                      type="checkbox"
+                                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                      checked={isBackSupportGroupEnabled}
+                                    onChange={(event) => {
+                                      setIsBackSupportGroupEnabled(event.target.checked);
+                                      setViewOptionVersion(prev => prev + 1);
+                                    }}
+                                    />
+                                    후열 받침
+                                  </label>
+                                </div>
+                              </section>
+                            </div>
+                          )}
+                        </div>
+                      </aside>
+                      <div className="flex-1 flex items-center justify-center">
+                        <svg
+                          id="section-svg"
+                          viewBox={`${viewBoxX} ${viewBoxY} ${adjustedViewBoxWidth} ${adjustedViewBoxHeight}`}
+                          className="max-w-full max-h-[85vh]"
+                          style={{ 
+                            width: 'auto',
+                            height: 'auto',
+                            maxWidth: '100%',
+                            maxHeight: '85vh'
+                          }}
+                          preserveAspectRatio="xMidYMid meet"
+                          key={`svg-${adjustedViewBoxWidth}-${adjustedViewBoxHeight}-${customPoints.length}-${sectionViewType}-${isFrontSupportGroupEnabled}-${isBackSupportGroupEnabled}-${viewOptionVersion}`}
+                        >
                         {/* 그리드 배경 */}
                         <defs>
                           <pattern
@@ -4469,7 +4746,7 @@ const calculateArcCenter = (
                         <rect width="100%" height="100%" fill="url(#grid)" />
 
                         {/* 삽도 경로 (평면 뷰만) */}
-                        {!isFrontView && (
+                {!isFrontView && sectionViewType !== 'flyout-front' && sectionViewType !== 'flyout-back' && (
                           <path
                             d={svgPath}
                             fill="white"
@@ -4481,6 +4758,23 @@ const calculateArcCenter = (
                             vectorEffect="non-scaling-stroke"
                           />
                         )}
+                {!isFrontView &&
+                  sectionViewType !== 'flyout-front' &&
+                  sectionViewType !== 'flyout-back' &&
+                  params.hasStep &&
+                  params.stepValue > 0 &&
+                  params.stepValue < params.height && (
+                  <line
+                    x1={0}
+                    y1={params.stepValue}
+                    x2={params.width}
+                    y2={params.stepValue}
+                    stroke="#888"
+                    strokeWidth={1}
+                    strokeDasharray="8 4"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                )}
 
                         {/* 정면 뷰용 삽도 경로 */}
                         {isFrontView && (
@@ -4647,8 +4941,18 @@ const calculateArcCenter = (
                         {/* 앵커 위치들 (옵션에 따라) */}
                         {renderedSectionPreview}
 
+                        {/* 교축(평면) 치수선 */}
+                        {sectionViewType === 'axial-plan' && axialPlanVerticalElements}
+                        {sectionViewType === 'axial-plan' && axialPlanHorizontalElements}
+                        {sectionViewType === 'axial-plan' && axialPlanDimensionElements}
+
+                        {/* 교직(평면) 치수선 */}
+                        {sectionViewType === 'vertical-plan' && verticalPlanDimensionElements}
+                        {sectionViewType === 'vertical-plan' && verticalPlanAdditionalHorizontalElements}
+                        {sectionViewType === 'vertical-plan' && verticalPlanAdditionalVerticalElements}
+
                         {/* 치수선 예시 (평면 뷰만) */}
-                        {!isFrontView && (
+                        {!isFrontView && sectionViewType !== 'flyout-front' && sectionViewType !== 'flyout-back' && (
                           <>
                             <line
                               x1="0"
@@ -4670,6 +4974,7 @@ const calculateArcCenter = (
                           </>
                         )}
                       </svg>
+                      </div>
                     </div>
                   ) : (
                     <div className="flex items-center justify-center h-full text-gray-400">
