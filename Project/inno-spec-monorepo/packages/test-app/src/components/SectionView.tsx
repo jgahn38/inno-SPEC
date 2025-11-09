@@ -79,6 +79,32 @@ const ANCHOR_FILL_COLOR = '#FF0000'; // 앵커 점은 빨간색
 const ANCHOR_STROKE_COLOR = '#FF0000';
 const MAIN_LINE_STROKE_WIDTH = "3"; // 메인 선의 굵기 (코핑 형상 미리보기와 삽도 미리보기 통일)
 
+// 교축(평면) 치수선 배치를 위한 상수
+const PLAN_DIMENSION_LINE_OFFSET_FRONT = 150;
+const PLAN_DIMENSION_TEXT_OFFSET_FRONT = 80;
+const PLAN_DIMENSION_LINE_OFFSET_BACK = 150;
+const PLAN_DIMENSION_TEXT_OFFSET_BACK = 80;
+const PLAN_DIMENSION_EXTRA_MARGIN = 100;
+const PLAN_DIMENSION_TEXT_FONT_SIZE = 100;
+const AXIAL_PLAN_HORIZONTAL_DIMENSION_TEXT_OFFSET_Y = 80;
+const AXIAL_PLAN_HORIZONTAL_DIMENSION_EXTRA_MARGIN = 100;
+const AXIAL_PLAN_HORIZONTAL_DIMENSION_TEXT_FONT_SIZE = 100;
+const AXIAL_PLAN_VERTICAL_DIMENSION_LINE_OFFSET_X = 150;
+const AXIAL_PLAN_VERTICAL_DIMENSION_TEXT_OFFSET_X = 80;
+const AXIAL_PLAN_VERTICAL_DIMENSION_EXTRA_MARGIN = 100;
+const AXIAL_PLAN_VERTICAL_DIMENSION_TEXT_FONT_SIZE = 100;
+const VERTICAL_PLAN_DIMENSION_LINE_OFFSET_FRONT_X = 150;
+const VERTICAL_PLAN_DIMENSION_LINE_OFFSET_BACK_X = 300;
+const VERTICAL_PLAN_DIMENSION_TEXT_OFFSET_X = 80;
+const VERTICAL_PLAN_DIMENSION_EXTRA_MARGIN = 100;
+const VERTICAL_PLAN_DIMENSION_TEXT_FONT_SIZE = 100;
+const VERTICAL_PLAN_HORIZONTAL_BOTTOM_OFFSET = 150;
+const VERTICAL_PLAN_HORIZONTAL_BOTTOM_TEXT_OFFSET = 80;
+const VERTICAL_PLAN_HORIZONTAL_TOP_OFFSET = 150;
+const VERTICAL_PLAN_HORIZONTAL_TOP_TEXT_OFFSET = 80;
+const VERTICAL_PLAN_HORIZONTAL_EXTRA_MARGIN = 100;
+const VERTICAL_PLAN_VERTICAL_TEXT_OFFSET_X = 100;
+
 // localStorage 키 상수
 const STORAGE_KEYS = {
   PARAMS: 'anchor-section-params',
@@ -365,6 +391,167 @@ const SectionView: React.FC = () => {
       pointId: string;
     }> = [];
     const planDimensionMap = new Map<number, { anchorY: number; isFrontRow: boolean; minX: number; maxX: number }>();
+    const axialPlanVerticalDimensions: Array<{
+      key: string;
+      lineX: number;
+      textX: number;
+      anchorY: number;
+      targetY: number;
+      length: number;
+    }> = [];
+    const axialPlanHorizontalDimensions: Array<{
+      key: string;
+      anchorX: number;
+      targetX: number;
+      lineY: number;
+      textPosition: 'above' | 'below';
+      length: number;
+    }> = [];
+    const verticalPlanAdditionalVerticalDimensions: Array<{
+      key: string;
+      lineX: number;
+      anchorY: number;
+      targetY: number;
+      textX: number;
+      length: number;
+    }> = [];
+    const verticalPlanAdditionalHorizontalDimensions: Array<{
+      key: string;
+      anchorX: number;
+      targetX: number;
+      lineY: number;
+      textY: number;
+      length: number;
+    }> = [];
+    const verticalPlanDimensionMap = new Map<'front' | 'back', { minY: number; maxY: number }>();
+    const updateVerticalDimension = (key: 'front' | 'back', y: number) => {
+      const entry = verticalPlanDimensionMap.get(key) ?? { minY: Infinity, maxY: -Infinity };
+      entry.minY = Math.min(entry.minY, y);
+      entry.maxY = Math.max(entry.maxY, y);
+      verticalPlanDimensionMap.set(key, entry);
+    };
+    const getDomainY = (anchor: { x: number; y: number; isFrontRow: boolean }) =>
+      params.height - anchor.y;
+    const selectAnchor = (
+      supportIndex: number | null,
+      domainPreference: 'max' | 'min',
+      xPreference: 'max' | 'min'
+    ) => {
+      if (supportIndex === null) {
+        return null;
+      }
+      const anchors = anchorPoints.filter(anchor => anchor.supportIndex === supportIndex);
+      if (anchors.length === 0) {
+        return null;
+      }
+      const domainValues = anchors.map(getDomainY);
+      const targetDomain =
+        domainPreference === 'max' ? Math.max(...domainValues) : Math.min(...domainValues);
+      const domainFiltered = anchors.filter(
+        anchor => Math.abs(getDomainY(anchor) - targetDomain) < 0.001
+      );
+      const xValues = domainFiltered.map(anchor => anchor.x);
+      const targetX =
+        xPreference === 'max' ? Math.max(...xValues) : Math.min(...xValues);
+      const xFiltered = domainFiltered.filter(anchor => Math.abs(anchor.x - targetX) < 0.001);
+      return xFiltered[0] ?? domainFiltered[0] ?? null;
+    };
+    const addVerticalDimension = (
+      key: string,
+      anchor: { x: number; y: number },
+      direction: 'up' | 'down',
+      side: 'left' | 'right'
+    ) => {
+      const targetY = direction === 'down' ? params.height : 0;
+      const length = Math.abs(targetY - anchor.y);
+      if (length <= 0.001) {
+        return;
+      }
+      const lineX =
+        side === 'left'
+          ? -AXIAL_PLAN_VERTICAL_DIMENSION_LINE_OFFSET_X
+          : params.width + AXIAL_PLAN_VERTICAL_DIMENSION_LINE_OFFSET_X;
+      const textX =
+        side === 'left'
+          ? -(AXIAL_PLAN_VERTICAL_DIMENSION_LINE_OFFSET_X + AXIAL_PLAN_VERTICAL_DIMENSION_TEXT_OFFSET_X)
+          : params.width +
+            AXIAL_PLAN_VERTICAL_DIMENSION_LINE_OFFSET_X +
+            AXIAL_PLAN_VERTICAL_DIMENSION_TEXT_OFFSET_X;
+      axialPlanVerticalDimensions.push({
+        key,
+        lineX,
+        textX,
+        anchorY: anchor.y,
+        targetY,
+        length
+      });
+    };
+    const addHorizontalDimension = (
+      key: string,
+      anchor: { x: number; y: number },
+      direction: 'left' | 'right',
+      textPosition: 'above' | 'below'
+    ) => {
+      const targetX = direction === 'left' ? 0 : params.width;
+      const length = Math.abs(targetX - anchor.x);
+      if (length <= 0.001) {
+        return;
+      }
+      axialPlanHorizontalDimensions.push({
+        key,
+        anchorX: anchor.x,
+        targetX,
+        lineY: anchor.y,
+        textPosition,
+        length
+      });
+    };
+    const addVerticalPlanVerticalDimension = (
+      key: string,
+      anchor: { x: number; y: number },
+      direction: 'up' | 'down'
+    ) => {
+      const targetY = direction === 'down' ? params.height : 0;
+      const length = Math.abs(targetY - anchor.y);
+      if (length <= 0.001) {
+        return;
+      }
+      verticalPlanAdditionalVerticalDimensions.push({
+        key,
+        lineX: anchor.x,
+        anchorY: anchor.y,
+        targetY,
+        textX: anchor.x + VERTICAL_PLAN_VERTICAL_TEXT_OFFSET_X,
+        length
+      });
+    };
+    const addVerticalPlanHorizontalDimension = (
+      key: string,
+      anchor: { x: number; y: number },
+      position: 'top' | 'bottom'
+    ) => {
+      const targetX = params.width;
+      const length = Math.abs(targetX - anchor.x);
+      if (length <= 0.001) {
+        return;
+      }
+      const lineY =
+        position === 'top'
+          ? -VERTICAL_PLAN_HORIZONTAL_TOP_OFFSET
+          : params.height + VERTICAL_PLAN_HORIZONTAL_BOTTOM_OFFSET;
+      const textY =
+        position === 'top'
+          ? lineY - VERTICAL_PLAN_HORIZONTAL_TOP_TEXT_OFFSET
+          : lineY + VERTICAL_PLAN_HORIZONTAL_BOTTOM_TEXT_OFFSET;
+      verticalPlanAdditionalHorizontalDimensions.push({
+        key,
+        anchorX: anchor.x,
+        targetX,
+        lineY,
+        textY,
+        length
+      });
+    };
 
     customPoints.forEach((point, index) => {
       const isFrontRow = index < params.frontRowCount;
@@ -433,24 +620,111 @@ const SectionView: React.FC = () => {
     const frontRowAnchors = anchorPoints.filter(a => a.isFrontRow);
     const backRowAnchors = anchorPoints.filter(a => !a.isFrontRow);
 
-    // 전열: Y 값이 가장 작은 앵커들 찾기 (교축방향으로 가장 위에 배치된 열)
-    const frontRowMinY = frontRowAnchors.length > 0 
-      ? Math.min(...frontRowAnchors.map(a => a.y))
-      : null;
-    const frontRowTopAnchors = frontRowMinY !== null
-      ? frontRowAnchors.filter(a => Math.abs(a.y - frontRowMinY) < 0.001) // Y 값이 같거나 거의 같은 앵커들
-      : [];
+    let anchorsToDrawLines: Array<typeof anchorPoints[number]> = [];
 
-    // 후열: Y 값이 가장 큰 앵커들 찾기 (교축방향으로 가장 아래에 배치된 열)
-    const backRowMaxY = backRowAnchors.length > 0
-      ? Math.max(...backRowAnchors.map(a => a.y))
-      : null;
-    const backRowBottomAnchors = backRowMaxY !== null
-      ? backRowAnchors.filter(a => Math.abs(a.y - backRowMaxY) < 0.001) // Y 값이 같거나 거의 같은 앵커들
-      : [];
+    if (sectionViewType === 'vertical-plan') {
+      const lastFrontSupportIndex = params.frontRowCount > 0 ? params.frontRowCount - 1 : null;
+      const lastBackSupportIndex =
+        params.backRowCount > 0 ? params.frontRowCount + params.backRowCount - 1 : null;
 
-    // 직선을 그릴 앵커만 선택
-    const anchorsToDrawLines = [...frontRowTopAnchors, ...backRowBottomAnchors];
+      const selectAnchorsForSupport = (supportIndex: number | null, targetAnchors: Array<typeof anchorPoints[number]>) => {
+        if (supportIndex === null) {
+          return [];
+        }
+        const supportAnchors = targetAnchors.filter(anchor => anchor.supportIndex === supportIndex);
+        if (supportAnchors.length === 0) {
+          return [];
+        }
+        const minX = Math.min(...supportAnchors.map(anchor => anchor.x));
+        return supportAnchors.filter(anchor => Math.abs(anchor.x - minX) < 0.001);
+      };
+
+      anchorsToDrawLines = [
+        ...selectAnchorsForSupport(lastFrontSupportIndex, frontRowAnchors),
+        ...selectAnchorsForSupport(lastBackSupportIndex, backRowAnchors)
+      ];
+    } else {
+      // 전열: Y 값이 가장 작은 앵커들 찾기 (교축방향으로 가장 위에 배치된 열)
+      const frontRowMinY = frontRowAnchors.length > 0 
+        ? Math.min(...frontRowAnchors.map(a => a.y))
+        : null;
+      const frontRowTopAnchors = frontRowMinY !== null
+        ? frontRowAnchors.filter(a => Math.abs(a.y - frontRowMinY) < 0.001) // Y 값이 같거나 거의 같은 앵커들
+        : [];
+
+      // 후열: Y 값이 가장 큰 앵커들 찾기 (교축방향으로 가장 아래에 배치된 열)
+      const backRowMaxY = backRowAnchors.length > 0
+        ? Math.max(...backRowAnchors.map(a => a.y))
+        : null;
+      const backRowBottomAnchors = backRowMaxY !== null
+        ? backRowAnchors.filter(a => Math.abs(a.y - backRowMaxY) < 0.001) // Y 값이 같거나 거의 같은 앵커들
+        : [];
+
+      anchorsToDrawLines = [...frontRowTopAnchors, ...backRowBottomAnchors];
+    }
+
+    if (sectionViewType === 'axial-plan') {
+      const frontFirstAnchor =
+        params.frontRowCount > 0
+          ? selectAnchor(0, 'max', 'min')
+          : null;
+      if (frontFirstAnchor) {
+        addVerticalDimension('front-first', frontFirstAnchor, 'down', 'left');
+        addHorizontalDimension('front-first', frontFirstAnchor, 'left', 'above');
+      }
+
+      const frontLastSupportIndex =
+        params.frontRowCount > 0 ? params.frontRowCount - 1 : null;
+      const frontLastAnchor = frontLastSupportIndex !== null
+        ? selectAnchor(frontLastSupportIndex, 'max', 'max')
+        : null;
+      if (frontLastAnchor) {
+        addVerticalDimension('front-last', frontLastAnchor, 'down', 'right');
+        addHorizontalDimension('front-last', frontLastAnchor, 'right', 'above');
+      }
+
+      const backFirstSupportIndex =
+        params.backRowCount > 0 ? params.frontRowCount : null;
+      const backFirstAnchor = backFirstSupportIndex !== null
+        ? selectAnchor(backFirstSupportIndex, 'min', 'min')
+        : null;
+      if (backFirstAnchor) {
+        addVerticalDimension('back-first', backFirstAnchor, 'up', 'left');
+        addHorizontalDimension('back-first', backFirstAnchor, 'left', 'below');
+      }
+
+      const backLastSupportIndex =
+        params.backRowCount > 0 ? params.frontRowCount + params.backRowCount - 1 : null;
+      const backLastAnchor = backLastSupportIndex !== null
+        ? selectAnchor(backLastSupportIndex, 'min', 'max')
+        : null;
+      if (backLastAnchor) {
+        addVerticalDimension('back-last', backLastAnchor, 'up', 'right');
+        addHorizontalDimension('back-last', backLastAnchor, 'right', 'below');
+      }
+    }
+
+    if (sectionViewType === 'vertical-plan') {
+      const frontLastSupportIndex =
+        params.frontRowCount > 0 ? params.frontRowCount - 1 : null;
+      const frontLastAnchor = frontLastSupportIndex !== null
+        ? selectAnchor(frontLastSupportIndex, 'min', 'min')
+        : null;
+      if (frontLastAnchor) {
+        addVerticalPlanHorizontalDimension('vertical-front-last-horizontal', frontLastAnchor, 'bottom');
+        addVerticalPlanVerticalDimension('vertical-front-last-vertical', frontLastAnchor, 'down');
+      }
+
+      const backLastSupportIndex =
+        params.backRowCount > 0 ? params.frontRowCount + params.backRowCount - 1 : null;
+      const backLastAnchor = backLastSupportIndex !== null
+        ? selectAnchor(backLastSupportIndex, 'max', 'min')
+        : null;
+      if (backLastAnchor) {
+        addVerticalPlanHorizontalDimension('vertical-back-last-horizontal', backLastAnchor, 'top');
+        addVerticalPlanVerticalDimension('vertical-back-last-vertical', backLastAnchor, 'up');
+      }
+    }
 
     return (
       <g key="anchor-points-group">
@@ -611,21 +885,35 @@ const SectionView: React.FC = () => {
 
           // 전열 받침의 앵커: (+X, -Y) 방향과 (-X, -Y) 방향으로 각각 1/1.5의 기울기
           // 후열 받침의 앵커: (+X, +Y) 방향과 (-X, +Y) 방향으로 각각 1/1.5의 기울기
-          const slope = 1 / 1.5; // 약 0.6667
+        const baseSlope = 1 / 1.5; // 약 0.6667
+        const adjustSlope = (value: number) => sectionViewType === 'vertical-plan' ? -1 / value : value;
           let line1: { x1: number; y1: number; x2: number; y2: number } | null = null;
           let line2: { x1: number; y1: number; x2: number; y2: number } | null = null;
 
-          if (anchor.isFrontRow) {
-            // 전열: (+X, -Y) 방향 (기울기 -1/1.5), (-X, -Y) 방향 (기울기 1/1.5)
-            // 전열은 +Y 방향 부분을 Trim (trimPositiveY = true)
-            line1 = getLineIntersection(-slope, anchor.x, anchor.y, true); // (+X, -Y)
-            line2 = getLineIntersection(slope, anchor.x, anchor.y, true);  // (-X, -Y)
-          } else {
-            // 후열: (+X, +Y) 방향 (기울기 1/1.5), (-X, +Y) 방향 (기울기 -1/1.5)
-            // 후열은 -Y 방향 부분을 Trim (trimPositiveY = false)
-            line1 = getLineIntersection(slope, anchor.x, anchor.y, false);   // (+X, +Y)
-            line2 = getLineIntersection(-slope, anchor.x, anchor.y, false);  // (-X, +Y)
+        const getTrimmedLine = (slope: number, trimPositiveY: boolean) => {
+          const initialLine = getLineIntersection(slope, anchor.x, anchor.y, trimPositiveY);
+          if (!initialLine || sectionViewType !== 'vertical-plan') {
+            return initialLine;
           }
+          const isLeftDirection = initialLine.x2 < anchor.x;
+          if (!isLeftDirection) {
+            return initialLine;
+          }
+          const adjustedLine = getLineIntersection(slope, anchor.x, anchor.y, !trimPositiveY);
+          return adjustedLine ?? initialLine;
+        };
+
+        if (anchor.isFrontRow) {
+          // 전열: (+X, -Y) 방향 (기울기 -1/1.5), (-X, -Y) 방향 (기울기 1/1.5)
+          // 전열은 +Y 방향 부분을 Trim (trimPositiveY = true)
+          line1 = getTrimmedLine(adjustSlope(-baseSlope), true); // (+X, -Y)
+          line2 = getTrimmedLine(adjustSlope(baseSlope), true);  // (-X, -Y)
+        } else {
+          // 후열: (+X, +Y) 방향 (기울기 1/1.5), (-X, +Y) 방향 (기울기 -1/1.5)
+          // 후열은 -Y 방향 부분을 Trim (trimPositiveY = false)
+          line1 = getTrimmedLine(adjustSlope(baseSlope), false);   // (+X, +Y)
+          line2 = getTrimmedLine(adjustSlope(-baseSlope), false);  // (-X, +Y)
+        }
 
           const groupElements: React.ReactNode[] = [];
 
@@ -646,24 +934,32 @@ const SectionView: React.FC = () => {
             );
           }
 
-          if (line2) {
-            groupElements.push(
-              <line
-                key={`anchor-line2-${idx}`}
-                x1={line2.x1}
-                y1={line2.y1}
-                x2={line2.x2}
-                y2={line2.y2}
-                stroke={ANCHOR_STROKE_COLOR}
-                strokeWidth="1"
-                strokeOpacity={0.5}
-                strokeDasharray="2,2"
-                vectorEffect="non-scaling-stroke"
-              />
-            );
-          }
+        if (line2) {
+          groupElements.push(
+            <line
+              key={`anchor-line2-${idx}`}
+              x1={line2.x1}
+              y1={line2.y1}
+              x2={line2.x2}
+              y2={line2.y2}
+              stroke={ANCHOR_STROKE_COLOR}
+              strokeWidth="1"
+              strokeOpacity={0.5}
+              strokeDasharray="2,2"
+              vectorEffect="non-scaling-stroke"
+            />
+          );
+        }
 
-          const intersectionXs: number[] = [];
+        if (sectionViewType === 'vertical-plan') {
+          const dimensionKey = anchor.isFrontRow ? 'front' : 'back';
+          if (line1) {
+            updateVerticalDimension(dimensionKey, line1.y2);
+          }
+          if (line2) {
+            updateVerticalDimension(dimensionKey, line2.y2);
+          }
+        }
 
           if (sectionViewType === 'axial-plan') {
             if (!planDimensionMap.has(anchor.supportIndex)) {
@@ -693,6 +989,116 @@ const SectionView: React.FC = () => {
             </g>
           );
         })}
+        {sectionViewType === 'axial-plan' &&
+          axialPlanVerticalDimensions.map(dimension => {
+            const tickHalf = 20;
+            const y1 = Math.min(dimension.anchorY, dimension.targetY);
+            const y2 = Math.max(dimension.anchorY, dimension.targetY);
+            const label = Math.round(dimension.length).toLocaleString();
+
+            return (
+              <g key={`axial-plan-vertical-dimension-${dimension.key}`}>
+                <line
+                  x1={dimension.lineX}
+                  y1={y1}
+                  x2={dimension.lineX}
+                  y2={y2}
+                  stroke={SECTION_STROKE_COLOR}
+                  strokeWidth="2"
+                  strokeOpacity={1}
+                  markerStart="url(#arrowhead-start)"
+                  markerEnd="url(#arrowhead-end)"
+                />
+                <line
+                  x1={dimension.lineX - tickHalf}
+                  y1={dimension.anchorY}
+                  x2={dimension.lineX + tickHalf}
+                  y2={dimension.anchorY}
+                  stroke={SECTION_STROKE_COLOR}
+                  strokeWidth="2"
+                  strokeOpacity={1}
+                />
+                <line
+                  x1={dimension.lineX - tickHalf}
+                  y1={dimension.targetY}
+                  x2={dimension.lineX + tickHalf}
+                  y2={dimension.targetY}
+                  stroke={SECTION_STROKE_COLOR}
+                  strokeWidth="2"
+                  strokeOpacity={1}
+                />
+                <text
+                  x={0}
+                  y={0}
+                  transform={`translate(${dimension.textX}, ${(dimension.anchorY + dimension.targetY) / 2}) rotate(-90)`}
+                  fill={SECTION_STROKE_COLOR}
+                  fontSize={AXIAL_PLAN_VERTICAL_DIMENSION_TEXT_FONT_SIZE}
+                  fontWeight="bold"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                >
+                  {label}
+                </text>
+              </g>
+            );
+          })}
+        {sectionViewType === 'axial-plan' &&
+          axialPlanHorizontalDimensions.map(dimension => {
+            const tickHalf = 20;
+            const x1 = Math.min(dimension.anchorX, dimension.targetX);
+            const x2 = Math.max(dimension.anchorX, dimension.targetX);
+            const label = Math.round(dimension.length).toLocaleString();
+            const textY =
+              dimension.lineY +
+              (dimension.textPosition === 'above'
+                ? -AXIAL_PLAN_HORIZONTAL_DIMENSION_TEXT_OFFSET_Y
+                : AXIAL_PLAN_HORIZONTAL_DIMENSION_TEXT_OFFSET_Y);
+
+            return (
+              <g key={`axial-plan-horizontal-dimension-${dimension.key}`}>
+                <line
+                  x1={x1}
+                  y1={dimension.lineY}
+                  x2={x2}
+                  y2={dimension.lineY}
+                  stroke={SECTION_STROKE_COLOR}
+                  strokeWidth="2"
+                  strokeOpacity={1}
+                  markerStart="url(#arrowhead-start)"
+                  markerEnd="url(#arrowhead-end)"
+                />
+                <line
+                  x1={dimension.anchorX}
+                  y1={dimension.lineY - tickHalf}
+                  x2={dimension.anchorX}
+                  y2={dimension.lineY + tickHalf}
+                  stroke={SECTION_STROKE_COLOR}
+                  strokeWidth="2"
+                  strokeOpacity={1}
+                />
+                <line
+                  x1={dimension.targetX}
+                  y1={dimension.lineY - tickHalf}
+                  x2={dimension.targetX}
+                  y2={dimension.lineY + tickHalf}
+                  stroke={SECTION_STROKE_COLOR}
+                  strokeWidth="2"
+                  strokeOpacity={1}
+                />
+                <text
+                  x={(dimension.anchorX + dimension.targetX) / 2}
+                  y={textY}
+                  fill={SECTION_STROKE_COLOR}
+                  fontSize={AXIAL_PLAN_HORIZONTAL_DIMENSION_TEXT_FONT_SIZE}
+                  fontWeight="bold"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                >
+                  {label}
+                </text>
+              </g>
+            );
+          })}
         {sectionViewType === 'axial-plan' && Array.from(planDimensionMap.entries()).map(([supportIndex, data]) => {
           const { minX, maxX } = data;
 
@@ -700,8 +1106,12 @@ const SectionView: React.FC = () => {
             return null;
           }
 
-          const dimensionY = data.isFrontRow ? data.anchorY - 150 : data.anchorY + 150;
-          const labelY = data.isFrontRow ? dimensionY - 80 : dimensionY + 80;
+          const dimensionY = data.isFrontRow
+            ? params.height + PLAN_DIMENSION_LINE_OFFSET_FRONT
+            : -PLAN_DIMENSION_LINE_OFFSET_BACK;
+          const labelY = data.isFrontRow
+            ? dimensionY + PLAN_DIMENSION_TEXT_OFFSET_FRONT
+            : dimensionY - PLAN_DIMENSION_TEXT_OFFSET_BACK;
           const tickHalf = 20;
           const dimensionText = Math.round(maxX - minX).toLocaleString();
 
@@ -740,7 +1150,7 @@ const SectionView: React.FC = () => {
                 x={(minX + maxX) / 2}
                 y={labelY}
                 fill={SECTION_STROKE_COLOR}
-                fontSize="60"
+                fontSize={PLAN_DIMENSION_TEXT_FONT_SIZE}
                 fontWeight="bold"
                 textAnchor="middle"
                 dominantBaseline="middle"
@@ -750,9 +1160,171 @@ const SectionView: React.FC = () => {
             </g>
           );
         })}
+        {sectionViewType === 'vertical-plan' && (['front', 'back'] as const).map(key => {
+          const data = verticalPlanDimensionMap.get(key);
+          if (!data || !Number.isFinite(data.minY) || !Number.isFinite(data.maxY) || Math.abs(data.maxY - data.minY) < 1e-6) {
+            return null;
+          }
+
+          const lineX = params.width + VERTICAL_PLAN_DIMENSION_LINE_OFFSET_FRONT_X;
+          const textX = lineX + VERTICAL_PLAN_DIMENSION_TEXT_OFFSET_X;
+          const tickHalf = 20;
+          const dimensionText = Math.round(data.maxY - data.minY).toLocaleString();
+
+          return (
+            <g key={`vertical-plan-dimension-${key}`}>
+              <line
+                x1={lineX}
+                y1={data.minY}
+                x2={lineX}
+                y2={data.maxY}
+                stroke={SECTION_STROKE_COLOR}
+                strokeWidth="2"
+                strokeOpacity={1}
+                markerStart="url(#arrowhead-start)"
+                markerEnd="url(#arrowhead-end)"
+              />
+              <line
+                x1={lineX - tickHalf}
+                y1={data.minY}
+                x2={lineX + tickHalf}
+                y2={data.minY}
+                stroke={SECTION_STROKE_COLOR}
+                strokeWidth="2"
+                strokeOpacity={1}
+              />
+              <line
+                x1={lineX - tickHalf}
+                y1={data.maxY}
+                x2={lineX + tickHalf}
+                y2={data.maxY}
+                stroke={SECTION_STROKE_COLOR}
+                strokeWidth="2"
+                strokeOpacity={1}
+              />
+              <text
+                x={0}
+                y={0}
+                transform={`translate(${textX}, ${(data.minY + data.maxY) / 2}) rotate(-90)`}
+                fill={SECTION_STROKE_COLOR}
+                fontSize={VERTICAL_PLAN_DIMENSION_TEXT_FONT_SIZE}
+                fontWeight="bold"
+                textAnchor="middle"
+                dominantBaseline="middle"
+              >
+                {dimensionText}
+              </text>
+            </g>
+          );
+        })}
+        {sectionViewType === 'vertical-plan' &&
+          verticalPlanAdditionalHorizontalDimensions.map(dimension => {
+            const tickHalf = 20;
+            const x1 = Math.min(dimension.anchorX, dimension.targetX);
+            const x2 = Math.max(dimension.anchorX, dimension.targetX);
+            const label = Math.round(dimension.length).toLocaleString();
+
+            return (
+              <g key={`vertical-plan-horizontal-dimension-${dimension.key}`}>
+                <line
+                  x1={x1}
+                  y1={dimension.lineY}
+                  x2={x2}
+                  y2={dimension.lineY}
+                  stroke={SECTION_STROKE_COLOR}
+                  strokeWidth="2"
+                  strokeOpacity={1}
+                  markerStart="url(#arrowhead-start)"
+                  markerEnd="url(#arrowhead-end)"
+                />
+                <line
+                  x1={dimension.anchorX}
+                  y1={dimension.lineY - tickHalf}
+                  x2={dimension.anchorX}
+                  y2={dimension.lineY + tickHalf}
+                  stroke={SECTION_STROKE_COLOR}
+                  strokeWidth="2"
+                  strokeOpacity={1}
+                />
+                <line
+                  x1={dimension.targetX}
+                  y1={dimension.lineY - tickHalf}
+                  x2={dimension.targetX}
+                  y2={dimension.lineY + tickHalf}
+                  stroke={SECTION_STROKE_COLOR}
+                  strokeWidth="2"
+                  strokeOpacity={1}
+                />
+                <text
+                  x={(dimension.anchorX + dimension.targetX) / 2}
+                  y={dimension.textY}
+                  fill={SECTION_STROKE_COLOR}
+                  fontSize={VERTICAL_PLAN_DIMENSION_TEXT_FONT_SIZE}
+                  fontWeight="bold"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                >
+                  {label}
+                </text>
+              </g>
+            );
+          })}
+        {sectionViewType === 'vertical-plan' &&
+          verticalPlanAdditionalVerticalDimensions.map(dimension => {
+            const tickHalf = 20;
+            const y1 = Math.min(dimension.anchorY, dimension.targetY);
+            const y2 = Math.max(dimension.anchorY, dimension.targetY);
+            const label = Math.round(dimension.length).toLocaleString();
+
+            return (
+              <g key={`vertical-plan-vertical-dimension-${dimension.key}`}>
+                <line
+                  x1={dimension.lineX}
+                  y1={y1}
+                  x2={dimension.lineX}
+                  y2={y2}
+                  stroke={SECTION_STROKE_COLOR}
+                  strokeWidth="2"
+                  strokeOpacity={1}
+                  markerStart="url(#arrowhead-start)"
+                  markerEnd="url(#arrowhead-end)"
+                />
+                <line
+                  x1={dimension.lineX - tickHalf}
+                  y1={dimension.anchorY}
+                  x2={dimension.lineX + tickHalf}
+                  y2={dimension.anchorY}
+                  stroke={SECTION_STROKE_COLOR}
+                  strokeWidth="2"
+                  strokeOpacity={1}
+                />
+                <line
+                  x1={dimension.lineX - tickHalf}
+                  y1={dimension.targetY}
+                  x2={dimension.lineX + tickHalf}
+                  y2={dimension.targetY}
+                  stroke={SECTION_STROKE_COLOR}
+                  strokeWidth="2"
+                  strokeOpacity={1}
+                />
+                <text
+                  x={0}
+                  y={0}
+                  transform={`translate(${dimension.textX}, ${(dimension.anchorY + dimension.targetY) / 2}) rotate(-90)`}
+                  fill={SECTION_STROKE_COLOR}
+                  fontSize={VERTICAL_PLAN_DIMENSION_TEXT_FONT_SIZE}
+                  fontWeight="bold"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                >
+                  {label}
+                </text>
+              </g>
+            );
+          })}
       </g>
     );
-  }, [customPoints, params.height, params.width, params.frontRowCount, sectionViewType]);
+  }, [customPoints, params.height, params.width, params.frontRowCount, params.backRowCount, sectionViewType]);
 
   // 삽도 미리보기 옵션별 렌더링 (useMemo로 메모이제이션)
   // 교축(정면)에서 받침 중심 위치 및 앵커 렌더링
@@ -3801,6 +4373,37 @@ const calculateArcCenter = (
                     adjustedViewBoxHeight = viewBoxHeight + padding + bottomPadding;
                     viewBoxX = -leftPadding; // viewBox 시작점을 왼쪽으로 이동
                     adjustedViewBoxWidth = params.height + leftPadding + rightPadding;
+                  } else if (sectionViewType === 'vertical-plan') {
+                    const rightPadding =
+                      VERTICAL_PLAN_DIMENSION_LINE_OFFSET_BACK_X +
+                      VERTICAL_PLAN_DIMENSION_TEXT_OFFSET_X +
+                      VERTICAL_PLAN_DIMENSION_EXTRA_MARGIN;
+                    const topPadding =
+                      VERTICAL_PLAN_HORIZONTAL_TOP_OFFSET +
+                      VERTICAL_PLAN_HORIZONTAL_TOP_TEXT_OFFSET +
+                      VERTICAL_PLAN_HORIZONTAL_EXTRA_MARGIN;
+                    const bottomPadding =
+                      VERTICAL_PLAN_HORIZONTAL_BOTTOM_OFFSET +
+                      VERTICAL_PLAN_HORIZONTAL_BOTTOM_TEXT_OFFSET +
+                      VERTICAL_PLAN_HORIZONTAL_EXTRA_MARGIN;
+                    adjustedViewBoxHeight = viewBoxHeight + topPadding + bottomPadding;
+                    adjustedViewBoxWidth = params.width + rightPadding;
+                    viewBoxY = -topPadding;
+                  } else if (sectionViewType === 'axial-plan') {
+                    const topPadding = Math.max(
+                      PLAN_DIMENSION_LINE_OFFSET_BACK + PLAN_DIMENSION_TEXT_OFFSET_BACK + PLAN_DIMENSION_EXTRA_MARGIN,
+                      AXIAL_PLAN_HORIZONTAL_DIMENSION_TEXT_OFFSET_Y + AXIAL_PLAN_HORIZONTAL_DIMENSION_EXTRA_MARGIN
+                    );
+                    const bottomPadding =
+                      PLAN_DIMENSION_LINE_OFFSET_FRONT + PLAN_DIMENSION_TEXT_OFFSET_FRONT + PLAN_DIMENSION_EXTRA_MARGIN;
+                    const sidePadding =
+                      AXIAL_PLAN_VERTICAL_DIMENSION_LINE_OFFSET_X +
+                      AXIAL_PLAN_VERTICAL_DIMENSION_TEXT_OFFSET_X +
+                      AXIAL_PLAN_VERTICAL_DIMENSION_EXTRA_MARGIN;
+                    viewBoxX = -sidePadding;
+                    viewBoxY = -topPadding;
+                    adjustedViewBoxHeight = viewBoxHeight + topPadding + bottomPadding;
+                    adjustedViewBoxWidth = params.width + sidePadding * 2;
                   }
                   
                   const isValid = adjustedViewBoxWidth > 0 && adjustedViewBoxHeight > 0;
