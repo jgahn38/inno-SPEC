@@ -21,7 +21,10 @@ interface Point {
   anchorRowCountVertical: number; // 앵커열 개수(교직)
   anchorGapAxial: number; // 앵커간격(교축) (mm)
   anchorGapVertical: number; // 앵커간격(교직) (mm)
+  effectiveEmbedLength: number; // 유효 묻힘길이 (mm)
 }
+
+type PointWithIndex = { point: Point; originalIndex: number };
 
 type NumericInputProps = {
   inputKey: string;
@@ -157,7 +160,16 @@ const SectionView: React.FC = () => {
 
   // 초기 상태 로드
   const [params, setParams] = useState<SectionParams>(() => loadFromStorage(STORAGE_KEYS.PARAMS, DEFAULT_PARAMS));
-  const [customPoints, setCustomPoints] = useState<Point[]>(() => loadFromStorage(STORAGE_KEYS.CUSTOM_POINTS, []));
+  const [customPoints, setCustomPoints] = useState<Point[]>(() => {
+    const stored = loadFromStorage<Point[]>(STORAGE_KEYS.CUSTOM_POINTS, []);
+    if (!Array.isArray(stored)) {
+      return [];
+    }
+    return stored.map(point => ({
+      ...point,
+      effectiveEmbedLength: point?.effectiveEmbedLength ?? 0
+    }));
+  });
   const [sectionPoints, setSectionPoints] = useState<Array<{ id: string; x: number; y: number; r: number }>>(() => 
     loadFromStorage(STORAGE_KEYS.SECTION_POINTS, [])
   );
@@ -190,7 +202,17 @@ const SectionView: React.FC = () => {
   const [pendingInputs, setPendingInputs] = useState<Record<string, string>>({});
 const [isFrontSupportGroupEnabled, setIsFrontSupportGroupEnabled] = useState<boolean>(false);
 const [isBackSupportGroupEnabled, setIsBackSupportGroupEnabled] = useState<boolean>(false);
+const [isVerticalSupportCombinedEnabled, setIsVerticalSupportCombinedEnabled] = useState<boolean>(false);
 const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
+const [isFrontDimensionVisible, setIsFrontDimensionVisible] = useState<boolean>(true);
+const [isBackDimensionVisible, setIsBackDimensionVisible] = useState<boolean>(true);
+const [isAxialFrontFrontDimensionVisible, setIsAxialFrontFrontDimensionVisible] = useState<boolean>(true);
+const [isAxialFrontBackDimensionVisible, setIsAxialFrontBackDimensionVisible] = useState<boolean>(true);
+const [isVerticalPlanFrontDimensionVisible, setIsVerticalPlanFrontDimensionVisible] = useState<boolean>(true);
+const [isVerticalPlanBackDimensionVisible, setIsVerticalPlanBackDimensionVisible] = useState<boolean>(true);
+const [isVerticalFrontFrontDimensionVisible, setIsVerticalFrontFrontDimensionVisible] = useState<boolean>(true);
+const [isVerticalFrontBackDimensionVisible, setIsVerticalFrontBackDimensionVisible] = useState<boolean>(true);
+const [selectedFlyoutSupportIndex, setSelectedFlyoutSupportIndex] = useState<number>(0);
 
   const isIntermediateNumericValue = useCallback((value: string) => {
     return value === '' || value === '-' || value === '.' || value === '-.';
@@ -271,6 +293,69 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
     []
   );
 
+const flyoutSupportOptions = useMemo(() => {
+  const frontCount = Math.min(
+    Math.max(params.frontRowCount, 0),
+    customPoints.length
+  );
+  const backCount = Math.min(
+    Math.max(params.backRowCount, 0),
+    Math.max(customPoints.length - frontCount, 0)
+  );
+  const options: Array<{ value: number; label: string }> = [];
+  for (let i = 0; i < frontCount; i += 1) {
+    options.push({
+      value: i,
+      label: `받침-${i + 1}(전열)`
+    });
+  }
+  for (let j = 0; j < backCount; j += 1) {
+    const globalIndex = frontCount + j;
+    options.push({
+      value: globalIndex,
+      label: `받침-${globalIndex + 1}(후열)`
+    });
+  }
+  return options;
+}, [customPoints, params.frontRowCount, params.backRowCount]);
+
+const selectedFlyoutSupport = useMemo<PointWithIndex | null>(() => {
+  const options = flyoutSupportOptions;
+  if (options.length === 0) {
+    return null;
+  }
+  const clampedIndex = Math.min(
+    Math.max(selectedFlyoutSupportIndex, 0),
+    options.length - 1
+  );
+  const point = customPoints[clampedIndex];
+  return point
+    ? { point, originalIndex: clampedIndex }
+    : null;
+}, [flyoutSupportOptions, customPoints, selectedFlyoutSupportIndex]);
+
+const flyoutInterferenceStatus = useMemo(() => {
+  if (!selectedFlyoutSupport) {
+    return {
+      axial: '',
+      vertical: ''
+    };
+  }
+  const { point } = selectedFlyoutSupport;
+  const effectiveEmbed = Number(point.effectiveEmbedLength ?? 0);
+  const axialGap = Number(point.anchorGapAxial ?? 0);
+  const verticalGap = Number(point.anchorGapVertical ?? 0);
+  const threshold = effectiveEmbed * 3; // 2 * 1.5 * 유효 묻힘길이
+
+  const computeStatus = (gap: number) =>
+    gap > threshold ? '간섭 미발생' : '간섭 발생';
+
+  return {
+    axial: computeStatus(axialGap),
+    vertical: computeStatus(verticalGap)
+  };
+}, [selectedFlyoutSupport]);
+
   // params 변경 시 localStorage에 저장
   useEffect(() => {
     saveToStorage(STORAGE_KEYS.PARAMS, params);
@@ -310,6 +395,41 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
   useEffect(() => {
     saveToStorage(STORAGE_KEYS.SECTION_POINT_COUNT_BACK, sectionPointCountBack);
   }, [sectionPointCountBack]);
+
+useEffect(() => {
+  if (sectionViewType === 'flyout-back') {
+    const frontCount = Math.min(
+      Math.max(params.frontRowCount, 0),
+      customPoints.length
+    );
+    const backCount = Math.min(
+      Math.max(params.backRowCount, 0),
+      Math.max(customPoints.length - frontCount, 0)
+    );
+    const fallbackIndex = backCount > 0 ? frontCount : 0;
+    setSectionViewType('flyout-front');
+    if (backCount > 0) {
+      setSelectedFlyoutSupportIndex(fallbackIndex);
+    }
+    setViewOptionVersion(prev => prev + 1);
+  }
+}, [sectionViewType, params.frontRowCount, params.backRowCount, customPoints.length]);
+
+useEffect(() => {
+  if (flyoutSupportOptions.length === 0) {
+    setSelectedFlyoutSupportIndex(0);
+    return;
+  }
+  setSelectedFlyoutSupportIndex(prev => {
+    if (prev < 0) {
+      return 0;
+    }
+    if (prev >= flyoutSupportOptions.length) {
+      return flyoutSupportOptions.length - 1;
+    }
+    return prev;
+  });
+}, [flyoutSupportOptions.length]);
 
   // copingViewType 변경 시 localStorage에 저장
   useEffect(() => {
@@ -365,6 +485,14 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.width, params.height, params.frontRowCount, params.backRowCount, customPoints]);
+
+  // 단차 위치가 On이면 교직(평면) 전열+후열 옵션 비활성화 및 Off 유지
+  useEffect(() => {
+    if (params.hasStep && isVerticalSupportCombinedEnabled) {
+      setIsVerticalSupportCombinedEnabled(false);
+      setViewOptionVersion(prev => prev + 1);
+    }
+  }, [params.hasStep, isVerticalSupportCombinedEnabled]);
 
   // 점들을 메모이제이션하여 색상이 유지되도록 (받침 중심 점은 렌더링하지 않음)
   const renderedPoints = useMemo(() => {
@@ -575,21 +703,10 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
     type PointWithIndex = { point: (typeof customPoints)[number]; originalIndex: number };
     const pointsForRendering: PointWithIndex[] = (() => {
       if (sectionViewType === 'flyout-front') {
-        if (params.frontRowCount <= 0) {
-          return [] as PointWithIndex[];
-        }
-        const index = Math.min(Math.max(params.frontRowCount - 1, 0), customPoints.length - 1);
-        return index >= 0 ? [{ point: customPoints[index], originalIndex: index }] : [];
+        return selectedFlyoutSupport ? [selectedFlyoutSupport] : [];
       }
       if (sectionViewType === 'flyout-back') {
-        if (params.backRowCount <= 0) {
-          return [] as PointWithIndex[];
-        }
-        const index = params.frontRowCount + params.backRowCount - 1;
-        if (index < 0 || index >= customPoints.length) {
-          return [] as PointWithIndex[];
-        }
-        return [{ point: customPoints[index], originalIndex: index }];
+        return selectedFlyoutSupport ? [selectedFlyoutSupport] : [];
       }
       return customPoints.map((point, originalIndex) => ({ point, originalIndex }));
     })();
@@ -736,6 +853,12 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
       anchorsToDrawLines = [...frontRowTopAnchors, ...backRowBottomAnchors];
     }
 
+    if (sectionViewType === 'vertical-plan') {
+      anchorsToDrawLines = anchorsToDrawLines.filter(anchor =>
+        anchor.isFrontRow ? isVerticalPlanFrontDimensionVisible : isVerticalPlanBackDimensionVisible
+      );
+    }
+
     if (sectionViewType === 'axial-plan') {
       const frontFirstAnchor =
         params.frontRowCount > 0
@@ -872,7 +995,11 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
           </g>
         ))}
 
-        {anchorsToDrawLines.map((anchor, idx) => {
+        {anchorsToDrawLines
+          .filter(anchor => {
+            return anchor.isFrontRow ? isFrontDimensionVisible : isBackDimensionVisible;
+          })
+          .map((anchor, idx) => {
           // 사각형 경계
           const rectLeft = 0;
           const rectRight = params.width;
@@ -1080,6 +1207,10 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
     const axialPlanVerticalElements =
       sectionViewType === 'axial-plan'
         ? axialPlanVerticalDimensions.map(dimension => {
+            const isFrontEntry = dimension.key.startsWith('front-');
+            if ((isFrontEntry && !isFrontDimensionVisible) || (!isFrontEntry && !isBackDimensionVisible)) {
+              return null;
+            }
             const tickHalf = 20;
             const y1 = Math.min(dimension.anchorY, dimension.targetY);
             const y2 = Math.max(dimension.anchorY, dimension.targetY);
@@ -1136,6 +1267,10 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
     const axialPlanHorizontalElements =
       sectionViewType === 'axial-plan'
         ? axialPlanHorizontalDimensions.map(dimension => {
+            const isFrontEntry = dimension.key.startsWith('front-');
+            if ((isFrontEntry && !isFrontDimensionVisible) || (!isFrontEntry && !isBackDimensionVisible)) {
+              return null;
+            }
             const tickHalf = 20;
             const x1 = Math.min(dimension.anchorX, dimension.targetX);
             const x2 = Math.max(dimension.anchorX, dimension.targetX);
@@ -1256,7 +1391,11 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
             addEntries(frontEntries, isFrontSupportGroupEnabled, 'front-group', true);
             addEntries(backEntries, isBackSupportGroupEnabled, 'back-group', false);
 
-            return dimensionEntries.map(entry => {
+            const filteredEntries = dimensionEntries.filter(entry =>
+              entry.isFrontRow ? isFrontDimensionVisible : isBackDimensionVisible
+            );
+
+            return filteredEntries.map(entry => {
               const dimensionY = entry.isFrontRow
                 ? params.height + PLAN_DIMENSION_LINE_OFFSET_FRONT
                 : -PLAN_DIMENSION_LINE_OFFSET_BACK;
@@ -1316,68 +1455,133 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
 
     const verticalPlanDimensionElements =
       sectionViewType === 'vertical-plan'
-        ? (['front', 'back'] as const).map(key => {
-          const data = verticalPlanDimensionMap.get(key);
-          if (!data || !Number.isFinite(data.minY) || !Number.isFinite(data.maxY) || Math.abs(data.maxY - data.minY) < 1e-6) {
-            return null;
-          }
+        ? (() => {
+            const baseEntries = (['front', 'back'] as const)
+              .map(key => {
+                const data = verticalPlanDimensionMap.get(key);
+                if (
+                  !data ||
+                  !Number.isFinite(data.minY) ||
+                  !Number.isFinite(data.maxY) ||
+                  Math.abs(data.maxY - data.minY) < 1e-6
+                ) {
+                  return null;
+                }
+                return { key, minY: data.minY, maxY: data.maxY };
+              })
+              .filter((entry): entry is { key: 'front' | 'back'; minY: number; maxY: number } => entry !== null);
 
-          const lineX = params.width + VERTICAL_PLAN_DIMENSION_LINE_OFFSET_FRONT_X;
-          const textX = lineX + VERTICAL_PLAN_DIMENSION_TEXT_OFFSET_X;
-          const tickHalf = 20;
-          const dimensionText = Math.round(data.maxY - data.minY).toLocaleString();
+            if (baseEntries.length === 0) {
+              return [];
+            }
 
-          return (
-            <g key={`vertical-plan-dimension-${key}`}>
-              <line
-                x1={lineX}
-                y1={data.minY}
-                x2={lineX}
-                y2={data.maxY}
-                stroke={SECTION_STROKE_COLOR}
-                strokeWidth="2"
-                strokeOpacity={1}
-                markerStart="url(#arrowhead-start)"
-                markerEnd="url(#arrowhead-end)"
-              />
-              <line
-                x1={lineX - tickHalf}
-                y1={data.minY}
-                x2={lineX + tickHalf}
-                y2={data.minY}
-                stroke={SECTION_STROKE_COLOR}
-                strokeWidth="2"
-                strokeOpacity={1}
-              />
-              <line
-                x1={lineX - tickHalf}
-                y1={data.maxY}
-                x2={lineX + tickHalf}
-                y2={data.maxY}
-                stroke={SECTION_STROKE_COLOR}
-                strokeWidth="2"
-                strokeOpacity={1}
-              />
-              <text
-                x={0}
-                y={0}
-                transform={`translate(${textX}, ${(data.minY + data.maxY) / 2}) rotate(-90)`}
-                fill={SECTION_STROKE_COLOR}
-                fontSize={VERTICAL_PLAN_DIMENSION_TEXT_FONT_SIZE}
-                fontWeight="bold"
-                textAnchor="middle"
-                dominantBaseline="middle"
-              >
-                {dimensionText}
-              </text>
-            </g>
-          );
-        })
+            const dimensionEntries: Array<{ key: React.Key; minY: number; maxY: number }> = [];
+
+            if (isVerticalSupportCombinedEnabled) {
+              const combinedMinY = Math.min(...baseEntries.map(entry => entry.minY));
+              const combinedMaxY = Math.max(...baseEntries.map(entry => entry.maxY));
+              if (Number.isFinite(combinedMinY) && Number.isFinite(combinedMaxY) && Math.abs(combinedMaxY - combinedMinY) >= 1e-6) {
+                dimensionEntries.push({
+                  key: 'front-back-group',
+                  minY: combinedMinY,
+                  maxY: combinedMaxY
+                });
+              }
+            } else {
+              baseEntries.forEach(entry => {
+                dimensionEntries.push({
+                  key: entry.key,
+                  minY: entry.minY,
+                  maxY: entry.maxY
+                });
+              });
+            }
+
+            const lineX = params.width + VERTICAL_PLAN_DIMENSION_LINE_OFFSET_FRONT_X;
+            const textX = lineX + VERTICAL_PLAN_DIMENSION_TEXT_OFFSET_X;
+            const tickHalf = 20;
+
+            const visibleDimensionEntries = dimensionEntries.filter(entry => {
+              if (entry.key === 'front-back-group') {
+                return isVerticalPlanFrontDimensionVisible || isVerticalPlanBackDimensionVisible;
+              }
+              if (entry.key === 'front') {
+                return isVerticalPlanFrontDimensionVisible;
+              }
+              if (entry.key === 'back') {
+                return isVerticalPlanBackDimensionVisible;
+              }
+              return true;
+            });
+
+            return visibleDimensionEntries.map(entry => {
+              const { minY, maxY, key } = entry;
+              const dimensionText = Math.round(maxY - minY).toLocaleString();
+
+              return (
+                <g key={`vertical-plan-dimension-${key}`}>
+                  <line
+                    x1={lineX}
+                    y1={minY}
+                    x2={lineX}
+                    y2={maxY}
+                    stroke={SECTION_STROKE_COLOR}
+                    strokeWidth="2"
+                    strokeOpacity={1}
+                    markerStart="url(#arrowhead-start)"
+                    markerEnd="url(#arrowhead-end)"
+                  />
+                  <line
+                    x1={lineX - tickHalf}
+                    y1={minY}
+                    x2={lineX + tickHalf}
+                    y2={minY}
+                    stroke={SECTION_STROKE_COLOR}
+                    strokeWidth="2"
+                    strokeOpacity={1}
+                  />
+                  <line
+                    x1={lineX - tickHalf}
+                    y1={maxY}
+                    x2={lineX + tickHalf}
+                    y2={maxY}
+                    stroke={SECTION_STROKE_COLOR}
+                    strokeWidth="2"
+                    strokeOpacity={1}
+                  />
+                  <text
+                    x={0}
+                    y={0}
+                    transform={`translate(${textX}, ${(minY + maxY) / 2}) rotate(-90)`}
+                    fill={SECTION_STROKE_COLOR}
+                    fontSize={VERTICAL_PLAN_DIMENSION_TEXT_FONT_SIZE}
+                    fontWeight="bold"
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                  >
+                    {dimensionText}
+                  </text>
+                </g>
+              );
+            });
+          })()
         : [];
 
     const verticalPlanAdditionalHorizontalElements =
       sectionViewType === 'vertical-plan'
-        ? verticalPlanAdditionalHorizontalDimensions.map(dimension => {
+        ? verticalPlanAdditionalHorizontalDimensions
+            .filter(dimension => {
+              const isFrontEntry = dimension.key.includes('front');
+              if (isFrontEntry) {
+                return isVerticalPlanFrontDimensionVisible;
+              }
+              const isBackEntry = dimension.key.includes('back');
+              if (isBackEntry) {
+                return isVerticalPlanBackDimensionVisible;
+              }
+              return true;
+            })
+            .map(dimension => {
             const tickHalf = 20;
             const x1 = Math.min(dimension.anchorX, dimension.targetX);
             const x2 = Math.max(dimension.anchorX, dimension.targetX);
@@ -1432,7 +1636,19 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
 
     const verticalPlanAdditionalVerticalElements =
       sectionViewType === 'vertical-plan'
-        ? verticalPlanAdditionalVerticalDimensions.map(dimension => {
+        ? verticalPlanAdditionalVerticalDimensions
+            .filter(dimension => {
+              const isFrontEntry = dimension.key.includes('front');
+              if (isFrontEntry) {
+                return isVerticalPlanFrontDimensionVisible;
+              }
+              const isBackEntry = dimension.key.includes('back');
+              if (isBackEntry) {
+                return isVerticalPlanBackDimensionVisible;
+              }
+              return true;
+            })
+            .map(dimension => {
             const tickHalf = 20;
             const y1 = Math.min(dimension.anchorY, dimension.targetY);
             const y2 = Math.max(dimension.anchorY, dimension.targetY);
@@ -1508,6 +1724,17 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
     params.stepValue,
     isFrontSupportGroupEnabled,
     isBackSupportGroupEnabled,
+    selectedFlyoutSupportIndex,
+    selectedFlyoutSupport,
+    isFrontDimensionVisible,
+    isBackDimensionVisible,
+    isAxialFrontFrontDimensionVisible,
+    isAxialFrontBackDimensionVisible,
+    isVerticalPlanFrontDimensionVisible,
+    isVerticalPlanBackDimensionVisible,
+    isVerticalFrontFrontDimensionVisible,
+    isVerticalFrontBackDimensionVisible,
+    isVerticalSupportCombinedEnabled,
     viewOptionVersion
   ]);
 
@@ -1515,12 +1742,19 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
   // 교축(정면)에서 받침 중심 위치 및 앵커 렌더링
   const renderedSupportCenters = useMemo(() => {
     if (sectionViewType !== 'axial-front') {
-      return null;
+      return {
+        supportElements: null,
+        frontDimensionElements: [] as JSX.Element[],
+        backDimensionElements: [] as JSX.Element[]
+      };
     }
 
     // viewBox 높이 계산
     const baseViewBoxHeight = Math.max(params.heightFront, params.heightBack);
     const viewBoxHeight = baseViewBoxHeight;
+
+    const frontDimensionElements: JSX.Element[] = [];
+    const backDimensionElements: JSX.Element[] = [];
 
     // 전열 받침 중심 위치 및 앵커 계산 및 렌더링
     const frontSupportsAndAnchors = customPoints
@@ -1664,86 +1898,88 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
             const referenceX1 = params.height / 2; // 형상 상단 중앙점 X
             const referenceX2 = intersectionX; // 교차점 X
             
-            anchors.push(
-              <g key={`front-dimension-${index}`}>
-                <line
-                  key={`front-dashed-line-${index}`}
-                  x1={lastAnchorX}
-                  y1={lastAnchorY}
-                  x2={intersectionX}
-                  y2={intersectionY}
-                  stroke={ANCHOR_STROKE_COLOR}
-                  strokeWidth="2"
-                  strokeDasharray="5,5"
-                  strokeOpacity={1}
-                />
-                {/* 보조선: 시작점(형상 상단 중앙점)에서 치수선까지 */}
-                <line
-                  x1={referenceX1}
-                  y1={dimensionY1}
-                  x2={dimensionLineX}
-                  y2={dimensionY1}
-                  stroke={SECTION_STROKE_COLOR}
-                  strokeWidth="1"
-                  strokeOpacity={0.5}
-                />
-                {/* 보조선: 끝점(교차점)에서 치수선까지 */}
-                <line
-                  x1={referenceX2}
-                  y1={dimensionY2}
-                  x2={dimensionLineX}
-                  y2={dimensionY2}
-                  stroke={SECTION_STROKE_COLOR}
-                  strokeWidth="1"
-                  strokeOpacity={0.5}
-                />
-                {/* Dimension 수직선 (화살표 포함) */}
-                <line
-                  x1={dimensionLineX}
-                  y1={dimensionY1}
-                  x2={dimensionLineX}
-                  y2={dimensionY2}
-                  stroke={SECTION_STROKE_COLOR}
-                  strokeWidth="2"
-                  strokeOpacity={1}
-                  markerStart="url(#arrowhead-start)"
-                  markerEnd="url(#arrowhead-end)"
-                />
-                {/* Dimension 시작점 표시선 */}
-                <line
-                  x1={dimensionLineX - 20}
-                  y1={dimensionY1}
-                  x2={dimensionLineX + 20}
-                  y2={dimensionY1}
-                  stroke={SECTION_STROKE_COLOR}
-                  strokeWidth="2"
-                  strokeOpacity={1}
-                />
-                {/* Dimension 끝점 표시선 */}
-                <line
-                  x1={dimensionLineX - 20}
-                  y1={dimensionY2}
-                  x2={dimensionLineX + 20}
-                  y2={dimensionY2}
-                  stroke={SECTION_STROKE_COLOR}
-                  strokeWidth="2"
-                  strokeOpacity={1}
-                />
-                {/* Dimension 텍스트 (전열: 치수 선의 왼쪽에 배치, 텍스트는 세로로 배치) */}
-                <text
-                  x={dimensionLineX - 100}
-                  y={(dimensionY1 + dimensionY2) / 2}
-                  fill={SECTION_STROKE_COLOR}
-                  fontSize="100"
-                  fontWeight="bold"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  transform={`rotate(-90 ${dimensionLineX - 100} ${(dimensionY1 + dimensionY2) / 2})`}
-                >
-                  {Math.round(dimensionDistance).toLocaleString()}
-                </text>
-              </g>
-            );
+            if (isAxialFrontFrontDimensionVisible) {
+              frontDimensionElements.push(
+                <g key={`axial-front-dimension-front-${index}`}>
+                  <line
+                    key={`front-dashed-line-${index}`}
+                    x1={lastAnchorX}
+                    y1={lastAnchorY}
+                    x2={intersectionX}
+                    y2={intersectionY}
+                    stroke={ANCHOR_STROKE_COLOR}
+                    strokeWidth="2"
+                    strokeDasharray="5,5"
+                    strokeOpacity={1}
+                  />
+                  {/* 보조선: 시작점(형상 상단 중앙점)에서 치수선까지 */}
+                  <line
+                    x1={referenceX1}
+                    y1={dimensionY1}
+                    x2={dimensionLineX}
+                    y2={dimensionY1}
+                    stroke={SECTION_STROKE_COLOR}
+                    strokeWidth="1"
+                    strokeOpacity={0.5}
+                  />
+                  {/* 보조선: 끝점(교차점)에서 치수선까지 */}
+                  <line
+                    x1={referenceX2}
+                    y1={dimensionY2}
+                    x2={dimensionLineX}
+                    y2={dimensionY2}
+                    stroke={SECTION_STROKE_COLOR}
+                    strokeWidth="1"
+                    strokeOpacity={0.5}
+                  />
+                  {/* Dimension 수직선 (화살표 포함) */}
+                  <line
+                    x1={dimensionLineX}
+                    y1={dimensionY1}
+                    x2={dimensionLineX}
+                    y2={dimensionY2}
+                    stroke={SECTION_STROKE_COLOR}
+                    strokeWidth="2"
+                    strokeOpacity={1}
+                    markerStart="url(#arrowhead-start)"
+                    markerEnd="url(#arrowhead-end)"
+                  />
+                  {/* Dimension 시작점 표시선 */}
+                  <line
+                    x1={dimensionLineX - 20}
+                    y1={dimensionY1}
+                    x2={dimensionLineX + 20}
+                    y2={dimensionY1}
+                    stroke={SECTION_STROKE_COLOR}
+                    strokeWidth="2"
+                    strokeOpacity={1}
+                  />
+                  {/* Dimension 끝점 표시선 */}
+                  <line
+                    x1={dimensionLineX - 20}
+                    y1={dimensionY2}
+                    x2={dimensionLineX + 20}
+                    y2={dimensionY2}
+                    stroke={SECTION_STROKE_COLOR}
+                    strokeWidth="2"
+                    strokeOpacity={1}
+                  />
+                  {/* Dimension 텍스트 (전열: 치수 선의 왼쪽에 배치, 텍스트는 세로로 배치) */}
+                  <text
+                    x={dimensionLineX - 100}
+                    y={(dimensionY1 + dimensionY2) / 2}
+                    fill={SECTION_STROKE_COLOR}
+                    fontSize="100"
+                    fontWeight="bold"
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    transform={`rotate(-90 ${dimensionLineX - 100} ${(dimensionY1 + dimensionY2) / 2})`}
+                  >
+                    {Math.round(dimensionDistance).toLocaleString()}
+                  </text>
+                </g>
+              );
+            }
           }
         }
         
@@ -1898,86 +2134,88 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
             const referenceX1 = params.height / 2; // 형상 상단 중앙점 X
             const referenceX2 = intersectionX; // 교차점 X
             
-            anchors.push(
-              <g key={`back-dimension-${index}`}>
-                <line
-                  key={`back-dashed-line-${index}`}
-                  x1={firstAnchorX}
-                  y1={firstAnchorY}
-                  x2={intersectionX}
-                  y2={intersectionY}
-                  stroke={ANCHOR_STROKE_COLOR}
-                  strokeWidth="2"
-                  strokeDasharray="5,5"
-                  strokeOpacity={1}
-                />
-                {/* 보조선: 시작점(형상 상단 중앙점)에서 치수선까지 */}
-                <line
-                  x1={referenceX1}
-                  y1={dimensionY1}
-                  x2={dimensionLineX}
-                  y2={dimensionY1}
-                  stroke={SECTION_STROKE_COLOR}
-                  strokeWidth="1"
-                  strokeOpacity={0.5}
-                />
-                {/* 보조선: 끝점(교차점)에서 치수선까지 */}
-                <line
-                  x1={referenceX2}
-                  y1={dimensionY2}
-                  x2={dimensionLineX}
-                  y2={dimensionY2}
-                  stroke={SECTION_STROKE_COLOR}
-                  strokeWidth="1"
-                  strokeOpacity={0.5}
-                />
-                {/* Dimension 수직선 (화살표 포함) */}
-                <line
-                  x1={dimensionLineX}
-                  y1={dimensionY1}
-                  x2={dimensionLineX}
-                  y2={dimensionY2}
-                  stroke={SECTION_STROKE_COLOR}
-                  strokeWidth="2"
-                  strokeOpacity={1}
-                  markerStart="url(#arrowhead-start)"
-                  markerEnd="url(#arrowhead-end)"
-                />
-                {/* Dimension 시작점 표시선 */}
-                <line
-                  x1={dimensionLineX - 20}
-                  y1={dimensionY1}
-                  x2={dimensionLineX + 20}
-                  y2={dimensionY1}
-                  stroke={SECTION_STROKE_COLOR}
-                  strokeWidth="2"
-                  strokeOpacity={1}
-                />
-                {/* Dimension 끝점 표시선 */}
-                <line
-                  x1={dimensionLineX - 20}
-                  y1={dimensionY2}
-                  x2={dimensionLineX + 20}
-                  y2={dimensionY2}
-                  stroke={SECTION_STROKE_COLOR}
-                  strokeWidth="2"
-                  strokeOpacity={1}
-                />
-                {/* Dimension 텍스트 (후열: 치수 선의 왼쪽에 배치, 텍스트는 세로로 배치) */}
-                <text
-                  x={dimensionLineX - 100}
-                  y={(dimensionY1 + dimensionY2) / 2}
-                  fill={SECTION_STROKE_COLOR}
-                  fontSize="100"
-                  fontWeight="bold"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  transform={`rotate(-90 ${dimensionLineX - 100} ${(dimensionY1 + dimensionY2) / 2})`}
-                >
-                  {Math.round(dimensionDistance).toLocaleString()}
-                </text>
-              </g>
-            );
+            if (isAxialFrontBackDimensionVisible) {
+              backDimensionElements.push(
+                <g key={`axial-front-dimension-back-${index}`}>
+                  <line
+                    key={`back-dashed-line-${index}`}
+                    x1={firstAnchorX}
+                    y1={firstAnchorY}
+                    x2={intersectionX}
+                    y2={intersectionY}
+                    stroke={ANCHOR_STROKE_COLOR}
+                    strokeWidth="2"
+                    strokeDasharray="5,5"
+                    strokeOpacity={1}
+                  />
+                  {/* 보조선: 시작점(형상 상단 중앙점)에서 치수선까지 */}
+                  <line
+                    x1={referenceX1}
+                    y1={dimensionY1}
+                    x2={dimensionLineX}
+                    y2={dimensionY1}
+                    stroke={SECTION_STROKE_COLOR}
+                    strokeWidth="1"
+                    strokeOpacity={0.5}
+                  />
+                  {/* 보조선: 끝점(교차점)에서 치수선까지 */}
+                  <line
+                    x1={referenceX2}
+                    y1={dimensionY2}
+                    x2={dimensionLineX}
+                    y2={dimensionY2}
+                    stroke={SECTION_STROKE_COLOR}
+                    strokeWidth="1"
+                    strokeOpacity={0.5}
+                  />
+                  {/* Dimension 수직선 (화살표 포함) */}
+                  <line
+                    x1={dimensionLineX}
+                    y1={dimensionY1}
+                    x2={dimensionLineX}
+                    y2={dimensionY2}
+                    stroke={SECTION_STROKE_COLOR}
+                    strokeWidth="2"
+                    strokeOpacity={1}
+                    markerStart="url(#arrowhead-start)"
+                    markerEnd="url(#arrowhead-end)"
+                  />
+                  {/* Dimension 시작점 표시선 */}
+                  <line
+                    x1={dimensionLineX - 20}
+                    y1={dimensionY1}
+                    x2={dimensionLineX + 20}
+                    y2={dimensionY1}
+                    stroke={SECTION_STROKE_COLOR}
+                    strokeWidth="2"
+                    strokeOpacity={1}
+                  />
+                  {/* Dimension 끝점 표시선 */}
+                  <line
+                    x1={dimensionLineX - 20}
+                    y1={dimensionY2}
+                    x2={dimensionLineX + 20}
+                    y2={dimensionY2}
+                    stroke={SECTION_STROKE_COLOR}
+                    strokeWidth="2"
+                    strokeOpacity={1}
+                  />
+                  {/* Dimension 텍스트 (후열: 치수 선의 왼쪽에 배치, 텍스트는 세로로 배치) */}
+                  <text
+                    x={dimensionLineX - 100}
+                    y={(dimensionY1 + dimensionY2) / 2}
+                    fill={SECTION_STROKE_COLOR}
+                    fontSize="100"
+                    fontWeight="bold"
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    transform={`rotate(-90 ${dimensionLineX - 100} ${(dimensionY1 + dimensionY2) / 2})`}
+                  >
+                    {Math.round(dimensionDistance).toLocaleString()}
+                  </text>
+                </g>
+              );
+            }
           }
         }
         
@@ -2019,13 +2257,31 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
         );
       });
 
-    return (
-      <>
-        {frontSupportsAndAnchors}
-        {backSupportsAndAnchors}
-      </>
-    );
-  }, [sectionViewType, customPoints, params.height, params.heightFront, params.heightBack, params.frontRowCount]);
+    return {
+      supportElements: (
+        <>
+          {frontSupportsAndAnchors}
+          {backSupportsAndAnchors}
+        </>
+      ),
+      frontDimensionElements,
+      backDimensionElements
+    };
+  }, [
+    sectionViewType,
+    customPoints,
+    params.height,
+    params.heightFront,
+    params.heightBack,
+    params.frontRowCount,
+    params.backRowCount,
+    params.hasStep,
+    isAxialFrontFrontDimensionVisible,
+    isAxialFrontBackDimensionVisible,
+    isVerticalFrontFrontDimensionVisible,
+    isVerticalFrontBackDimensionVisible,
+    viewOptionVersion
+  ]);
 
 
 
@@ -2127,7 +2383,10 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
       for (let i = 0; i < totalCount; i++) {
         if (i < currentCount) {
           // 기존 점 유지
-          newPoints.push(prev[i]);
+          newPoints.push({
+            ...prev[i],
+            effectiveEmbedLength: prev[i].effectiveEmbedLength ?? 0
+          });
         } else {
           // 새로운 점 추가
           newPoints.push({
@@ -2137,7 +2396,8 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
             anchorRowCountAxial: 0,
             anchorRowCountVertical: 0,
             anchorGapAxial: 0,
-            anchorGapVertical: 0
+            anchorGapVertical: 0,
+            effectiveEmbedLength: 0
           });
         }
       }
@@ -2146,7 +2406,18 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
   }, [params.frontRowCount, params.backRowCount]);
 
   // 점 업데이트
-  const updatePoint = (id: string, field: 'offsetX' | 'offsetY' | 'anchorRowCountAxial' | 'anchorRowCountVertical' | 'anchorGapAxial' | 'anchorGapVertical', value: number) => {
+  const updatePoint = (
+    id: string,
+    field:
+      | 'offsetX'
+      | 'offsetY'
+      | 'anchorRowCountAxial'
+      | 'anchorRowCountVertical'
+      | 'anchorGapAxial'
+      | 'anchorGapVertical'
+      | 'effectiveEmbedLength',
+    value: number
+  ) => {
     setCustomPoints(customPoints.map(p => 
       p.id === id ? { ...p, [field]: value } : p
     ));
@@ -2167,6 +2438,7 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
         const anchorRowCountVertical = cells.length >= 4 ? parseFloat(cells[3]) : 0;
         const anchorGapAxial = cells.length >= 5 ? parseFloat(cells[4]) : 0;
         const anchorGapVertical = cells.length >= 6 ? parseFloat(cells[5]) : 0;
+        const effectiveEmbedLength = cells.length >= 7 ? parseFloat(cells[6]) : 0;
         
         if (!isNaN(x) && !isNaN(y)) {
           const targetIndex = startIndex + lineIndex;
@@ -2180,7 +2452,8 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
               anchorRowCountAxial: !isNaN(anchorRowCountAxial) ? anchorRowCountAxial : updatedPoints[targetIndex].anchorRowCountAxial,
               anchorRowCountVertical: !isNaN(anchorRowCountVertical) ? anchorRowCountVertical : updatedPoints[targetIndex].anchorRowCountVertical,
               anchorGapAxial: !isNaN(anchorGapAxial) ? anchorGapAxial : updatedPoints[targetIndex].anchorGapAxial,
-              anchorGapVertical: !isNaN(anchorGapVertical) ? anchorGapVertical : updatedPoints[targetIndex].anchorGapVertical
+              anchorGapVertical: !isNaN(anchorGapVertical) ? anchorGapVertical : updatedPoints[targetIndex].anchorGapVertical,
+              effectiveEmbedLength: !isNaN(effectiveEmbedLength) ? effectiveEmbedLength : (updatedPoints[targetIndex].effectiveEmbedLength ?? 0)
             };
           } else {
             // 새 점 추가
@@ -2191,7 +2464,8 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
               anchorRowCountAxial: !isNaN(anchorRowCountAxial) ? anchorRowCountAxial : 0,
               anchorRowCountVertical: !isNaN(anchorRowCountVertical) ? anchorRowCountVertical : 0,
               anchorGapAxial: !isNaN(anchorGapAxial) ? anchorGapAxial : 0,
-              anchorGapVertical: !isNaN(anchorGapVertical) ? anchorGapVertical : 0
+              anchorGapVertical: !isNaN(anchorGapVertical) ? anchorGapVertical : 0,
+              effectiveEmbedLength: !isNaN(effectiveEmbedLength) ? effectiveEmbedLength : 0
             });
           }
         }
@@ -2206,7 +2480,9 @@ const [viewOptionVersion, setViewOptionVersion] = useState<number>(0);
       (p.offsetX !== customPoints[i].offsetX || p.offsetY !== customPoints[i].offsetY ||
        p.anchorRowCountAxial !== customPoints[i].anchorRowCountAxial ||
        p.anchorRowCountVertical !== customPoints[i].anchorRowCountVertical ||
-       p.anchorGapAxial !== customPoints[i].anchorGapAxial || p.anchorGapVertical !== customPoints[i].anchorGapVertical)
+       p.anchorGapAxial !== customPoints[i].anchorGapAxial ||
+       p.anchorGapVertical !== customPoints[i].anchorGapVertical ||
+       (p.effectiveEmbedLength ?? 0) !== (customPoints[i].effectiveEmbedLength ?? 0))
     )) {
       setCustomPoints(updatedPoints);
     }
@@ -2701,6 +2977,10 @@ const calculateArcCenter = (
       const supportY = originY; // Y는 기준점의 Y 좌표 (원본, flipY 적용 전)
 
       const elements: React.ReactNode[] = [];
+      const isFrontSupport = index < params.frontRowCount;
+      const isDimensionVisible = isFrontSupport
+        ? isVerticalFrontFrontDimensionVisible
+        : isVerticalFrontBackDimensionVisible;
 
       // 받침 중심위치 점 (크게 표시하여 육안으로 확인 가능하도록)
       // 기준점 기준으로 받침 중심위치 계산
@@ -2826,7 +3106,7 @@ const calculateArcCenter = (
           // 마지막 전열 받침 또는 마지막 후열 받침
           const isLastSupport = isLastFront || isLastBack;
           
-          if (isFirstSupport || isLastSupport) {
+          if (isDimensionVisible && (isFirstSupport || isLastSupport)) {
             // 첫 번째 전열/후열 받침: 마지막 열의 앵커
             // 마지막 전열/후열 받침: 첫 번째 열의 앵커
             const targetAnchorIndex = isFirstSupport
@@ -3860,6 +4140,13 @@ const calculateArcCenter = (
     params.height,
     isFrontSupportGroupEnabled,
     isBackSupportGroupEnabled,
+    isVerticalSupportCombinedEnabled,
+    isFrontDimensionVisible,
+    isBackDimensionVisible,
+    isAxialFrontFrontDimensionVisible,
+    isAxialFrontBackDimensionVisible,
+    isVerticalPlanFrontDimensionVisible,
+    isVerticalPlanBackDimensionVisible,
     viewOptionVersion
   ]);
 
@@ -3875,7 +4162,7 @@ const calculateArcCenter = (
       return renderedAnchors;
     } else if (viewType === 'axial-front') {
       // 교축(정면): 받침 중심 위치 렌더링
-      return renderedSupportCenters;
+      return renderedSupportCenters.supportElements;
     } else {
       // 교직(정면): 받침 중심위치 렌더링
       return renderedVerticalFrontSupports;
@@ -3891,8 +4178,19 @@ const calculateArcCenter = (
     renderedAnchors,
     renderedSupportCenters,
     renderedVerticalFrontSupports,
+    selectedFlyoutSupportIndex,
+    selectedFlyoutSupport,
     isFrontSupportGroupEnabled,
     isBackSupportGroupEnabled,
+    isVerticalSupportCombinedEnabled,
+    isFrontDimensionVisible,
+    isBackDimensionVisible,
+    isAxialFrontFrontDimensionVisible,
+    isAxialFrontBackDimensionVisible,
+    isVerticalPlanFrontDimensionVisible,
+    isVerticalPlanBackDimensionVisible,
+    isVerticalFrontFrontDimensionVisible,
+    isVerticalFrontBackDimensionVisible,
     viewOptionVersion
   ]);
 
@@ -4374,12 +4672,13 @@ const calculateArcCenter = (
                         <tr>
                           <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b border-gray-300 w-12">#</th>
                           <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b border-gray-300 w-28 whitespace-nowrap">구분</th>
-                          <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b border-gray-300">X (mm)</th>
-                          <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b border-gray-300">Y (mm)</th>
+                          <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b border-gray-300 w-24">X (mm)</th>
+                          <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b border-gray-300 w-24">Y (mm)</th>
                           <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b border-gray-300">앵커열 개수(교축)</th>
                           <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b border-gray-300">앵커열 개수(교직)</th>
-                          <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b border-gray-300">앵커 간격(교축) (mm)</th>
-                          <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b border-gray-300">앵커 간격(교직) (mm)</th>
+                          <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b border-gray-300 w-36 whitespace-nowrap">앵커 간격(교축) (mm)</th>
+                          <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b border-gray-300 w-36 whitespace-nowrap">앵커 간격(교직) (mm)</th>
+                          <th className="px-3 py-2 text-left font-semibold text-gray-700 border-b border-gray-300 whitespace-nowrap">유효 묻힘길이 (mm)</th>
                         </tr>
                       </thead>
                       <tbody
@@ -4464,6 +4763,18 @@ const calculateArcCenter = (
                                   step="1"
                                 />
                               </td>
+                              <td className="px-3 py-2">
+                                <NumericInput
+                                  {...numericInputSharedProps}
+                                  inputKey={`custom-${point.id}-effectiveEmbedLength`}
+                                  type="number"
+                                  value={point.effectiveEmbedLength}
+                                  onValueChange={(val) => updatePoint(point.id, 'effectiveEmbedLength', val)}
+                                  className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                  step="1"
+                                  min="0"
+                                />
+                              </td>
                             </tr>
                           );
                         })}
@@ -4537,17 +4848,7 @@ const calculateArcCenter = (
                           : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                       }`}
                     >
-                      프라이아웃(전열)
-                    </button>
-                    <button
-                      onClick={() => setSectionViewType('flyout-back')}
-                      className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                        sectionViewType === 'flyout-back'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      }`}
-                    >
-                      프라이아웃(후열)
+                      프라이아웃
                     </button>
                   </div>
                 </div>
@@ -4648,40 +4949,256 @@ const calculateArcCenter = (
 
                   return isValid ? (
                     <div className="flex flex-row gap-6 min-h-full w-full items-stretch">
-                      <aside className="w-80 flex-shrink-0">
+                      <aside className="flex-none" style={{ width: '240px', minWidth: '240px', maxWidth: '240px' }}>
                         <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 h-full">
                           <h3 className="text-lg font-semibold text-gray-900 mb-2">뷰 옵션</h3>
-                          {sectionViewType === 'axial-plan' && (
+                          {(
+                            sectionViewType === 'axial-plan' ||
+                            sectionViewType === 'vertical-plan' ||
+                            sectionViewType === 'axial-front' ||
+                            sectionViewType === 'vertical-front' ||
+                            sectionViewType === 'flyout-front'
+                          ) && (
                             <div className="space-y-6">
-                              <section>
-                                <h4 className="text-sm(font-semibold text-gray-800 mb-3">받침 그룹(전단 파괴면)</h4>
-                                <div className="space-y-2">
-                                  <label className="flex items-center gap-2 text-sm text-gray-700">
-                                    <input
-                                      type="checkbox"
-                                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                      checked={isFrontSupportGroupEnabled}
-                                    onChange={(event) => {
-                                      setIsFrontSupportGroupEnabled(event.target.checked);
-                                      setViewOptionVersion(prev => prev + 1);
-                                    }}
-                                    />
-                                    전열 받침
-                                  </label>
-                                  <label className="flex items-center gap-2 text-sm text-gray-700">
-                                    <input
-                                      type="checkbox"
-                                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                      checked={isBackSupportGroupEnabled}
-                                    onChange={(event) => {
-                                      setIsBackSupportGroupEnabled(event.target.checked);
-                                      setViewOptionVersion(prev => prev + 1);
-                                    }}
-                                    />
-                                    후열 받침
-                                  </label>
-                                </div>
-                              </section>
+                              {sectionViewType === 'axial-plan' && (
+                                <section>
+                                  <h4 className="text-sm font-semibold text-gray-800 mb-3">치수선 보기</h4>
+                                  <div className="space-y-2">
+                                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                                      <input
+                                        type="checkbox"
+                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        checked={isFrontDimensionVisible}
+                                        onChange={(event) => {
+                                          setIsFrontDimensionVisible(event.target.checked);
+                                          setViewOptionVersion(prev => prev + 1);
+                                        }}
+                                      />
+                                      전열
+                                    </label>
+                                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                                      <input
+                                        type="checkbox"
+                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        checked={isBackDimensionVisible}
+                                        onChange={(event) => {
+                                          setIsBackDimensionVisible(event.target.checked);
+                                          setViewOptionVersion(prev => prev + 1);
+                                        }}
+                                      />
+                                      후열
+                                    </label>
+                                  </div>
+                                </section>
+                              )}
+                              {sectionViewType === 'axial-front' && (
+                                <section>
+                                  <h4 className="text-sm font-semibold text-gray-800 mb-3">치수선 보기</h4>
+                                  <div className="space-y-2">
+                                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                                      <input
+                                        type="checkbox"
+                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        checked={isAxialFrontFrontDimensionVisible}
+                                        onChange={(event) => {
+                                          setIsAxialFrontFrontDimensionVisible(event.target.checked);
+                                          setViewOptionVersion(prev => prev + 1);
+                                        }}
+                                      />
+                                      전열
+                                    </label>
+                                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                                      <input
+                                        type="checkbox"
+                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        checked={isAxialFrontBackDimensionVisible}
+                                        onChange={(event) => {
+                                          setIsAxialFrontBackDimensionVisible(event.target.checked);
+                                          setViewOptionVersion(prev => prev + 1);
+                                        }}
+                                      />
+                                      후열
+                                    </label>
+                                  </div>
+                                </section>
+                              )}
+                              {sectionViewType === 'vertical-front' && (
+                                <section>
+                                  <h4 className="text-sm font-semibold text-gray-800 mb-3">치수선 보기</h4>
+                                  <div className="space-y-2">
+                                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                                      <input
+                                        type="checkbox"
+                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        checked={isVerticalFrontFrontDimensionVisible}
+                                        onChange={(event) => {
+                                          setIsVerticalFrontFrontDimensionVisible(event.target.checked);
+                                          setViewOptionVersion(prev => prev + 1);
+                                        }}
+                                      />
+                                      전열
+                                    </label>
+                                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                                      <input
+                                        type="checkbox"
+                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        checked={isVerticalFrontBackDimensionVisible}
+                                        onChange={(event) => {
+                                          setIsVerticalFrontBackDimensionVisible(event.target.checked);
+                                          setViewOptionVersion(prev => prev + 1);
+                                        }}
+                                      />
+                                      후열
+                                    </label>
+                                  </div>
+                                </section>
+                              )}
+                              {sectionViewType === 'axial-plan' && (
+                                <section>
+                                  <h4 className="text-sm font-semibold text-gray-800 mb-3">전단파괴 그룹</h4>
+                                  <div className="space-y-2">
+                                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                                      <input
+                                        type="checkbox"
+                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        checked={isFrontSupportGroupEnabled}
+                                        onChange={(event) => {
+                                          setIsFrontSupportGroupEnabled(event.target.checked);
+                                          setViewOptionVersion(prev => prev + 1);
+                                        }}
+                                      />
+                                      전열
+                                    </label>
+                                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                                      <input
+                                        type="checkbox"
+                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        checked={isBackSupportGroupEnabled}
+                                        onChange={(event) => {
+                                          setIsBackSupportGroupEnabled(event.target.checked);
+                                          setViewOptionVersion(prev => prev + 1);
+                                        }}
+                                      />
+                                      후열
+                                    </label>
+                                  </div>
+                                </section>
+                              )}
+                              {sectionViewType === 'vertical-plan' && (
+                                <section>
+                                  <h4 className="text-sm font-semibold text-gray-800 mb-3">치수선 보기</h4>
+                                  <div className="space-y-2">
+                                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                                      <input
+                                        type="checkbox"
+                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        checked={isVerticalPlanFrontDimensionVisible}
+                                        onChange={(event) => {
+                                          setIsVerticalPlanFrontDimensionVisible(event.target.checked);
+                                          setViewOptionVersion(prev => prev + 1);
+                                        }}
+                                      />
+                                      전열
+                                    </label>
+                                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                                      <input
+                                        type="checkbox"
+                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        checked={isVerticalPlanBackDimensionVisible}
+                                        onChange={(event) => {
+                                          setIsVerticalPlanBackDimensionVisible(event.target.checked);
+                                          setViewOptionVersion(prev => prev + 1);
+                                        }}
+                                      />
+                                      후열
+                                    </label>
+                                  </div>
+                                </section>
+                              )}
+                              {sectionViewType === 'vertical-plan' && (
+                                <section>
+                                  <h4 className="text-sm font-semibold text-gray-800 mb-3">전단파괴 그룹</h4>
+                                  <div className="space-y-2">
+                                    <label className="flex items-center gap-2 text-sm text-gray-700">
+                                      <input
+                                        type="checkbox"
+                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        checked={!params.hasStep && isVerticalSupportCombinedEnabled}
+                                        disabled={params.hasStep}
+                                        onChange={(event) => {
+                                          if (params.hasStep) {
+                                            return;
+                                          }
+                                          setIsVerticalSupportCombinedEnabled(event.target.checked);
+                                          setViewOptionVersion(prev => prev + 1);
+                                        }}
+                                      />
+                                      전열+후열
+                                    </label>
+                                  </div>
+                                </section>
+                              )}
+                      {sectionViewType === 'flyout-front' && (
+                        <section>
+                          <h4 className="text-sm font-semibold text-gray-800 mb-3">받침 선택</h4>
+                          <select
+                            className="w-full px-2 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            value={
+                              flyoutSupportOptions.length > 0
+                                ? String(
+                                    Math.min(
+                                      selectedFlyoutSupportIndex,
+                                      flyoutSupportOptions.length - 1
+                                    )
+                                  )
+                                : ''
+                            }
+                            onChange={(event) => {
+                              const parsed = Number(event.target.value);
+                              if (!Number.isNaN(parsed)) {
+                                setSelectedFlyoutSupportIndex(parsed);
+                                setViewOptionVersion(prev => prev + 1);
+                              }
+                            }}
+                            disabled={flyoutSupportOptions.length === 0}
+                          >
+                            {flyoutSupportOptions.length === 0 ? (
+                              <option value="">선택 가능한 받침이 없습니다</option>
+                            ) : (
+                              flyoutSupportOptions.map(option => (
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))
+                            )}
+                          </select>
+                        </section>
+                      )}
+                      {sectionViewType === 'flyout-front' && (
+                        <section>
+                          <h4 className="text-sm font-semibold text-gray-800 mb-3">앵커 간섭</h4>
+                          <div className="space-y-3 text-sm text-gray-700">
+                            <div className="flex items-center gap-3">
+                              <span className="font-medium whitespace-nowrap">교축</span>
+                              <input
+                                type="text"
+                                readOnly
+                                value={flyoutInterferenceStatus.axial}
+                                className="flex-1 px-2 py-2 border border-gray-300 rounded bg-gray-100 text-gray-800 focus:outline-none"
+                              />
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="font-medium whitespace-nowrap">교직</span>
+                              <input
+                                type="text"
+                                readOnly
+                                value={flyoutInterferenceStatus.vertical}
+                                className="flex-1 px-2 py-2 border border-gray-300 rounded bg-gray-100 text-gray-800 focus:outline-none"
+                              />
+                            </div>
+                          </div>
+                        </section>
+                      )}
                             </div>
                           )}
                         </div>
@@ -4698,7 +5215,7 @@ const calculateArcCenter = (
                             maxHeight: '85vh'
                           }}
                           preserveAspectRatio="xMidYMid meet"
-                          key={`svg-${adjustedViewBoxWidth}-${adjustedViewBoxHeight}-${customPoints.length}-${sectionViewType}-${isFrontSupportGroupEnabled}-${isBackSupportGroupEnabled}-${viewOptionVersion}`}
+                          key={`svg-${adjustedViewBoxWidth}-${adjustedViewBoxHeight}-${customPoints.length}-${sectionViewType}-${isFrontSupportGroupEnabled}-${isBackSupportGroupEnabled}-${isVerticalSupportCombinedEnabled}-${isFrontDimensionVisible}-${isBackDimensionVisible}-${isAxialFrontFrontDimensionVisible}-${isAxialFrontBackDimensionVisible}-${selectedFlyoutSupportIndex}-${viewOptionVersion}`}
                         >
                         {/* 그리드 배경 */}
                         <defs>
@@ -4940,6 +5457,10 @@ const calculateArcCenter = (
 
                         {/* 앵커 위치들 (옵션에 따라) */}
                         {renderedSectionPreview}
+
+                        {/* 교축(정면) 치수선 */}
+                        {sectionViewType === 'axial-front' && renderedSupportCenters.frontDimensionElements}
+                        {sectionViewType === 'axial-front' && renderedSupportCenters.backDimensionElements}
 
                         {/* 교축(평면) 치수선 */}
                         {sectionViewType === 'axial-plan' && axialPlanVerticalElements}
