@@ -107,6 +107,10 @@ const VERTICAL_PLAN_HORIZONTAL_TOP_OFFSET = 150;
 const VERTICAL_PLAN_HORIZONTAL_TOP_TEXT_OFFSET = 80;
 const VERTICAL_PLAN_HORIZONTAL_EXTRA_MARGIN = 100;
 const VERTICAL_PLAN_VERTICAL_TEXT_OFFSET_X = 100;
+const INTERFERENCE_DIMENSION_TEXT_FONT_SIZE = 120;
+const INTERFERENCE_DIMENSION_OFFSET = 80;
+const FLYOUT_DIMENSION_VIEWBOX_PADDING = 800;
+const FLYOUT_CONTENT_SCALE: number = 3;
 
 // localStorage 키 상수
 const STORAGE_KEYS = {
@@ -784,6 +788,74 @@ useEffect(() => {
       };
     }
 
+    const interferenceRectangles: Array<{ cx: number; cy: number; width: number; height: number; originalWidth: number; originalHeight: number }> = [];
+    const interferenceDimensionElements: JSX.Element[] = [];
+
+    if (
+      (sectionViewType === 'flyout-front' || sectionViewType === 'flyout-back') &&
+      selectedFlyoutSupport &&
+      anchorRects.length > 0 &&
+      anchorPoints.length > 0
+    ) {
+      const { point } = selectedFlyoutSupport;
+      const effectiveEmbed = Number(point.effectiveEmbedLength ?? 0);
+      const pad = 1.5 * effectiveEmbed;
+      const axialCount = Math.max(Number(point.anchorRowCountAxial ?? 0), 0);
+      const verticalCount = Math.max(Number(point.anchorRowCountVertical ?? 0), 0);
+      const axialGap = Number(point.anchorGapAxial ?? 0);
+      const verticalGap = Number(point.anchorGapVertical ?? 0);
+      const axialSpan = Math.max(axialCount - 1, 0) * axialGap;
+      const verticalSpan = Math.max(verticalCount - 1, 0) * verticalGap;
+      const fullHeight = pad * 2 + axialSpan;
+      const fullWidth = pad * 2 + verticalSpan;
+      const padOnly = pad * 2;
+      const baseX = anchorRects[0].baseX;
+      const baseY = anchorRects[0].baseY;
+      const anchorXs = anchorPoints.map(anchor => anchor.x);
+      const anchorYs = anchorPoints.map(anchor => anchor.y);
+      const minX = Math.min(...anchorXs);
+      const maxX = Math.max(...anchorXs);
+      const minY = Math.min(...anchorYs);
+      const maxY = Math.max(...anchorYs);
+      const axialInterferes = flyoutInterferenceStatus.axial === '간섭 발생';
+      const verticalInterferes = flyoutInterferenceStatus.vertical === '간섭 발생';
+
+      const addRectangle = (cx: number, cy: number, width: number, height: number) => {
+        if (!Number.isFinite(width) || !Number.isFinite(height)) {
+          return;
+        }
+        if (width <= 0 || height <= 0) {
+          return;
+        }
+        interferenceRectangles.push({
+          cx,
+          cy,
+          width,
+          height,
+          originalWidth: width,
+          originalHeight: height
+        });
+      };
+
+      if (axialInterferes && verticalInterferes) {
+        addRectangle(baseX, baseY, fullWidth, fullHeight);
+      } else if (axialInterferes && !verticalInterferes) {
+        addRectangle(minX, baseY, padOnly, fullHeight);
+        if (Math.abs(maxX - minX) > 0.001) {
+          addRectangle(maxX, baseY, padOnly, fullHeight);
+        }
+      } else if (!axialInterferes && verticalInterferes) {
+        addRectangle(baseX, minY, fullWidth, padOnly);
+        if (Math.abs(maxY - minY) > 0.001) {
+          addRectangle(baseX, maxY, fullWidth, padOnly);
+        }
+      } else {
+        anchorPoints.forEach(anchor => {
+          addRectangle(anchor.x, anchor.y, padOnly, padOnly);
+        });
+      }
+    }
+
     if (
       (sectionViewType === 'flyout-front' || sectionViewType === 'flyout-back') &&
       anchorRects.length > 0
@@ -803,6 +875,198 @@ useEffect(() => {
       anchorPoints.forEach(anchor => {
         anchor.x += shiftX;
         anchor.y += shiftY;
+      });
+
+      interferenceRectangles.forEach(rect => {
+        rect.cx += shiftX;
+        rect.cy += shiftY;
+      });
+
+      if (FLYOUT_CONTENT_SCALE !== 1) {
+        anchorRects.forEach(rect => {
+          const scaledCenterX =
+            targetCenterX + (rect.baseX - targetCenterX) * FLYOUT_CONTENT_SCALE;
+          const scaledCenterY =
+            targetCenterY + (rect.baseY - targetCenterY) * FLYOUT_CONTENT_SCALE;
+          const newWidth = rect.width * FLYOUT_CONTENT_SCALE;
+          const newHeight = rect.height * FLYOUT_CONTENT_SCALE;
+          rect.x = scaledCenterX - newWidth / 2;
+          rect.y = scaledCenterY - newHeight / 2;
+          rect.width = newWidth;
+          rect.height = newHeight;
+          rect.baseX = scaledCenterX;
+          rect.baseY = scaledCenterY;
+        });
+
+        anchorPoints.forEach(anchor => {
+          anchor.x = targetCenterX + (anchor.x - targetCenterX) * FLYOUT_CONTENT_SCALE;
+          anchor.y = targetCenterY + (anchor.y - targetCenterY) * FLYOUT_CONTENT_SCALE;
+        });
+
+      interferenceRectangles.forEach(rect => {
+        rect.cx = targetCenterX + (rect.cx - targetCenterX) * FLYOUT_CONTENT_SCALE;
+        rect.cy = targetCenterY + (rect.cy - targetCenterY) * FLYOUT_CONTENT_SCALE;
+        rect.width *= FLYOUT_CONTENT_SCALE;
+        rect.height *= FLYOUT_CONTENT_SCALE;
+      });
+      }
+    }
+
+    if ((sectionViewType === 'flyout-front' || sectionViewType === 'flyout-back') && interferenceRectangles.length > 0) {
+      const tickHalf = 20;
+      const representativeRect = (() => {
+        const rectangles = interferenceRectangles;
+        if (rectangles.length === 0) {
+          return null;
+        }
+        // 우선순위: 가로로 2개 → 오른쪽, 세로로 2개 → 아래, 그 외 (앵커별) → 가장 오른쪽 아래
+        let candidate = rectangles[0];
+        rectangles.forEach(rect => {
+          const sameY = Math.abs(rect.cy - candidate.cy) < 0.001;
+          const sameX = Math.abs(rect.cx - candidate.cx) < 0.001;
+
+          const isFurtherRight = rect.cx > candidate.cx + 0.001;
+          const isFurtherDown = rect.cy > candidate.cy + 0.001;
+
+          if (rectangles.length === 2) {
+            // 가로 두 개: cx가 더 큰 것
+            if (isFurtherRight && sameY) {
+              candidate = rect;
+              return;
+            }
+            // 세로 두 개: cy가 더 큰 것
+            if (isFurtherDown && sameX) {
+              candidate = rect;
+              return;
+            }
+          }
+
+          // 다수 직사각형 (앵커별 등): 오른쪽 우선, 같은 x면 아래쪽
+          if (isFurtherRight) {
+            candidate = rect;
+            return;
+          }
+          if (sameX && isFurtherDown) {
+            candidate = rect;
+          }
+        });
+        return candidate;
+      })();
+
+      const representativeIndex = representativeRect
+        ? interferenceRectangles.indexOf(representativeRect)
+        : -1;
+
+      interferenceRectangles.forEach((rect, rectIdx) => {
+        const leftX = rect.cx - rect.width / 2;
+        const rightX = rect.cx + rect.width / 2;
+        const topY = rect.cy - rect.height / 2;
+        const bottomY = rect.cy + rect.height / 2;
+         if (rectIdx !== representativeIndex) {
+        return;
+      }
+
+        const horizontalY = bottomY + INTERFERENCE_DIMENSION_OFFSET;
+      const verticalX = rightX + INTERFERENCE_DIMENSION_OFFSET;
+        const widthLabel = Math.round(rect.originalWidth).toLocaleString();
+        const heightLabel = Math.round(rect.originalHeight).toLocaleString();
+
+        interferenceDimensionElements.push(
+          <g key={`interference-dimension-horizontal-${rectIdx}`}>
+            <line
+              x1={leftX}
+              y1={horizontalY}
+              x2={rightX}
+              y2={horizontalY}
+              stroke={SECTION_STROKE_COLOR}
+              strokeWidth="2"
+              strokeOpacity={1}
+              markerStart="url(#arrowhead-start-flyout)"
+              markerEnd="url(#arrowhead-end-flyout)"
+              vectorEffect="non-scaling-stroke"
+            />
+            <line
+              x1={leftX}
+              y1={horizontalY - tickHalf}
+              x2={leftX}
+              y2={horizontalY + tickHalf}
+              stroke={SECTION_STROKE_COLOR}
+              strokeWidth="2"
+              strokeOpacity={1}
+              vectorEffect="non-scaling-stroke"
+            />
+            <line
+              x1={rightX}
+              y1={horizontalY - tickHalf}
+              x2={rightX}
+              y2={horizontalY + tickHalf}
+              stroke={SECTION_STROKE_COLOR}
+              strokeWidth="2"
+              strokeOpacity={1}
+              vectorEffect="non-scaling-stroke"
+            />
+            <text
+              x={(leftX + rightX) / 2}
+              y={horizontalY + INTERFERENCE_DIMENSION_TEXT_FONT_SIZE}
+              fill={SECTION_STROKE_COLOR}
+              fontSize={INTERFERENCE_DIMENSION_TEXT_FONT_SIZE}
+              fontWeight="bold"
+              textAnchor="middle"
+              dominantBaseline="hanging"
+            >
+              {widthLabel}
+            </text>
+          </g>
+        );
+
+        interferenceDimensionElements.push(
+          <g key={`interference-dimension-vertical-${rectIdx}`}>
+            <line
+              x1={verticalX}
+              y1={topY}
+              x2={verticalX}
+              y2={bottomY}
+              stroke={SECTION_STROKE_COLOR}
+              strokeWidth="2"
+              strokeOpacity={1}
+              markerStart="url(#arrowhead-start-flyout)"
+              markerEnd="url(#arrowhead-end-flyout)"
+              vectorEffect="non-scaling-stroke"
+            />
+            <line
+              x1={verticalX - tickHalf}
+              y1={topY}
+              x2={verticalX + tickHalf}
+              y2={topY}
+              stroke={SECTION_STROKE_COLOR}
+              strokeWidth="2"
+              strokeOpacity={1}
+              vectorEffect="non-scaling-stroke"
+            />
+            <line
+              x1={verticalX - tickHalf}
+              y1={bottomY}
+              x2={verticalX + tickHalf}
+              y2={bottomY}
+              stroke={SECTION_STROKE_COLOR}
+              strokeWidth="2"
+              strokeOpacity={1}
+              vectorEffect="non-scaling-stroke"
+            />
+            <text
+              x={verticalX + INTERFERENCE_DIMENSION_TEXT_FONT_SIZE / 4}
+              y={(topY + bottomY) / 2}
+              transform={`rotate(-90, ${verticalX + INTERFERENCE_DIMENSION_TEXT_FONT_SIZE / 4}, ${(topY + bottomY) / 2})`}
+              fill={SECTION_STROKE_COLOR}
+              fontSize={INTERFERENCE_DIMENSION_TEXT_FONT_SIZE}
+              fontWeight="bold"
+              textAnchor="middle"
+              dominantBaseline="central"
+            >
+              {heightLabel}
+            </text>
+          </g>
+        );
       });
     }
 
@@ -994,6 +1258,26 @@ useEffect(() => {
             />
           </g>
         ))}
+
+        {(sectionViewType === 'flyout-front' || sectionViewType === 'flyout-back') &&
+          interferenceRectangles.map((rect, idx) => (
+            <rect
+              key={`interference-rect-${idx}`}
+              x={rect.cx - rect.width / 2}
+              y={rect.cy - rect.height / 2}
+              width={rect.width}
+              height={rect.height}
+              fill="none"
+              stroke={ANCHOR_STROKE_COLOR}
+              strokeWidth="2"
+              strokeOpacity={0.8}
+              strokeDasharray="6 6"
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+
+        {(sectionViewType === 'flyout-front' || sectionViewType === 'flyout-back') &&
+          interferenceDimensionElements}
 
         {anchorsToDrawLines
           .filter(anchor => {
@@ -1726,6 +2010,7 @@ useEffect(() => {
     isBackSupportGroupEnabled,
     selectedFlyoutSupportIndex,
     selectedFlyoutSupport,
+    flyoutInterferenceStatus,
     isFrontDimensionVisible,
     isBackDimensionVisible,
     isAxialFrontFrontDimensionVisible,
@@ -4180,6 +4465,7 @@ const calculateArcCenter = (
     renderedVerticalFrontSupports,
     selectedFlyoutSupportIndex,
     selectedFlyoutSupport,
+    flyoutInterferenceStatus,
     isFrontSupportGroupEnabled,
     isBackSupportGroupEnabled,
     isVerticalSupportCombinedEnabled,
@@ -4928,6 +5214,12 @@ const calculateArcCenter = (
                     adjustedViewBoxHeight = viewBoxHeight + topPadding + bottomPadding;
                     adjustedViewBoxWidth = params.width + rightPadding;
                     viewBoxY = -topPadding;
+                  } else if (sectionViewType === 'flyout-front' || sectionViewType === 'flyout-back') {
+                    const padding = FLYOUT_DIMENSION_VIEWBOX_PADDING;
+                    viewBoxX = -padding;
+                    viewBoxY = -padding;
+                    adjustedViewBoxWidth = params.width + padding * 2;
+                    adjustedViewBoxHeight = viewBoxHeight + padding * 2;
                   } else if (sectionViewType === 'axial-plan') {
                     const topPadding = Math.max(
                       PLAN_DIMENSION_LINE_OFFSET_BACK + PLAN_DIMENSION_TEXT_OFFSET_BACK + PLAN_DIMENSION_EXTRA_MARGIN,
@@ -5212,7 +5504,8 @@ const calculateArcCenter = (
                             width: 'auto',
                             height: 'auto',
                             maxWidth: '100%',
-                            maxHeight: '85vh'
+                            maxHeight: '85vh',
+                            backgroundColor: '#ffffff'
                           }}
                           preserveAspectRatio="xMidYMid meet"
                           key={`svg-${adjustedViewBoxWidth}-${adjustedViewBoxHeight}-${customPoints.length}-${sectionViewType}-${isFrontSupportGroupEnabled}-${isBackSupportGroupEnabled}-${isVerticalSupportCombinedEnabled}-${isFrontDimensionVisible}-${isBackDimensionVisible}-${isAxialFrontFrontDimensionVisible}-${isAxialFrontBackDimensionVisible}-${selectedFlyoutSupportIndex}-${viewOptionVersion}`}
@@ -5256,6 +5549,32 @@ const calculateArcCenter = (
                           >
                             <polygon
                               points="0 0, 30 15, 0 30"
+                              fill={SECTION_STROKE_COLOR}
+                            />
+                          </marker>
+                          <marker
+                            id="arrowhead-start-flyout"
+                            markerWidth="10"
+                            markerHeight="10"
+                            refX="1"
+                            refY="5"
+                            orient="auto"
+                          >
+                            <polygon
+                              points="10 0, 0 5, 10 10"
+                              fill={SECTION_STROKE_COLOR}
+                            />
+                          </marker>
+                          <marker
+                            id="arrowhead-end-flyout"
+                            markerWidth="10"
+                            markerHeight="10"
+                            refX="9"
+                            refY="5"
+                            orient="auto"
+                          >
+                            <polygon
+                              points="0 0, 10 5, 0 10"
                               fill={SECTION_STROKE_COLOR}
                             />
                           </marker>
