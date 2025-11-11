@@ -80,27 +80,30 @@ const NumericInput = React.memo(
 const SECTION_STROKE_COLOR = '#000000';
 const ANCHOR_FILL_COLOR = '#FF0000'; // 앵커 점은 빨간색
 const ANCHOR_STROKE_COLOR = '#FF0000';
+const ANCHOR_DASHED_STROKE_WIDTH = "4";
 const MAIN_LINE_STROKE_WIDTH = "3"; // 메인 선의 굵기 (코핑 형상 미리보기와 삽도 미리보기 통일)
-
-// 교축(평면) 치수선 배치를 위한 상수
-const PLAN_DIMENSION_LINE_OFFSET_FRONT = 150;
-const PLAN_DIMENSION_TEXT_OFFSET_FRONT = 80;
-const PLAN_DIMENSION_LINE_OFFSET_BACK = 150;
-const PLAN_DIMENSION_TEXT_OFFSET_BACK = 80;
-const PLAN_DIMENSION_EXTRA_MARGIN = 100;
-const PLAN_DIMENSION_TEXT_FONT_SIZE = 100;
-const AXIAL_PLAN_HORIZONTAL_DIMENSION_TEXT_OFFSET_Y = 80;
-const AXIAL_PLAN_HORIZONTAL_DIMENSION_EXTRA_MARGIN = 100;
-const AXIAL_PLAN_HORIZONTAL_DIMENSION_TEXT_FONT_SIZE = 100;
-const AXIAL_PLAN_VERTICAL_DIMENSION_LINE_OFFSET_X = 150;
-const AXIAL_PLAN_VERTICAL_DIMENSION_TEXT_OFFSET_X = 80;
-const AXIAL_PLAN_VERTICAL_DIMENSION_EXTRA_MARGIN = 100;
-const AXIAL_PLAN_VERTICAL_DIMENSION_TEXT_FONT_SIZE = 100;
+const ANCHOR_OUTER_RADIUS_RATIO = 0.0025;
+const ANCHOR_OUTER_RADIUS_MIN = 2.4;
+const ANCHOR_INNER_RADIUS_RATIO = 0.45;
+const ANCHOR_INNER_RADIUS_MIN = 10;
+const ANCHOR_RING_STROKE_RATIO = 0.12;
+const ANCHOR_RING_STROKE_MIN = 0.4;
+const ANCHOR_INNER_STROKE_RATIO = 0.08;
+const ANCHOR_INNER_STROKE_MIN = 0.2;
+const ORIGIN_MARKER_RADIUS_RATIO = 0.07;
+const ORIGIN_MARKER_RADIUS_MIN = 2;
+const DIMENSION_TEXT_FONT_SIZE_PX = '140px';
+const SECTION_PREVIEW_DIMENSION_TEXT_FONT_SIZE_PX = '140px';
+const INTERFERENCE_DIMENSION_TEXT_FONT_SIZE_PX = '160px';
+const ARROW_MARKER_BASE_RATIO = 0.005;
+const ARROW_MARKER_MIN_SIZE = 40;
+const MARKER_HALF_RATIO = 0.5;
+const MARKER_REF_START_RATIO = 0;
+const MARKER_REF_END_RATIO = 1;
 const VERTICAL_PLAN_DIMENSION_LINE_OFFSET_FRONT_X = 150;
 const VERTICAL_PLAN_DIMENSION_LINE_OFFSET_BACK_X = 300;
 const VERTICAL_PLAN_DIMENSION_TEXT_OFFSET_X = 80;
 const VERTICAL_PLAN_DIMENSION_EXTRA_MARGIN = 100;
-const VERTICAL_PLAN_DIMENSION_TEXT_FONT_SIZE = 100;
 const VERTICAL_PLAN_HORIZONTAL_BOTTOM_OFFSET = 150;
 const VERTICAL_PLAN_HORIZONTAL_BOTTOM_TEXT_OFFSET = 80;
 const VERTICAL_PLAN_HORIZONTAL_TOP_OFFSET = 150;
@@ -108,9 +111,20 @@ const VERTICAL_PLAN_HORIZONTAL_TOP_TEXT_OFFSET = 80;
 const VERTICAL_PLAN_HORIZONTAL_EXTRA_MARGIN = 100;
 const VERTICAL_PLAN_VERTICAL_TEXT_OFFSET_X = 100;
 const INTERFERENCE_DIMENSION_TEXT_FONT_SIZE = 120;
-const INTERFERENCE_DIMENSION_OFFSET = 80;
+const INTERFERENCE_DIMENSION_OFFSET = 150;
+const PLAN_DIMENSION_LINE_OFFSET_FRONT = 150;
+const PLAN_DIMENSION_LINE_OFFSET_BACK = 300;
+const PLAN_DIMENSION_TEXT_OFFSET_FRONT = 80;
+const PLAN_DIMENSION_TEXT_OFFSET_BACK = 80;
+const PLAN_DIMENSION_EXTRA_MARGIN = 100;
+const AXIAL_PLAN_HORIZONTAL_DIMENSION_TEXT_OFFSET_Y = 100;
+const AXIAL_PLAN_HORIZONTAL_DIMENSION_EXTRA_MARGIN = 100;
+const AXIAL_PLAN_VERTICAL_DIMENSION_LINE_OFFSET_X = 150;
+const AXIAL_PLAN_VERTICAL_DIMENSION_TEXT_OFFSET_X = 80;
+const AXIAL_PLAN_VERTICAL_DIMENSION_EXTRA_MARGIN = 100;
 const FLYOUT_DIMENSION_VIEWBOX_PADDING = 800;
 const FLYOUT_CONTENT_SCALE: number = 3;
+const FLYOUT_EXTRA_MARGIN = 300;
 
 // localStorage 키 상수
 const STORAGE_KEYS = {
@@ -218,6 +232,35 @@ const [isVerticalFrontFrontDimensionVisible, setIsVerticalFrontFrontDimensionVis
 const [isVerticalFrontBackDimensionVisible, setIsVerticalFrontBackDimensionVisible] = useState<boolean>(true);
 const [selectedFlyoutSupportIndex, setSelectedFlyoutSupportIndex] = useState<number>(0);
 
+  const {
+    anchorOuterRadius,
+    anchorInnerRadius,
+    anchorRingStrokeWidth,
+    anchorInnerStrokeWidth,
+    originMarkerRadius
+  } = useMemo(() => {
+    const dimensionCandidates = [
+      Number(params.width),
+      Number(params.height),
+      Number(params.heightFront),
+      Number(params.heightBack)
+    ].filter(value => Number.isFinite(value) && value > 0);
+    const baseDimension = dimensionCandidates.length > 0 ? Math.max(...dimensionCandidates) : 1;
+    const outerRadius = Math.max(baseDimension * ANCHOR_OUTER_RADIUS_RATIO, ANCHOR_OUTER_RADIUS_MIN);
+    const innerRadius = Math.max(outerRadius * ANCHOR_INNER_RADIUS_RATIO, ANCHOR_INNER_RADIUS_MIN);
+    const ringStroke = Math.max(outerRadius * ANCHOR_RING_STROKE_RATIO, ANCHOR_RING_STROKE_MIN);
+    const innerStroke = Math.max(outerRadius * ANCHOR_INNER_STROKE_RATIO, ANCHOR_INNER_STROKE_MIN);
+    const originRadius = Math.max(outerRadius * ORIGIN_MARKER_RADIUS_RATIO, ORIGIN_MARKER_RADIUS_MIN);
+
+    return {
+      anchorOuterRadius: outerRadius,
+      anchorInnerRadius: innerRadius,
+      anchorRingStrokeWidth: ringStroke,
+      anchorInnerStrokeWidth: innerStroke,
+      originMarkerRadius: originRadius
+    };
+  }, [params.width, params.height, params.heightFront, params.heightBack]);
+
   const isIntermediateNumericValue = useCallback((value: string) => {
     return value === '' || value === '-' || value === '.' || value === '-.';
   }, []);
@@ -296,7 +339,6 @@ const [selectedFlyoutSupportIndex, setSelectedFlyoutSupportIndex] = useState<num
     `,
     []
   );
-
 const flyoutSupportOptions = useMemo(() => {
   const frontCount = Math.min(
     Math.max(params.frontRowCount, 0),
@@ -549,6 +591,7 @@ useEffect(() => {
       anchorY: number;
       targetY: number;
       length: number;
+      isFrontRow: boolean;
     }> = [];
     const axialPlanHorizontalDimensions: Array<{
       key: string;
@@ -609,7 +652,7 @@ useEffect(() => {
     };
     const addVerticalDimension = (
       key: string,
-      anchor: { x: number; y: number },
+      anchor: { x: number; y: number; isFrontRow: boolean },
       direction: 'up' | 'down',
       side: 'left' | 'right'
     ) => {
@@ -634,7 +677,8 @@ useEffect(() => {
         textX,
         anchorY: anchor.y,
         targetY,
-        length
+        length,
+        isFrontRow: anchor.isFrontRow ?? false
       });
     };
     const addHorizontalDimension = (
@@ -672,7 +716,7 @@ useEffect(() => {
         lineX: anchor.x,
         anchorY: anchor.y,
         targetY,
-        textX: anchor.x + VERTICAL_PLAN_VERTICAL_TEXT_OFFSET_X,
+      textX: anchor.x - VERTICAL_PLAN_VERTICAL_TEXT_OFFSET_X,
         length
       });
     };
@@ -966,8 +1010,12 @@ useEffect(() => {
         return;
       }
 
-        const horizontalY = bottomY + INTERFERENCE_DIMENSION_OFFSET;
-      const verticalX = rightX + INTERFERENCE_DIMENSION_OFFSET;
+        const horizontalYRaw = bottomY + INTERFERENCE_DIMENSION_OFFSET;
+      const verticalXRaw = rightX + INTERFERENCE_DIMENSION_OFFSET;
+      const maxHorizontalY = params.height + FLYOUT_DIMENSION_VIEWBOX_PADDING + FLYOUT_EXTRA_MARGIN - INTERFERENCE_DIMENSION_OFFSET;
+      const maxVerticalX = params.width + FLYOUT_DIMENSION_VIEWBOX_PADDING + FLYOUT_EXTRA_MARGIN - INTERFERENCE_DIMENSION_OFFSET;
+      const horizontalY = Math.min(horizontalYRaw, maxHorizontalY);
+      const verticalX = Math.min(verticalXRaw, maxVerticalX);
         const widthLabel = Math.round(rect.originalWidth).toLocaleString();
         const heightLabel = Math.round(rect.originalHeight).toLocaleString();
 
@@ -981,8 +1029,8 @@ useEffect(() => {
               stroke={SECTION_STROKE_COLOR}
               strokeWidth="2"
               strokeOpacity={1}
-              markerStart="url(#arrowhead-start-flyout)"
-              markerEnd="url(#arrowhead-end-flyout)"
+              markerStart="url(#arrowhead-start)"
+              markerEnd="url(#arrowhead-end)"
               vectorEffect="non-scaling-stroke"
             />
             <line
@@ -1007,9 +1055,9 @@ useEffect(() => {
             />
             <text
               x={(leftX + rightX) / 2}
-              y={horizontalY + INTERFERENCE_DIMENSION_TEXT_FONT_SIZE}
+              y={horizontalY + INTERFERENCE_DIMENSION_TEXT_FONT_SIZE * 0.25}
               fill={SECTION_STROKE_COLOR}
-              fontSize={INTERFERENCE_DIMENSION_TEXT_FONT_SIZE}
+              fontSize={INTERFERENCE_DIMENSION_TEXT_FONT_SIZE_PX}
               fontWeight="bold"
               textAnchor="middle"
               dominantBaseline="hanging"
@@ -1029,8 +1077,8 @@ useEffect(() => {
               stroke={SECTION_STROKE_COLOR}
               strokeWidth="2"
               strokeOpacity={1}
-              markerStart="url(#arrowhead-start-flyout)"
-              markerEnd="url(#arrowhead-end-flyout)"
+              markerStart="url(#arrowhead-start)"
+              markerEnd="url(#arrowhead-end)"
               vectorEffect="non-scaling-stroke"
             />
             <line
@@ -1054,11 +1102,11 @@ useEffect(() => {
               vectorEffect="non-scaling-stroke"
             />
             <text
-              x={verticalX + INTERFERENCE_DIMENSION_TEXT_FONT_SIZE / 4}
+              x={verticalX + INTERFERENCE_DIMENSION_TEXT_FONT_SIZE}
               y={(topY + bottomY) / 2}
-              transform={`rotate(-90, ${verticalX + INTERFERENCE_DIMENSION_TEXT_FONT_SIZE / 4}, ${(topY + bottomY) / 2})`}
+              transform={`rotate(-90, ${verticalX + INTERFERENCE_DIMENSION_TEXT_FONT_SIZE}, ${(topY + bottomY) / 2})`}
               fill={SECTION_STROKE_COLOR}
-              fontSize={INTERFERENCE_DIMENSION_TEXT_FONT_SIZE}
+              fontSize={INTERFERENCE_DIMENSION_TEXT_FONT_SIZE_PX}
               fontWeight="bold"
               textAnchor="middle"
               dominantBaseline="central"
@@ -1069,12 +1117,38 @@ useEffect(() => {
         );
       });
     }
-
     // 전열과 후열로 분리
     const frontRowAnchors = anchorPoints.filter(a => a.isFrontRow);
     const backRowAnchors = anchorPoints.filter(a => !a.isFrontRow);
-
     let anchorsToDrawLines: Array<typeof anchorPoints[number]> = [];
+    const collectAnchorsPerSupport = (
+      targetAnchors: Array<typeof anchorPoints[number]>,
+      preference: 'min' | 'max'
+    ): Array<typeof anchorPoints[number]> => {
+      const grouped = new Map<number, Array<typeof anchorPoints[number]>>();
+      targetAnchors.forEach(anchor => {
+        if (!grouped.has(anchor.supportIndex)) {
+          grouped.set(anchor.supportIndex, []);
+        }
+        grouped.get(anchor.supportIndex)!.push(anchor);
+      });
+
+      const collected: Array<typeof anchorPoints[number]> = [];
+      grouped.forEach(anchors => {
+        if (anchors.length === 0) {
+          return;
+        }
+        const targetValue = preference === 'min'
+          ? Math.min(...anchors.map(anchor => anchor.y))
+          : Math.max(...anchors.map(anchor => anchor.y));
+        anchors.forEach(anchor => {
+          if (Math.abs(anchor.y - targetValue) < 0.001) {
+            collected.push(anchor);
+          }
+        });
+      });
+      return collected;
+    };
 
     if (sectionViewType === 'vertical-plan') {
       const lastFrontSupportIndex = params.frontRowCount > 0 ? params.frontRowCount - 1 : null;
@@ -1097,13 +1171,18 @@ useEffect(() => {
         ...selectAnchorsForSupport(lastFrontSupportIndex, frontRowAnchors),
         ...selectAnchorsForSupport(lastBackSupportIndex, backRowAnchors)
       ];
+    } else if (sectionViewType === 'axial-plan') {
+      anchorsToDrawLines = [
+        ...collectAnchorsPerSupport(frontRowAnchors, 'min'),
+        ...collectAnchorsPerSupport(backRowAnchors, 'max')
+      ];
     } else {
       // 전열: Y 값이 가장 작은 앵커들 찾기 (교축방향으로 가장 위에 배치된 열)
       const frontRowMinY = frontRowAnchors.length > 0 
         ? Math.min(...frontRowAnchors.map(a => a.y))
         : null;
       const frontRowTopAnchors = frontRowMinY !== null
-        ? frontRowAnchors.filter(a => Math.abs(a.y - frontRowMinY) < 0.001) // Y 값이 같거나 거의 같은 앵커들
+        ? frontRowAnchors.filter(a => Math.abs(a.y - frontRowMinY) < 0.001)
         : [];
 
       // 후열: Y 값이 가장 큰 앵커들 찾기 (교축방향으로 가장 아래에 배치된 열)
@@ -1111,7 +1190,7 @@ useEffect(() => {
         ? Math.max(...backRowAnchors.map(a => a.y))
         : null;
       const backRowBottomAnchors = backRowMaxY !== null
-        ? backRowAnchors.filter(a => Math.abs(a.y - backRowMaxY) < 0.001) // Y 값이 같거나 거의 같은 앵커들
+        ? backRowAnchors.filter(a => Math.abs(a.y - backRowMaxY) < 0.001)
         : [];
 
       anchorsToDrawLines = [...frontRowTopAnchors, ...backRowBottomAnchors];
@@ -1130,7 +1209,6 @@ useEffect(() => {
           : null;
       if (frontFirstAnchor) {
         addVerticalDimension('front-first', frontFirstAnchor, 'down', 'left');
-        addHorizontalDimension('front-first', frontFirstAnchor, 'left', 'above');
       }
 
       const frontLastSupportIndex =
@@ -1150,7 +1228,6 @@ useEffect(() => {
         : null;
       if (backFirstAnchor) {
         addVerticalDimension('back-first', backFirstAnchor, 'up', 'left');
-        addHorizontalDimension('back-first', backFirstAnchor, 'left', 'below');
       }
 
       const backLastSupportIndex =
@@ -1185,7 +1262,6 @@ useEffect(() => {
         addVerticalPlanVerticalDimension('vertical-back-last-vertical', backLastAnchor, 'up');
       }
     }
-
     const anchorElements = (
       <g key="anchor-points-group">
         {anchorRects.map((rect) => {
@@ -1238,20 +1314,10 @@ useEffect(() => {
             <circle
               cx={anchor.x}
               cy={anchor.y}
-              r="40"
-              fill="white"
-              stroke={ANCHOR_STROKE_COLOR}
-              strokeWidth="1"
-              strokeOpacity={0.5}
-              vectorEffect="non-scaling-stroke"
-            />
-            <circle
-              cx={anchor.x}
-              cy={anchor.y}
-              r="5"
+              r={anchorOuterRadius}
               fill={ANCHOR_FILL_COLOR}
               stroke={ANCHOR_STROKE_COLOR}
-              strokeWidth="1"
+              strokeWidth={anchorRingStrokeWidth}
               fillOpacity={1}
               strokeOpacity={1}
               vectorEffect="non-scaling-stroke"
@@ -1269,7 +1335,7 @@ useEffect(() => {
               height={rect.height}
               fill="none"
               stroke={ANCHOR_STROKE_COLOR}
-              strokeWidth="2"
+              strokeWidth={ANCHOR_DASHED_STROKE_WIDTH}
               strokeOpacity={0.8}
               strokeDasharray="6 6"
               vectorEffect="non-scaling-stroke"
@@ -1278,7 +1344,6 @@ useEffect(() => {
 
         {(sectionViewType === 'flyout-front' || sectionViewType === 'flyout-back') &&
           interferenceDimensionElements}
-
         {anchorsToDrawLines
           .filter(anchor => {
             return anchor.isFrontRow ? isFrontDimensionVisible : isBackDimensionVisible;
@@ -1421,8 +1486,8 @@ useEffect(() => {
                   x2={line1.x2}
                   y2={line1.y2}
                   stroke={ANCHOR_STROKE_COLOR}
-                  strokeWidth="1"
-                  strokeOpacity={0.5}
+                  strokeWidth={ANCHOR_DASHED_STROKE_WIDTH}
+                  strokeOpacity={1}
                   strokeDasharray="2,2"
                   vectorEffect="non-scaling-stroke"
                 />
@@ -1438,8 +1503,8 @@ useEffect(() => {
                   x2={line2.x2}
                   y2={line2.y2}
                   stroke={ANCHOR_STROKE_COLOR}
-                  strokeWidth="1"
-                  strokeOpacity={0.5}
+                  strokeWidth={ANCHOR_DASHED_STROKE_WIDTH}
+                  strokeOpacity={1}
                   strokeDasharray="2,2"
                   vectorEffect="non-scaling-stroke"
                 />
@@ -1489,63 +1554,76 @@ useEffect(() => {
     );
 
     const axialPlanVerticalElements =
-      sectionViewType === 'axial-plan'
-        ? axialPlanVerticalDimensions.map(dimension => {
-            const isFrontEntry = dimension.key.startsWith('front-');
-            if ((isFrontEntry && !isFrontDimensionVisible) || (!isFrontEntry && !isBackDimensionVisible)) {
-              return null;
-            }
-            const tickHalf = 20;
-            const y1 = Math.min(dimension.anchorY, dimension.targetY);
-            const y2 = Math.max(dimension.anchorY, dimension.targetY);
-            const label = Math.round(dimension.length).toLocaleString();
+      sectionViewType === 'axial-plan' &&
+      (isFrontDimensionVisible || isBackDimensionVisible)
+        ? axialPlanVerticalDimensions
+            .filter(dimension => {
+              if (!isFrontDimensionVisible && dimension.isFrontRow) {
+                return false;
+              }
+              if (!isBackDimensionVisible && !dimension.isFrontRow) {
+                return false;
+              }
+              if (dimension.key === 'front-first') {
+                return false;
+              }
+              if (dimension.key === 'back-first') {
+                return false;
+              }
+              return true;
+            })
+            .map(dimension => {
+              const lineY1 = dimension.anchorY;
+              const lineY2 = dimension.targetY;
+              const tickHalf = 20;
+              const label = Math.round(dimension.length).toLocaleString();
 
-            return (
-              <g key={`axial-plan-vertical-dimension-${dimension.key}`}>
-                <line
-                  x1={dimension.lineX}
-                  y1={y1}
-                  x2={dimension.lineX}
-                  y2={y2}
-                  stroke={SECTION_STROKE_COLOR}
-                  strokeWidth="2"
-                  strokeOpacity={1}
-                  markerStart="url(#arrowhead-start)"
-                  markerEnd="url(#arrowhead-end)"
-                />
-                <line
-                  x1={dimension.lineX - tickHalf}
-                  y1={dimension.anchorY}
-                  x2={dimension.lineX + tickHalf}
-                  y2={dimension.anchorY}
-                  stroke={SECTION_STROKE_COLOR}
-                  strokeWidth="2"
-                  strokeOpacity={1}
-                />
-                <line
-                  x1={dimension.lineX - tickHalf}
-                  y1={dimension.targetY}
-                  x2={dimension.lineX + tickHalf}
-                  y2={dimension.targetY}
-                  stroke={SECTION_STROKE_COLOR}
-                  strokeWidth="2"
-                  strokeOpacity={1}
-                />
-                <text
-                  x={0}
-                  y={0}
-                  transform={`translate(${dimension.textX}, ${(dimension.anchorY + dimension.targetY) / 2}) rotate(-90)`}
-                  fill={SECTION_STROKE_COLOR}
-                  fontSize={AXIAL_PLAN_VERTICAL_DIMENSION_TEXT_FONT_SIZE}
-                  fontWeight="bold"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                >
-                  {label}
-                </text>
-              </g>
-            );
-          })
+              return (
+                <g key={`axial-plan-vertical-dimension-${dimension.key}`}>
+                  <line
+                    x1={dimension.lineX}
+                    y1={lineY1}
+                    x2={dimension.lineX}
+                    y2={lineY2}
+                    stroke={SECTION_STROKE_COLOR}
+                    strokeWidth="2"
+                    strokeOpacity={1}
+                    markerStart="url(#arrowhead-start)"
+                    markerEnd="url(#arrowhead-end)"
+                  />
+                  <line
+                    x1={dimension.lineX - tickHalf}
+                    y1={lineY1}
+                    x2={dimension.lineX + tickHalf}
+                    y2={lineY1}
+                    stroke={SECTION_STROKE_COLOR}
+                    strokeWidth="2"
+                    strokeOpacity={1}
+                  />
+                  <line
+                    x1={dimension.lineX - tickHalf}
+                    y1={lineY2}
+                    x2={dimension.lineX + tickHalf}
+                    y2={lineY2}
+                    stroke={SECTION_STROKE_COLOR}
+                    strokeWidth="2"
+                    strokeOpacity={1}
+                  />
+                  <text
+                    x={0}
+                    y={0}
+                    transform={`translate(${dimension.textX}, ${(lineY1 + lineY2) / 2}) rotate(-90)`}
+                    fill={SECTION_STROKE_COLOR}
+                    fontSize={DIMENSION_TEXT_FONT_SIZE_PX}
+                    fontWeight="bold"
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                  >
+                    {label}
+                  </text>
+                </g>
+              );
+            })
         : [];
 
     const axialPlanHorizontalElements =
@@ -1600,7 +1678,7 @@ useEffect(() => {
                   x={(dimension.anchorX + dimension.targetX) / 2}
                   y={textY}
                   fill={SECTION_STROKE_COLOR}
-                  fontSize={AXIAL_PLAN_HORIZONTAL_DIMENSION_TEXT_FONT_SIZE}
+                  fontSize={DIMENSION_TEXT_FONT_SIZE_PX}
                   fontWeight="bold"
                   textAnchor="middle"
                   dominantBaseline="middle"
@@ -1611,7 +1689,6 @@ useEffect(() => {
             );
           })
         : [];
-
     const axialPlanDimensionElements =
       sectionViewType === 'axial-plan'
         ? (() => {
@@ -1724,7 +1801,7 @@ useEffect(() => {
                     x={(entry.minX + entry.maxX) / 2}
                     y={labelY}
                     fill={SECTION_STROKE_COLOR}
-                    fontSize={PLAN_DIMENSION_TEXT_FONT_SIZE}
+                    fontSize={DIMENSION_TEXT_FONT_SIZE_PX}
                     fontWeight="bold"
                     textAnchor="middle"
                     dominantBaseline="middle"
@@ -1736,7 +1813,6 @@ useEffect(() => {
             });
           })()
         : [];
-
     const verticalPlanDimensionElements =
       sectionViewType === 'vertical-plan'
         ? (() => {
@@ -1838,7 +1914,7 @@ useEffect(() => {
                     y={0}
                     transform={`translate(${textX}, ${(minY + maxY) / 2}) rotate(-90)`}
                     fill={SECTION_STROKE_COLOR}
-                    fontSize={VERTICAL_PLAN_DIMENSION_TEXT_FONT_SIZE}
+                    fontSize={DIMENSION_TEXT_FONT_SIZE_PX}
                     fontWeight="bold"
                     textAnchor="middle"
                     dominantBaseline="middle"
@@ -1906,7 +1982,7 @@ useEffect(() => {
                   x={(dimension.anchorX + dimension.targetX) / 2}
                   y={dimension.textY}
                   fill={SECTION_STROKE_COLOR}
-                  fontSize={VERTICAL_PLAN_DIMENSION_TEXT_FONT_SIZE}
+                  fontSize={DIMENSION_TEXT_FONT_SIZE_PX}
                   fontWeight="bold"
                   textAnchor="middle"
                   dominantBaseline="middle"
@@ -1917,7 +1993,6 @@ useEffect(() => {
             );
           })
         : [];
-
     const verticalPlanAdditionalVerticalElements =
       sectionViewType === 'vertical-plan'
         ? verticalPlanAdditionalVerticalDimensions
@@ -1974,7 +2049,7 @@ useEffect(() => {
                   y={0}
                   transform={`translate(${dimension.textX}, ${(dimension.anchorY + dimension.targetY) / 2}) rotate(-90)`}
                   fill={SECTION_STROKE_COLOR}
-                  fontSize={VERTICAL_PLAN_DIMENSION_TEXT_FONT_SIZE}
+                  fontSize={DIMENSION_TEXT_FONT_SIZE_PX}
                   fontWeight="bold"
                   textAnchor="middle"
                   dominantBaseline="middle"
@@ -2020,9 +2095,13 @@ useEffect(() => {
     isVerticalFrontFrontDimensionVisible,
     isVerticalFrontBackDimensionVisible,
     isVerticalSupportCombinedEnabled,
-    viewOptionVersion
+    viewOptionVersion,
+    anchorOuterRadius,
+    anchorInnerRadius,
+    anchorRingStrokeWidth,
+    anchorInnerStrokeWidth,
+    originMarkerRadius
   ]);
-
   // 삽도 미리보기 옵션별 렌더링 (useMemo로 메모이제이션)
   // 교축(정면)에서 받침 중심 위치 및 앵커 렌더링
   const renderedSupportCenters = useMemo(() => {
@@ -2042,505 +2121,421 @@ useEffect(() => {
     const backDimensionElements: JSX.Element[] = [];
 
     // 전열 받침 중심 위치 및 앵커 계산 및 렌더링
-    const frontSupportsAndAnchors = customPoints
-      .filter((_, index) => {
-        // 전열 받침: frontRowCount 개수만큼
-        return index < params.frontRowCount;
-      })
-      .map((point, index) => {
-        // 기준점: "길이=0, 높이=높이(전열)"
-        // viewBox Y 시작점이 -padding이므로, 실제 Y 좌표는 그대로 유지
-        const baseX = 0;
-        const baseY = viewBoxHeight - params.heightFront;
-        
-        // 길이 방향으로 받침 제원의 Y 값만큼 이동
-        const centerX = baseX + point.offsetY;
-        const centerY = baseY;
-        
-        // 앵커 위치 계산
-        const anchorCount = Number(point.anchorRowCountAxial) || 0;
-        const anchorGap = Number(point.anchorGapAxial) || 0;
-        const anchors: JSX.Element[] = [];
-        
-        if (anchorCount > 0 && anchorGap > 0) {
-          for (let i = 0; i < anchorCount; i++) {
-            // 앵커 위치 = (i - (n-1)/2) * gap
-            // 예: n=2, gap=600: i=0 -> (0-0.5)*600=-300, i=1 -> (1-0.5)*600=300
-            // 예: n=3, gap=600: i=0 -> (0-1)*600=-600, i=1 -> (1-1)*600=0, i=2 -> (2-1)*600=600
-            const offset = (i - (anchorCount - 1) / 2) * anchorGap;
-            const anchorX = centerX + offset;
-            const anchorY = centerY;
-            
-            // -Y 방향으로 300mm 선 그리기 (아래쪽 방향)
-            const lineEndY = anchorY + 300; // Y축 아래 방향으로 300mm
-            
-            anchors.push(
-              <g key={`front-anchor-group-${index}-${i}`}>
-                <line
-                  x1={anchorX}
-                  y1={anchorY}
-                  x2={anchorX}
-                  y2={lineEndY}
-                  stroke={ANCHOR_STROKE_COLOR}
-                  strokeWidth="3"
-                  strokeOpacity={1}
-                />
-                <circle
-                  cx={anchorX}
-                  cy={anchorY}
-                  r="12"
-                  fill={ANCHOR_FILL_COLOR}
-                  stroke="darkred"
-                  strokeWidth="3"
-                  opacity={0.9}
-                  vectorEffect="non-scaling-stroke"
-                />
-              </g>
-            );
-          }
-          
-          // 전열 받침: 교축방향 마지막 열의 앵커 중심 위치에서 1.5의 기울기를 갖는 선을 -X, +Y 방향으로 형상의 외곽선과 만나는 위치까지 그린다.
-          if (anchorCount > 0) {
-            const lastAnchorIndex = anchorCount - 1; // 마지막 열 (가장 오른쪽)
-            const lastAnchorOffset = (lastAnchorIndex - (anchorCount - 1) / 2) * anchorGap;
-            const lastAnchorX = centerX + lastAnchorOffset;
-            const lastAnchorY = centerY;
-            
-            // 기울기 1.5: dy/dx = 1.5, 즉 dy = 1.5 * dx
-            // -X, +Y 방향 (왼쪽 아래, SVG 좌표계에서 +Y는 아래)
-            // 직선 방정식: y - lastAnchorY = 1.5 * (x - lastAnchorX)
-            // -X, +Y 방향이므로 x가 감소하고 y가 증가해야 함 (SVG 좌표계에서 아래는 Y가 큰 값)
-            // 형상의 외곽선: 좌측 가장자리(x=0) 또는 하단 가장자리(y=viewBoxHeight)
-            // 좌측 가장자리와 만나는 점: x = 0
-            // y = lastAnchorY + 1.5 * (0 - lastAnchorX) = lastAnchorY - 1.5 * lastAnchorX
-            // 하단 가장자리와 만나는 점: y = viewBoxHeight
-            // viewBoxHeight = lastAnchorY + 1.5 * (x - lastAnchorX)
-            // x = lastAnchorX - (viewBoxHeight - lastAnchorY) / 1.5
-            
-            const slope = 1.5;
-            const leftEdgeX = 0; // 좌측 가장자리
-            const bottomEdgeY = viewBoxHeight; // 하단 가장자리
-            
-            // 좌측 가장자리와 만나는 점 (-X, +Y 방향, Y가 증가해야 함)
-            const intersectionWithLeftY = lastAnchorY + slope * (lastAnchorX - leftEdgeX);
-            
-            // 하단 가장자리와 만나는 점
-            const deltaY = bottomEdgeY - lastAnchorY;
-            const deltaX = deltaY / slope;
-            const intersectionWithBottomX = lastAnchorX - deltaX; // -X 방향
-            
-            // 실제 교차점은 좌측 가장자리와 하단 가장자리 중 먼저 만나는 곳
-            // -X, -Y 방향이므로 앵커 점에서 더 가까운 곳 선택
-            let intersectionX: number;
-            let intersectionY: number;
-            
-            // 좌측 가장자리 교차점이 유효한지 확인 (Y가 형상 범위 내에 있고, 앵커보다 아래에 있어야 함)
-            const isLeftValid = intersectionWithLeftY > lastAnchorY && 
-                               intersectionWithLeftY <= bottomEdgeY;
-            
-            // 하단 가장자리 교차점이 유효한지 확인 (X가 형상 범위 내에 있고, 앵커보다 왼쪽에 있어야 함)
-            const isBottomValid = intersectionWithBottomX >= leftEdgeX && 
-                                 intersectionWithBottomX <= lastAnchorX;
-            
-            // 실제 교차점 선택: 둘 다 유효한 경우 거리로 판단
-            if (isLeftValid && isBottomValid) {
-              // 둘 다 유효한 경우, 거리로 판단
-              const leftDistance = Math.sqrt(Math.pow(lastAnchorX - leftEdgeX, 2) + Math.pow(lastAnchorY - intersectionWithLeftY, 2));
-              const bottomDistance = Math.sqrt(Math.pow(lastAnchorX - intersectionWithBottomX, 2) + Math.pow(lastAnchorY - bottomEdgeY, 2));
-              
-              if (leftDistance < bottomDistance) {
+    const lastFrontSupportIndex = params.frontRowCount > 0 ? params.frontRowCount - 1 : null;
+    const lastBackSupportIndex =
+      params.backRowCount > 0 ? params.frontRowCount + params.backRowCount - 1 : null;
+    const frontSupportsAndAnchors = lastFrontSupportIndex !== null
+      ? customPoints
+          .map((point, pointIndex) => ({ point, pointIndex }))
+          .filter(({ pointIndex }) => pointIndex === lastFrontSupportIndex)
+          .map(({ point, pointIndex }) => {
+            const baseX = 0;
+            const baseY = viewBoxHeight - params.heightFront;
+            const centerX = baseX + point.offsetY;
+            const centerY = baseY;
+
+            const anchorCount = Number(point.anchorRowCountAxial) || 0;
+            const anchorGap = Number(point.anchorGapAxial) || 0;
+            const anchors: JSX.Element[] = [];
+
+            if (anchorCount > 0 && anchorGap > 0) {
+              for (let i = 0; i < anchorCount; i++) {
+                const offset = (i - (anchorCount - 1) / 2) * anchorGap;
+                const anchorX = centerX + offset;
+                const anchorY = centerY;
+                const lineEndY = anchorY + 300;
+
+                anchors.push(
+                  <g key={`front-anchor-group-${pointIndex}-${i}`}>
+                    <line
+                      x1={anchorX}
+                      y1={anchorY}
+                      x2={anchorX}
+                      y2={lineEndY}
+                      stroke={ANCHOR_STROKE_COLOR}
+                      strokeWidth="3"
+                      strokeOpacity={1}
+                    />
+                    <circle
+                      cx={anchorX}
+                      cy={anchorY}
+                      r={anchorOuterRadius}
+                      fill={ANCHOR_FILL_COLOR}
+                      stroke={ANCHOR_STROKE_COLOR}
+                      strokeWidth={anchorRingStrokeWidth}
+                      fillOpacity={1}
+                      strokeOpacity={1}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  </g>
+                );
+              }
+
+              const lastAnchorIndex = anchorCount - 1;
+              const lastAnchorOffset = (lastAnchorIndex - (anchorCount - 1) / 2) * anchorGap;
+              const lastAnchorX = centerX + lastAnchorOffset;
+              const lastAnchorY = centerY;
+
+              const slope = 1.5;
+              const leftEdgeX = 0;
+              const bottomEdgeY = viewBoxHeight;
+
+              const intersectionWithLeftY = lastAnchorY + slope * (lastAnchorX - leftEdgeX);
+              const deltaY = bottomEdgeY - lastAnchorY;
+              const deltaX = deltaY / slope;
+              const intersectionWithBottomX = lastAnchorX - deltaX;
+
+              const isLeftValid = intersectionWithLeftY > lastAnchorY &&
+                                 intersectionWithLeftY <= bottomEdgeY;
+              const isBottomValid = intersectionWithBottomX >= leftEdgeX &&
+                                   intersectionWithBottomX <= lastAnchorX;
+
+              let intersectionX: number;
+              let intersectionY: number;
+
+              if (isLeftValid && isBottomValid) {
+                const leftDistance = Math.hypot(lastAnchorX - leftEdgeX, lastAnchorY - intersectionWithLeftY);
+                const bottomDistance = Math.hypot(lastAnchorX - intersectionWithBottomX, lastAnchorY - bottomEdgeY);
+
+                if (leftDistance < bottomDistance) {
+                  intersectionX = leftEdgeX;
+                  intersectionY = intersectionWithLeftY;
+                } else {
+                  intersectionX = intersectionWithBottomX;
+                  intersectionY = bottomEdgeY;
+                }
+              } else if (isLeftValid) {
                 intersectionX = leftEdgeX;
                 intersectionY = intersectionWithLeftY;
-              } else {
+              } else if (isBottomValid) {
                 intersectionX = intersectionWithBottomX;
                 intersectionY = bottomEdgeY;
+              } else {
+                intersectionX = leftEdgeX;
+                intersectionY = intersectionWithLeftY;
               }
-            } else if (isLeftValid) {
-              // 좌측 가장자리와 만남
-              intersectionX = leftEdgeX;
-              intersectionY = intersectionWithLeftY;
-            } else if (isBottomValid) {
-              // 하단 가장자리와 만남
-              intersectionX = intersectionWithBottomX;
-              intersectionY = bottomEdgeY;
-            } else {
-              // 둘 다 유효하지 않은 경우, 좌측 우선 시도
-              intersectionX = leftEdgeX;
-              intersectionY = intersectionWithLeftY;
-            }
-            
-            // Dimension: 빨간색 점선이 형상 외곽선과 만나는 점과 형상의 상단 중앙점 간의 수직 거리
-            const topCenterY = 0; // 형상의 상단 중앙점 Y (상단)
-            const dimensionY1 = topCenterY; // Dimension 시작점 Y (상단)
-            const dimensionY2 = intersectionY; // Dimension 끝점 Y (교차점)
-            const dimensionDistance = Math.abs(dimensionY2 - dimensionY1); // 수직 거리
-            
-            // Dimension 선 그리기 (전열 받침: 형상 외곽선의 왼쪽)
-            const dimensionLineOffset = 100; // Dimension 선과 형상 사이의 간격 (전열)
-            const dimensionLineX = 0 - dimensionLineOffset; // 형상 외곽선 왼쪽에 그리기
-            
-            // 보조선의 기준점: 형상 상단 중앙점과 교차점
-            const referenceX1 = params.height / 2; // 형상 상단 중앙점 X
-            const referenceX2 = intersectionX; // 교차점 X
-            
-            if (isAxialFrontFrontDimensionVisible) {
-              frontDimensionElements.push(
-                <g key={`axial-front-dimension-front-${index}`}>
-                  <line
-                    key={`front-dashed-line-${index}`}
-                    x1={lastAnchorX}
-                    y1={lastAnchorY}
-                    x2={intersectionX}
-                    y2={intersectionY}
-                    stroke={ANCHOR_STROKE_COLOR}
-                    strokeWidth="2"
-                    strokeDasharray="5,5"
-                    strokeOpacity={1}
-                  />
-                  {/* 보조선: 시작점(형상 상단 중앙점)에서 치수선까지 */}
-                  <line
-                    x1={referenceX1}
-                    y1={dimensionY1}
-                    x2={dimensionLineX}
-                    y2={dimensionY1}
-                    stroke={SECTION_STROKE_COLOR}
-                    strokeWidth="1"
-                    strokeOpacity={0.5}
-                  />
-                  {/* 보조선: 끝점(교차점)에서 치수선까지 */}
-                  <line
-                    x1={referenceX2}
-                    y1={dimensionY2}
-                    x2={dimensionLineX}
-                    y2={dimensionY2}
-                    stroke={SECTION_STROKE_COLOR}
-                    strokeWidth="1"
-                    strokeOpacity={0.5}
-                  />
-                  {/* Dimension 수직선 (화살표 포함) */}
-                  <line
-                    x1={dimensionLineX}
-                    y1={dimensionY1}
-                    x2={dimensionLineX}
-                    y2={dimensionY2}
-                    stroke={SECTION_STROKE_COLOR}
-                    strokeWidth="2"
-                    strokeOpacity={1}
-                    markerStart="url(#arrowhead-start)"
-                    markerEnd="url(#arrowhead-end)"
-                  />
-                  {/* Dimension 시작점 표시선 */}
-                  <line
-                    x1={dimensionLineX - 20}
-                    y1={dimensionY1}
-                    x2={dimensionLineX + 20}
-                    y2={dimensionY1}
-                    stroke={SECTION_STROKE_COLOR}
-                    strokeWidth="2"
-                    strokeOpacity={1}
-                  />
-                  {/* Dimension 끝점 표시선 */}
-                  <line
-                    x1={dimensionLineX - 20}
-                    y1={dimensionY2}
-                    x2={dimensionLineX + 20}
-                    y2={dimensionY2}
-                    stroke={SECTION_STROKE_COLOR}
-                    strokeWidth="2"
-                    strokeOpacity={1}
-                  />
-                  {/* Dimension 텍스트 (전열: 치수 선의 왼쪽에 배치, 텍스트는 세로로 배치) */}
-                  <text
-                    x={dimensionLineX - 100}
-                    y={(dimensionY1 + dimensionY2) / 2}
-                    fill={SECTION_STROKE_COLOR}
-                    fontSize="100"
-                    fontWeight="bold"
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    transform={`rotate(-90 ${dimensionLineX - 100} ${(dimensionY1 + dimensionY2) / 2})`}
-                  >
-                    {Math.round(dimensionDistance).toLocaleString()}
-                  </text>
-                </g>
-              );
-            }
-          }
-        }
-        
-        // 받침 중심 기준 직사각형 계산
-        // 아래 변의 중앙이 받침 중심 위치와 일치하도록
-        const rectWidth = anchorGap * 1.5; // 가로 길이 = 앵커 간격(교축) * 1.5
-        const rectHeight = 100; // 세로 길이 = 100
-        const rectX = centerX - rectWidth / 2; // 중심에서 가로/2만큼 왼쪽
-        const rectY = centerY - rectHeight; // 아래 변이 받침 중심과 일치하도록
-        
-        return (
-          <g key={`front-support-group-${index}`}>
-            {/* 받침 중심 기준 직사각형 */}
-            <rect
-              x={rectX}
-              y={rectY}
-              width={rectWidth}
-              height={rectHeight}
-              fill="white"
-              stroke={SECTION_STROKE_COLOR}
-              strokeWidth={MAIN_LINE_STROKE_WIDTH}
-              strokeOpacity={1}
-              vectorEffect="non-scaling-stroke"
-            />
-            {/* 받침 중심점 (크게 표시하여 육안으로 확인 가능하도록) */}
-            <circle
-              cx={centerX}
-              cy={centerY}
-              r="15"
-              fill="red"
-              stroke="darkred"
-              strokeWidth="3"
-              opacity={0.9}
-              vectorEffect="non-scaling-stroke"
-            />
-            {/* 앵커 점들 */}
-            {anchors}
-          </g>
-        );
-      });
 
-    // 후열 받침 중심 위치 및 앵커 계산 및 렌더링
-    const backSupportsAndAnchors = customPoints
-      .filter((_, index) => {
-        // 후열 받침: frontRowCount 이후부터
-        return index >= params.frontRowCount;
-      })
-      .map((point, index) => {
-        // 기준점: "길이=길이, 높이=높이(후열)"
-        // viewBox Y 시작점이 -padding이므로, 실제 Y 좌표는 그대로 유지
-        const baseX = params.height; // 길이
-        const baseY = viewBoxHeight - params.heightBack;
-        
-        // 길이 반대방향으로 받침 제원의 Y 값만큼 이동
-        const centerX = baseX - point.offsetY;
-        const centerY = baseY;
-        
-        // 앵커 위치 계산
-        const anchorCount = Number(point.anchorRowCountAxial) || 0;
-        const anchorGap = Number(point.anchorGapAxial) || 0;
-        const anchors: JSX.Element[] = [];
-        
-        if (anchorCount > 0 && anchorGap > 0) {
-          for (let i = 0; i < anchorCount; i++) {
-            // 앵커 위치 = (i - (n-1)/2) * gap
-            const offset = (i - (anchorCount - 1) / 2) * anchorGap;
-            const anchorX = centerX + offset;
-            const anchorY = centerY;
-            
-            // -Y 방향으로 300mm 선 그리기 (아래쪽 방향)
-            const lineEndY = anchorY + 300; // Y축 아래 방향으로 300mm
-            
-            anchors.push(
-              <g key={`back-anchor-group-${index}-${i}`}>
-                <line
-                  x1={anchorX}
-                  y1={anchorY}
-                  x2={anchorX}
-                  y2={lineEndY}
-                  stroke={ANCHOR_STROKE_COLOR}
-                  strokeWidth="3"
+              const topCenterY = 0;
+              const dimensionStartY = params.hasStep ? lastAnchorY : topCenterY;
+              const dimensionY1 = dimensionStartY;
+              const dimensionY2 = intersectionY;
+              const dimensionDistance = Math.abs(dimensionY2 - dimensionY1);
+
+              const dimensionLineOffset = 100;
+              const dimensionLineX = 0 - dimensionLineOffset;
+
+              const referenceX1 = params.hasStep ? lastAnchorX : params.height / 2;
+              const referenceX2 = intersectionX;
+
+              if (isAxialFrontFrontDimensionVisible) {
+                frontDimensionElements.push(
+                  <g key={`axial-front-dimension-front-${pointIndex}`}>
+                    <line
+                      key={`front-dashed-line-${pointIndex}`}
+                      x1={lastAnchorX}
+                      y1={lastAnchorY}
+                      x2={intersectionX}
+                      y2={intersectionY}
+                      stroke={ANCHOR_STROKE_COLOR}
+                      strokeWidth={ANCHOR_DASHED_STROKE_WIDTH}
+                      strokeDasharray="5,5"
+                      strokeOpacity={1}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                    <line
+                      x1={referenceX1}
+                      y1={dimensionY1}
+                      x2={dimensionLineX}
+                      y2={dimensionY1}
+                      stroke={SECTION_STROKE_COLOR}
+                      strokeWidth="1"
+                      strokeOpacity={0.5}
+                    />
+                    <line
+                      x1={referenceX2}
+                      y1={dimensionY2}
+                      x2={dimensionLineX}
+                      y2={dimensionY2}
+                      stroke={SECTION_STROKE_COLOR}
+                      strokeWidth="1"
+                      strokeOpacity={0.5}
+                    />
+                    <line
+                      x1={dimensionLineX}
+                      y1={dimensionY1}
+                      x2={dimensionLineX}
+                      y2={dimensionY2}
+                      stroke={SECTION_STROKE_COLOR}
+                      strokeWidth="2"
+                      strokeOpacity={1}
+                      markerStart="url(#arrowhead-start)"
+                      markerEnd="url(#arrowhead-end)"
+                    />
+                    <line
+                      x1={dimensionLineX - 20}
+                      y1={dimensionY1}
+                      x2={dimensionLineX + 20}
+                      y2={dimensionY1}
+                      stroke={SECTION_STROKE_COLOR}
+                      strokeWidth="2"
+                      strokeOpacity={1}
+                    />
+                    <line
+                      x1={dimensionLineX - 20}
+                      y1={dimensionY2}
+                      x2={dimensionLineX + 20}
+                      y2={dimensionY2}
+                      stroke={SECTION_STROKE_COLOR}
+                      strokeWidth="2"
+                      strokeOpacity={1}
+                    />
+                    <text
+                      x={dimensionLineX - 100}
+                      y={(dimensionY1 + dimensionY2) / 2}
+                      fill={SECTION_STROKE_COLOR}
+                      fontSize={SECTION_PREVIEW_DIMENSION_TEXT_FONT_SIZE_PX}
+                      fontWeight="bold"
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      transform={`rotate(-90 ${dimensionLineX - 100} ${(dimensionY1 + dimensionY2) / 2})`}
+                    >
+                      {Math.round(dimensionDistance).toLocaleString()}
+                    </text>
+                  </g>
+                );
+              }
+            }
+
+            const rectWidth = anchorGap * 1.5;
+            const rectHeight = 100;
+            const rectX = centerX - rectWidth / 2;
+            const rectY = centerY - rectHeight;
+
+            return (
+              <g key={`front-support-group-${pointIndex}`}>
+                <rect
+                  x={rectX}
+                  y={rectY}
+                  width={rectWidth}
+                  height={rectHeight}
+                  fill="white"
+                  stroke={SECTION_STROKE_COLOR}
+                  strokeWidth={MAIN_LINE_STROKE_WIDTH}
                   strokeOpacity={1}
-                />
-                <circle
-                  cx={anchorX}
-                  cy={anchorY}
-                  r="12"
-                  fill={ANCHOR_FILL_COLOR}
-                  stroke="darkred"
-                  strokeWidth="3"
-                  opacity={0.9}
                   vectorEffect="non-scaling-stroke"
                 />
+                {anchors}
               </g>
             );
-          }
-          
-          // 후열 받침: 교축방향 첫번째 열의 앵커 중심 위치에서 1.5의 기울기를 갖는 선을 +X, -Y 방향으로 형상의 외곽선과 만나는 위치까지 그린다.
-          if (anchorCount > 0) {
-            const firstAnchorIndex = 0; // 첫번째 열 (가장 왼쪽)
-            const firstAnchorOffset = (firstAnchorIndex - (anchorCount - 1) / 2) * anchorGap;
-            const firstAnchorX = centerX + firstAnchorOffset;
-            const firstAnchorY = centerY;
-            
-            // 기울기 1.5: dy/dx = 1.5, 즉 dy = 1.5 * dx
-            // +X, -Y 방향 (오른쪽 아래)
-            // 직선 방정식: y - firstAnchorY = 1.5 * (x - firstAnchorX)
-            // 형상의 외곽선: 우측 가장자리(x=params.height) 또는 하단 가장자리(y=viewBoxHeight)
-            // 우측 가장자리와 만나는 점: x = params.height
-            // y = firstAnchorY + 1.5 * (params.height - firstAnchorX)
-            // 하단 가장자리와 만나는 점: y = viewBoxHeight
-            // viewBoxHeight = firstAnchorY + 1.5 * (x - firstAnchorX)
-            // x = firstAnchorX + (viewBoxHeight - firstAnchorY) / 1.5
-            
-            const slope = 1.5;
-            const rightEdgeX = params.height; // 우측 가장자리
-            const bottomEdgeY = viewBoxHeight; // 하단 가장자리
-            
-            // 우측 가장자리와 만나는 점
-            const intersectionWithRightY = firstAnchorY + slope * (rightEdgeX - firstAnchorX);
-            
-            // 하단 가장자리와 만나는 점
-            const deltaY = bottomEdgeY - firstAnchorY;
-            const deltaX = deltaY / slope;
-            const intersectionWithBottomX = firstAnchorX + deltaX; // +X 방향
-            
-            // 실제 교차점은 우측 가장자리와 하단 가장자리 중 먼저 만나는 곳
-            let intersectionX: number;
-            let intersectionY: number;
-            
-            if (intersectionWithRightY >= 0 && intersectionWithRightY <= bottomEdgeY) {
-              // 우측 가장자리와 먼저 만남
-              intersectionX = rightEdgeX;
-              intersectionY = intersectionWithRightY;
-            } else {
-              // 하단 가장자리와 만남
-              intersectionX = intersectionWithBottomX;
-              intersectionY = bottomEdgeY;
+          })
+      : [];
+
+    // 후열 받침 중심 위치 및 앵커 계산 및 렌더링
+    const backSupportsAndAnchors = lastBackSupportIndex !== null
+      ? customPoints
+          .map((point, pointIndex) => ({ point, pointIndex }))
+          .filter(({ pointIndex }) => pointIndex === lastBackSupportIndex)
+          .map(({ point, pointIndex }) => {
+            const baseX = params.height;
+            const baseY = viewBoxHeight - params.heightBack;
+            const centerX = baseX - point.offsetY;
+            const centerY = baseY;
+
+            const anchorCount = Number(point.anchorRowCountAxial) || 0;
+            const anchorGap = Number(point.anchorGapAxial) || 0;
+            const anchors: JSX.Element[] = [];
+
+            if (anchorCount > 0 && anchorGap > 0) {
+              for (let i = 0; i < anchorCount; i++) {
+                const offset = (i - (anchorCount - 1) / 2) * anchorGap;
+                const anchorX = centerX + offset;
+                const anchorY = centerY;
+                const lineEndY = anchorY + 300;
+
+                anchors.push(
+                  <g key={`back-anchor-group-${pointIndex}-${i}`}>
+                    <line
+                      x1={anchorX}
+                      y1={anchorY}
+                      x2={anchorX}
+                      y2={lineEndY}
+                      stroke={ANCHOR_STROKE_COLOR}
+                      strokeWidth="3"
+                      strokeOpacity={1}
+                    />
+                    <circle
+                      cx={anchorX}
+                      cy={anchorY}
+                      r={anchorOuterRadius}
+                      fill={ANCHOR_FILL_COLOR}
+                      stroke={ANCHOR_STROKE_COLOR}
+                      strokeWidth={anchorRingStrokeWidth}
+                      fillOpacity={1}
+                      strokeOpacity={1}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  </g>
+                );
+              }
+
+              const firstAnchorIndex = 0;
+              const firstAnchorOffset = (firstAnchorIndex - (anchorCount - 1) / 2) * anchorGap;
+              const firstAnchorX = centerX + firstAnchorOffset;
+              const firstAnchorY = centerY;
+
+              const slope = 1.5;
+              const rightEdgeX = params.height;
+              const bottomEdgeY = viewBoxHeight;
+
+              const intersectionWithRightY = firstAnchorY + slope * (rightEdgeX - firstAnchorX);
+              const deltaY = bottomEdgeY - firstAnchorY;
+              const deltaX = deltaY / slope;
+              const intersectionWithBottomX = firstAnchorX + deltaX;
+
+              const isRightValid = intersectionWithRightY > firstAnchorY &&
+                                  intersectionWithRightY <= bottomEdgeY;
+              const isBottomValid = intersectionWithBottomX >= firstAnchorX &&
+                                   intersectionWithBottomX <= rightEdgeX;
+
+              let intersectionX: number;
+              let intersectionY: number;
+
+              if (isRightValid && isBottomValid) {
+                const rightDistance = Math.hypot(rightEdgeX - firstAnchorX, firstAnchorY - intersectionWithRightY);
+                const bottomDistance = Math.hypot(intersectionWithBottomX - firstAnchorX, firstAnchorY - bottomEdgeY);
+
+                if (rightDistance < bottomDistance) {
+                  intersectionX = rightEdgeX;
+                  intersectionY = intersectionWithRightY;
+                } else {
+                  intersectionX = intersectionWithBottomX;
+                  intersectionY = bottomEdgeY;
+                }
+              } else if (isRightValid) {
+                intersectionX = rightEdgeX;
+                intersectionY = intersectionWithRightY;
+              } else if (isBottomValid) {
+                intersectionX = intersectionWithBottomX;
+                intersectionY = bottomEdgeY;
+              } else {
+                intersectionX = rightEdgeX;
+                intersectionY = intersectionWithRightY;
+              }
+
+              const topCenterY = 0;
+              const dimensionStartY = params.hasStep ? firstAnchorY : topCenterY;
+              const dimensionY1 = dimensionStartY;
+              const dimensionY2 = intersectionY;
+              const dimensionDistance = Math.abs(dimensionY2 - dimensionY1);
+
+              const dimensionLineOffset = 100;
+              const dimensionLineX = params.height + dimensionLineOffset;
+
+              const referenceX1 = params.hasStep ? firstAnchorX : params.height / 2;
+              const referenceX2 = intersectionX;
+
+              if (isAxialFrontBackDimensionVisible) {
+                backDimensionElements.push(
+                  <g key={`axial-front-dimension-back-${pointIndex}`}>
+                    <line
+                      key={`back-dashed-line-${pointIndex}`}
+                      x1={firstAnchorX}
+                      y1={firstAnchorY}
+                      x2={intersectionX}
+                      y2={intersectionY}
+                      stroke={ANCHOR_STROKE_COLOR}
+                      strokeWidth={ANCHOR_DASHED_STROKE_WIDTH}
+                      strokeDasharray="5,5"
+                      strokeOpacity={1}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                    <line
+                      x1={referenceX1}
+                      y1={dimensionY1}
+                      x2={dimensionLineX}
+                      y2={dimensionY1}
+                      stroke={SECTION_STROKE_COLOR}
+                      strokeWidth="1"
+                      strokeOpacity={0.5}
+                    />
+                    <line
+                      x1={referenceX2}
+                      y1={dimensionY2}
+                      x2={dimensionLineX}
+                      y2={dimensionY2}
+                      stroke={SECTION_STROKE_COLOR}
+                      strokeWidth="1"
+                      strokeOpacity={0.5}
+                    />
+                    <line
+                      x1={dimensionLineX}
+                      y1={dimensionY1}
+                      x2={dimensionLineX}
+                      y2={dimensionY2}
+                      stroke={SECTION_STROKE_COLOR}
+                      strokeWidth="2"
+                      strokeOpacity={1}
+                      markerStart="url(#arrowhead-start)"
+                      markerEnd="url(#arrowhead-end)"
+                    />
+                    <line
+                      x1={dimensionLineX - 20}
+                      y1={dimensionY1}
+                      x2={dimensionLineX + 20}
+                      y2={dimensionY1}
+                      stroke={SECTION_STROKE_COLOR}
+                      strokeWidth="2"
+                      strokeOpacity={1}
+                    />
+                    <line
+                      x1={dimensionLineX - 20}
+                      y1={dimensionY2}
+                      x2={dimensionLineX + 20}
+                      y2={dimensionY2}
+                      stroke={SECTION_STROKE_COLOR}
+                      strokeWidth="2"
+                      strokeOpacity={1}
+                    />
+                    <text
+                      x={dimensionLineX + 100}
+                      y={(dimensionY1 + dimensionY2) / 2}
+                      fill={SECTION_STROKE_COLOR}
+                      fontSize={SECTION_PREVIEW_DIMENSION_TEXT_FONT_SIZE_PX}
+                      fontWeight="bold"
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      transform={`rotate(-90 ${dimensionLineX + 100} ${(dimensionY1 + dimensionY2) / 2})`}
+                    >
+                      {Math.round(dimensionDistance).toLocaleString()}
+                    </text>
+                  </g>
+                );
+              }
             }
-            
-            // Dimension: 빨간색 점선이 형상 외곽선과 만나는 점과 형상의 상단 중앙점 간의 수직 거리
-            const topCenterY = 0; // 형상의 상단 중앙점 Y (상단)
-            const dimensionY1 = topCenterY; // Dimension 시작점 Y (상단)
-            const dimensionY2 = intersectionY; // Dimension 끝점 Y (교차점)
-            const dimensionDistance = Math.abs(dimensionY2 - dimensionY1); // 수직 거리
-            
-            // Dimension 선 그리기 (후열 받침: 형상 외곽선의 오른쪽)
-            const dimensionLineOffset = 200; // Dimension 선과 형상 사이의 간격 (후열)
-            const dimensionLineX = params.height + dimensionLineOffset; // 형상 외곽선 오른쪽에 그리기
-            
-            // 보조선의 기준점: 형상 상단 중앙점과 교차점
-            const referenceX1 = params.height / 2; // 형상 상단 중앙점 X
-            const referenceX2 = intersectionX; // 교차점 X
-            
-            if (isAxialFrontBackDimensionVisible) {
-              backDimensionElements.push(
-                <g key={`axial-front-dimension-back-${index}`}>
-                  <line
-                    key={`back-dashed-line-${index}`}
-                    x1={firstAnchorX}
-                    y1={firstAnchorY}
-                    x2={intersectionX}
-                    y2={intersectionY}
-                    stroke={ANCHOR_STROKE_COLOR}
-                    strokeWidth="2"
-                    strokeDasharray="5,5"
-                    strokeOpacity={1}
-                  />
-                  {/* 보조선: 시작점(형상 상단 중앙점)에서 치수선까지 */}
-                  <line
-                    x1={referenceX1}
-                    y1={dimensionY1}
-                    x2={dimensionLineX}
-                    y2={dimensionY1}
-                    stroke={SECTION_STROKE_COLOR}
-                    strokeWidth="1"
-                    strokeOpacity={0.5}
-                  />
-                  {/* 보조선: 끝점(교차점)에서 치수선까지 */}
-                  <line
-                    x1={referenceX2}
-                    y1={dimensionY2}
-                    x2={dimensionLineX}
-                    y2={dimensionY2}
-                    stroke={SECTION_STROKE_COLOR}
-                    strokeWidth="1"
-                    strokeOpacity={0.5}
-                  />
-                  {/* Dimension 수직선 (화살표 포함) */}
-                  <line
-                    x1={dimensionLineX}
-                    y1={dimensionY1}
-                    x2={dimensionLineX}
-                    y2={dimensionY2}
-                    stroke={SECTION_STROKE_COLOR}
-                    strokeWidth="2"
-                    strokeOpacity={1}
-                    markerStart="url(#arrowhead-start)"
-                    markerEnd="url(#arrowhead-end)"
-                  />
-                  {/* Dimension 시작점 표시선 */}
-                  <line
-                    x1={dimensionLineX - 20}
-                    y1={dimensionY1}
-                    x2={dimensionLineX + 20}
-                    y2={dimensionY1}
-                    stroke={SECTION_STROKE_COLOR}
-                    strokeWidth="2"
-                    strokeOpacity={1}
-                  />
-                  {/* Dimension 끝점 표시선 */}
-                  <line
-                    x1={dimensionLineX - 20}
-                    y1={dimensionY2}
-                    x2={dimensionLineX + 20}
-                    y2={dimensionY2}
-                    stroke={SECTION_STROKE_COLOR}
-                    strokeWidth="2"
-                    strokeOpacity={1}
-                  />
-                  {/* Dimension 텍스트 (후열: 치수 선의 왼쪽에 배치, 텍스트는 세로로 배치) */}
-                  <text
-                    x={dimensionLineX - 100}
-                    y={(dimensionY1 + dimensionY2) / 2}
-                    fill={SECTION_STROKE_COLOR}
-                    fontSize="100"
-                    fontWeight="bold"
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    transform={`rotate(-90 ${dimensionLineX - 100} ${(dimensionY1 + dimensionY2) / 2})`}
-                  >
-                    {Math.round(dimensionDistance).toLocaleString()}
-                  </text>
-                </g>
-              );
-            }
-          }
-        }
-        
-        // 받침 중심 기준 직사각형 계산
-        // 아래 변의 중앙이 받침 중심 위치와 일치하도록
-        const rectWidth = anchorGap * 1.5; // 가로 길이 = 앵커 간격(교축) * 1.5
-        const rectHeight = 100; // 세로 길이 = 100
-        const rectX = centerX - rectWidth / 2; // 중심에서 가로/2만큼 왼쪽
-        const rectY = centerY - rectHeight; // 아래 변이 받침 중심과 일치하도록
-        
-        return (
-          <g key={`back-support-group-${index}`}>
-            {/* 받침 중심 기준 직사각형 */}
-            <rect
-              x={rectX}
-              y={rectY}
-              width={rectWidth}
-              height={rectHeight}
-              fill="white"
-              stroke={SECTION_STROKE_COLOR}
-              strokeWidth={MAIN_LINE_STROKE_WIDTH}
-              strokeOpacity={1}
-              vectorEffect="non-scaling-stroke"
-            />
-            {/* 받침 중심점 (크게 표시하여 육안으로 확인 가능하도록) */}
-            <circle
-              cx={centerX}
-              cy={centerY}
-              r="15"
-              fill="red"
-              stroke="darkred"
-              strokeWidth="3"
-              opacity={0.9}
-              vectorEffect="non-scaling-stroke"
-            />
-            {/* 앵커 점들 */}
-            {anchors}
-          </g>
-        );
-      });
+
+            const rectWidth = anchorGap * 1.5;
+            const rectHeight = 100;
+            const rectX = centerX - rectWidth / 2;
+            const rectY = centerY - rectHeight;
+
+            return (
+              <g key={`back-support-group-${pointIndex}`}>
+                <rect
+                  x={rectX}
+                  y={rectY}
+                  width={rectWidth}
+                  height={rectHeight}
+                  fill="white"
+                  stroke={SECTION_STROKE_COLOR}
+                  strokeWidth={MAIN_LINE_STROKE_WIDTH}
+                  strokeOpacity={1}
+                  vectorEffect="non-scaling-stroke"
+                />
+                {anchors}
+              </g>
+            );
+          })
+      : [];
 
     return {
       supportElements: (
@@ -2565,7 +2560,11 @@ useEffect(() => {
     isAxialFrontBackDimensionVisible,
     isVerticalFrontFrontDimensionVisible,
     isVerticalFrontBackDimensionVisible,
-    viewOptionVersion
+    viewOptionVersion,
+    anchorOuterRadius,
+    anchorInnerRadius,
+    anchorRingStrokeWidth,
+    anchorInnerStrokeWidth
   ]);
 
 
@@ -2623,7 +2622,6 @@ useEffect(() => {
       return newPoints;
     });
   }, [sectionPointCountFront]);
-
   // 단면 치수 행 개수에 따라 점 개수 자동 조정 (후열)
   useEffect(() => {
     setSectionPointsBack(prev => {
@@ -2707,7 +2705,6 @@ useEffect(() => {
       p.id === id ? { ...p, [field]: value } : p
     ));
   };
-
   // 엑셀 데이터 붙여넣기 처리
   const handlePasteData = (pastedData: string, startIndex: number) => {
     const lines = pastedData.split('\n').filter(line => line.trim());
@@ -2779,20 +2776,37 @@ useEffect(() => {
       [key]: value
     }));
   };
-
   const handleDownload = () => {
     const svg = document.getElementById('section-svg');
     if (!svg) return;
 
-    const svgData = new XMLSerializer().serializeToString(svg);
+    const rect = svg.getBoundingClientRect();
+    const ratio = window.devicePixelRatio || 1;
+    const outputWidth = Math.max(rect.width, 1);
+    const outputHeight = Math.max(rect.height, 1);
+
+    const clonedSvg = svg.cloneNode(true) as SVGSVGElement;
+    clonedSvg.setAttribute('width', `${outputWidth}`);
+    clonedSvg.setAttribute('height', `${outputHeight}`);
+
+    const svgData = new XMLSerializer().serializeToString(clonedSvg);
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
 
     img.onload = () => {
-      canvas.width = params.width;
-      canvas.height = params.height;
-      ctx?.drawImage(img, 0, 0);
+      const exportScale = Math.max(ratio, 2);
+      canvas.width = outputWidth * exportScale;
+      canvas.height = outputHeight * exportScale;
+      if (ctx) {
+        ctx.setTransform(exportScale, 0, 0, exportScale, 0, 0);
+        ctx.imageSmoothingEnabled = false;
+        (ctx as any).mozImageSmoothingEnabled = false;
+        (ctx as any).webkitImageSmoothingEnabled = false;
+        (ctx as any).msImageSmoothingEnabled = false;
+        ctx.clearRect(0, 0, outputWidth, outputHeight);
+        ctx.drawImage(img, 0, 0, outputWidth, outputHeight);
+      }
       const png = canvas.toDataURL('image/png');
       
       const link = document.createElement('a');
@@ -2803,7 +2817,6 @@ useEffect(() => {
 
     img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
   };
-
   // 상대 좌표를 절대 좌표로 변환하는 헬퍼 함수 (단면 뷰 렌더링용)
   // 모든 점이 상대 좌표로 저장되어 있으므로, 누적하여 절대 좌표로 변환
   const convertToAbsoluteCoordinates = (points: Array<{ id: string; x: number; y: number; r: number }>): Array<{ x: number; y: number; r: number }> => {
@@ -2828,6 +2841,35 @@ useEffect(() => {
 
 const ARC_TOLERANCE = 1e-8;
 
+type SectionBounds = {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+};
+
+type SectionViewBoxParams = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  centerX: number;
+  centerY: number;
+  padding: number;
+};
+
+type SectionPathEntry = {
+  pathData: string;
+  absolutePoints: Array<{ x: number; y: number; r: number }>;
+  flipY: (y: number) => number;
+  viewBox: string;
+  viewBoxParams: SectionViewBoxParams;
+};
+type SectionPathCollection = {
+  active: SectionPathEntry | null;
+  front: SectionPathEntry | null;
+  back: SectionPathEntry | null;
+};
 const calculateArcCenter = (
   startX: number,
   startY: number,
@@ -2908,7 +2950,6 @@ const calculateArcCenter = (
     centerY: chosenCenter.y
   };
 };
-
   // 테이블에서 입력받은 값을 저장 형식으로 변환하는 함수
   // 모든 입력값은 상대 좌표로 그대로 저장
   const convertInputToStorage = (
@@ -2933,112 +2974,53 @@ const calculateArcCenter = (
 
   // 단면 뷰 렌더링을 위한 useMemo
   // 단면 형상 path 생성 (교직(정면)과 코핑 형상 미리보기 단면에서 공통 사용)
-  const sectionPathData = useMemo(() => {
-    // 단면 뷰에서 사용할 점들 결정
-    const pointsToRender = params.hasStep
-      ? (activeSectionTab === 'front' ? sectionPointsFront : sectionPointsBack)
-      : sectionPoints;
-
-    if (pointsToRender.length === 0) {
-      return null;
-    }
-
-    // 상대 좌표를 절대 좌표로 변환
-    const absolutePoints = convertToAbsoluteCoordinates(pointsToRender);
-
-    // 점들의 경계 계산
-    const minX = Math.min(...absolutePoints.map(p => p.x));
-    const maxX = Math.max(...absolutePoints.map(p => p.x));
-    const minY = Math.min(...absolutePoints.map(p => p.y));
-    const maxY = Math.max(...absolutePoints.map(p => p.y));
-
-    const viewBoxWidth = maxX - minX || 100;
-    const viewBoxHeight = maxY - minY || 100;
-    const padding = Math.max(viewBoxWidth, viewBoxHeight) * 0.1 || 20;
-
-    // SVG 경계
-    const svgX = minX - padding;
-    const svgY = minY - padding;
-    const svgWidth = viewBoxWidth + padding * 2;
-    const svgHeight = viewBoxHeight + padding * 2;
-
-    // Y축을 뒤집기 위한 변환 값 계산 (SVG 좌표계에서 Y가 아래로 증가하므로, +Y가 위쪽이 되도록)
-    // viewBox의 중앙 Y 좌표
-    const centerY = svgY + svgHeight / 2;
-
-    // Y 좌표 변환 함수: Y축을 뒤집기 (centerY 기준으로 반사)
-    const flipY = (y: number) => centerY * 2 - y;
-
-    // 두 점 사이의 Arc를 생성하는 함수
-    const createArcPath = (
-      startX: number, startY: number,
-      endX: number, endY: number,
-      radius: number
-    ): string => {
-      const dx = endX - startX;
-      const dy = endY - startY;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-      
-      // 반지름이 거리의 절반보다 작으면 직선으로 처리
-      if (radius === 0 || Math.abs(radius) < distance / 2) {
-        return `L ${endX} ${endY}`;
-      }
-      
-      // R 값의 부호에 따라 Arc 방향 결정
-      const isNegative = radius < 0;
-      const absRadius = Math.abs(radius);
-      
-      // 두 점의 중점
-      const midX = (startX + endX) / 2;
-      const midY = (startY + endY) / 2;
-      
-      // 수직 방향 벡터 (두 점을 연결하는 선에 수직)
-      // 항상 한 방향으로 고정
-      const perpX = -dy / distance;
-      const perpY = dx / distance;
-      
-      // Arc의 높이 (versine)
-      const h = absRadius - Math.sqrt(absRadius * absRadius - (distance / 2) * (distance / 2));
-      
-      // Arc의 중심점 (항상 같은 방향)
-      const centerX = midX + perpX * h;
-      const centerY = midY + perpY * h;
-      
-      // 시작점과 끝점에서 중심까지의 벡터
-      const startToCenterX = centerX - startX;
-      const startToCenterY = centerY - startY;
-      const endToCenterX = centerX - endX;
-      const endToCenterY = centerY - endY;
-      
-      // 각도 계산 (시작점과 끝점의 중심 기준 각도)
-      const startAngle = Math.atan2(startToCenterY, startToCenterX);
-      const endAngle = Math.atan2(endToCenterY, endToCenterX);
-      
-      // Arc의 방향 결정 (큰 Arc인지 작은 Arc인지)
-      let angleDiff = endAngle - startAngle;
-      if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
-      if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-      
-      const largeArcFlag = Math.abs(angleDiff) > Math.PI ? 1 : 0;
-      
-      // sweepFlag 계산 (각도 차이에 따라)
-      let sweepFlag = angleDiff > 0 ? 1 : 0;
-      
-      // R이 음수면 sweepFlag를 반대로 설정하여 Arc 방향 반전
-      if (isNegative) {
-        sweepFlag = sweepFlag === 1 ? 0 : 1;
-      }
-      
-      // SVG A 명령어 사용 (절댓값 사용)
-      return `A ${absRadius} ${absRadius} 0 ${largeArcFlag} ${sweepFlag} ${endX} ${endY}`;
+const sectionPathData = useMemo<SectionPathCollection>(() => {
+    const calculateBounds = (
+      absolutePoints: Array<{ x: number; y: number }>
+    ): SectionBounds => {
+      const xs = absolutePoints.map(point => point.x);
+      const ys = absolutePoints.map(point => point.y);
+      const minX = Math.min(...xs);
+      const maxX = Math.max(...xs);
+      const minY = Math.min(...ys);
+      const maxY = Math.max(...ys);
+      return { minX, maxX, minY, maxY };
     };
 
-    // 점들을 path로 변환 (Y축 뒤집기 및 R 값 적용)
-    let pathData = '';
-    if (absolutePoints.length > 0) {
+    const buildViewBoxParams = (bounds: SectionBounds): SectionViewBoxParams => {
+      const width = (bounds.maxX - bounds.minX) || 100;
+      const height = (bounds.maxY - bounds.minY) || 100;
+      const paddingBase = Math.max(width, height) * 0.1;
+      const padding = paddingBase || 20;
+      const x = bounds.minX - padding;
+      const y = bounds.minY - padding;
+      const widthWithPadding = width + padding * 2;
+      const heightWithPadding = height + padding * 2;
+      const centerX = x + widthWithPadding / 2;
+      const centerY = y + heightWithPadding / 2;
+      return {
+        x,
+        y,
+        width: widthWithPadding,
+        height: heightWithPadding,
+        centerX,
+        centerY,
+        padding
+      };
+    };
+
+    const buildPathData = (
+      absolutePoints: Array<{ x: number; y: number; r: number }>,
+      flipY: (y: number) => number
+    ): string => {
+      if (absolutePoints.length === 0) {
+        return '';
+      }
+
+      let pathData = '';
       const firstPoint = absolutePoints[0];
       pathData = `M ${firstPoint.x} ${flipY(firstPoint.y)} `;
-      
+
       for (let i = 1; i < absolutePoints.length; i++) {
         const prevPoint = absolutePoints[i - 1];
         const currentPoint = absolutePoints[i];
@@ -3046,35 +3028,139 @@ const calculateArcCenter = (
         const prevY = flipY(prevPoint.y);
         const currX = currentPoint.x;
         const currY = flipY(currentPoint.y);
-        
+
         if (currentPoint.r === 0) {
-          // 직선 연결
           pathData += `L ${currX} ${currY} `;
         } else {
-          // Arc 연결
-          pathData += createArcPath(prevX, prevY, currX, currY, currentPoint.r);
-          pathData += ' ';
+          const dx = currX - prevX;
+          const dy = currY - prevY;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
+          if (currentPoint.r === 0 || Math.abs(currentPoint.r) < distance / 2) {
+            pathData += `L ${currX} ${currY} `;
+          } else {
+            const radius = currentPoint.r;
+            const isNegative = radius < 0;
+            const absRadius = Math.abs(radius);
+            const midX = (prevX + currX) / 2;
+            const midY = (prevY + currY) / 2;
+            const perpX = -dy / distance;
+            const perpY = dx / distance;
+            const h = absRadius - Math.sqrt(absRadius * absRadius - (distance / 2) * (distance / 2));
+            const centerX = midX + perpX * h;
+            const centerY = midY + perpY * h;
+            const startToCenterX = centerX - prevX;
+            const startToCenterY = centerY - prevY;
+            const endToCenterX = centerX - currX;
+            const endToCenterY = centerY - currY;
+            const startAngle = Math.atan2(startToCenterY, startToCenterX);
+            const endAngle = Math.atan2(endToCenterY, endToCenterX);
+            let angleDiff = endAngle - startAngle;
+            if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+            if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+            const largeArcFlag = Math.abs(angleDiff) > Math.PI ? 1 : 0;
+            let sweepFlag = angleDiff > 0 ? 1 : 0;
+            if (isNegative) {
+              sweepFlag = sweepFlag === 1 ? 0 : 1;
+            }
+            pathData += `A ${absRadius} ${absRadius} 0 ${largeArcFlag} ${sweepFlag} ${currX} ${currY} `;
+          }
         }
       }
-      
+
       pathData += 'Z';
+      return pathData;
+    };
+
+    const computeSectionPathData = (
+      pointsToRender: Array<{ id: string; x: number; y: number; r: number }>
+    ): SectionPathEntry | null => {
+      if (!pointsToRender || pointsToRender.length === 0) {
+        return null;
+      }
+
+      const absolutePoints = convertToAbsoluteCoordinates(pointsToRender);
+      const bounds = calculateBounds(absolutePoints);
+      const viewBoxParams = buildViewBoxParams(bounds);
+      const flipY = (y: number) => viewBoxParams.centerY * 2 - y;
+      const pathData = buildPathData(absolutePoints, flipY);
+
+      return {
+        pathData,
+        absolutePoints,
+        flipY,
+        viewBox: `${viewBoxParams.x} ${viewBoxParams.y} ${viewBoxParams.width} ${viewBoxParams.height}`,
+        viewBoxParams
+      };
+    };
+
+    const rebuildSectionPathEntry = (
+      entry: SectionPathEntry,
+      overrideViewBoxParams: SectionViewBoxParams
+    ): SectionPathEntry => {
+      const flipY = (y: number) => overrideViewBoxParams.centerY * 2 - y;
+      const pathData = buildPathData(entry.absolutePoints, flipY);
+      return {
+        pathData,
+        absolutePoints: entry.absolutePoints,
+        flipY,
+        viewBox: `${overrideViewBoxParams.x} ${overrideViewBoxParams.y} ${overrideViewBoxParams.width} ${overrideViewBoxParams.height}`,
+        viewBoxParams: overrideViewBoxParams
+      };
+    };
+
+    if (params.hasStep) {
+      const frontDataOriginal = computeSectionPathData(sectionPointsFront);
+      const backDataOriginal = computeSectionPathData(sectionPointsBack);
+
+      let frontData = frontDataOriginal;
+      let backData = backDataOriginal;
+
+      const combinedPoints: Array<{ x: number; y: number }> = [];
+      if (frontDataOriginal) {
+        combinedPoints.push(...frontDataOriginal.absolutePoints.map(point => ({ x: point.x, y: point.y })));
+      }
+      if (backDataOriginal) {
+        combinedPoints.push(...backDataOriginal.absolutePoints.map(point => ({ x: point.x, y: point.y })));
+      }
+
+      if (combinedPoints.length > 0) {
+        const combinedBounds = calculateBounds(combinedPoints);
+        const combinedViewBoxParams = buildViewBoxParams(combinedBounds);
+        if (frontDataOriginal) {
+          frontData = rebuildSectionPathEntry(frontDataOriginal, combinedViewBoxParams);
+        }
+        if (backDataOriginal) {
+          backData = rebuildSectionPathEntry(backDataOriginal, combinedViewBoxParams);
+        }
+      }
+
+      const activeData =
+        activeSectionTab === 'front'
+          ? frontData ?? backData
+          : backData ?? frontData;
+
+      return {
+        active: activeData ?? null,
+        front: frontData ?? null,
+        back: backData ?? null
+      };
     }
 
+    const singleData = computeSectionPathData(sectionPoints);
     return {
-      pathData,
-      absolutePoints,
-      flipY,
-      viewBox: `${svgX} ${svgY} ${svgWidth} ${svgHeight}`
+      active: singleData,
+      front: null,
+      back: null
     };
   }, [params.hasStep, activeSectionTab, sectionPoints, sectionPointsFront, sectionPointsBack]);
-
   // 교직(정면) 받침 중심위치 렌더링
   const renderedVerticalFrontSupports = useMemo(() => {
     if (sectionViewType !== 'vertical-front') {
       return null;
     }
 
-    const sectionData = sectionPathData;
+    const sectionData = sectionPathData.active;
     // sectionData가 없어도 기준점 표시는 가능하도록 기본값 설정
     if (!sectionData || !sectionData.pathData) {
       // 기본 경계값 사용
@@ -3108,8 +3194,9 @@ const calculateArcCenter = (
       const transformedOriginX = translateX + originX * scale;
       const transformedOriginY = translateY + originY * scale;
       
-      const markerSize = 200; // 매우 크게
-      const circleRadius = 50;
+    const markerSize = 200; // 매우 크게
+    const circleRadius = originMarkerRadius;
+    const innerCircleRadius = Math.max(circleRadius * 0.4, anchorInnerRadius * 0.5);
       
       return (
         <g>
@@ -3139,22 +3226,24 @@ const calculateArcCenter = (
             r={circleRadius}
             fill="blue"
             stroke="darkblue"
-            strokeWidth="5"
+            strokeWidth={Math.max(anchorRingStrokeWidth, 5)}
             opacity={0.9}
+            vectorEffect="non-scaling-stroke"
           />
           <circle
             cx={transformedOriginX}
             cy={transformedOriginY}
-            r={circleRadius * 0.4}
+            r={innerCircleRadius}
             fill="white"
             stroke="none"
+            vectorEffect="non-scaling-stroke"
           />
         </g>
       );
     }
 
     // 단면 형상의 경계 계산 (pathData는 이미 flipY가 적용된 상태)
-    const { absolutePoints, flipY } = sectionData;
+    const { absolutePoints, flipY, viewBoxParams } = sectionData;
     
     // 기준점: 단면 치수 입력 테이블의 첫 번째 점 (절대 좌표)
     // absolutePoints는 이미 절대 좌표로 변환된 상태이므로, 첫 번째 점이 기준점
@@ -3164,125 +3253,48 @@ const calculateArcCenter = (
     const originPoint = absolutePoints.length > 0 ? absolutePoints[0] : { x: 0, y: 0 };
     const originX = originPoint.x;
     const originY = originPoint.y; // 절대 좌표 (flipY 적용 전, 원본 Y 좌표)
-    
-    // flipY가 적용된 좌표로 경계 계산 (모달에서 단면 형상 렌더링과 동일)
-    const flippedPoints = absolutePoints.map(p => ({ x: p.x, y: flipY(p.y) }));
-    const minX = Math.min(...flippedPoints.map(p => p.x));
-    const maxX = Math.max(...flippedPoints.map(p => p.x));
-    const minY = Math.min(...flippedPoints.map(p => p.y));
-    const maxY = Math.max(...flippedPoints.map(p => p.y));
-    const sectionWidth = maxX - minX || 1;
-    const sectionHeight = maxY - minY || 1;
+    const frontOriginPoint = sectionPathData.front?.absolutePoints?.[0];
+    const backOriginPoint = sectionPathData.back?.absolutePoints?.[0];
+    const frontOriginX = frontOriginPoint?.x ?? originX;
+    const frontOriginY = frontOriginPoint?.y ?? originY;
+    const backOriginX = backOriginPoint?.x ?? originX;
+    const backOriginY = backOriginPoint?.y ?? originY;
+    const originalXs = absolutePoints.map(p => p.x);
+    const originalMinX = originalXs.length > 0 ? Math.min(...originalXs) : 0;
+    const originalMaxX = originalXs.length > 0 ? Math.max(...originalXs) : 0;
+    const padding = Math.max(params.width, params.height) * 0.1 || 20;
+    const adjustedViewBoxWidth = params.width + padding * 2;
+    const adjustedViewBoxHeight = params.height + padding * 2;
+    const viewBoxX = -padding;
+    const viewBoxY = -padding;
+    const scaleX = adjustedViewBoxWidth / viewBoxParams.width;
+    const scaleY = adjustedViewBoxHeight / viewBoxParams.height;
+    const scale = Math.min(scaleX, scaleY) * 0.9;
+    const viewBoxCenterX = viewBoxX + adjustedViewBoxWidth / 2;
+    const viewBoxCenterY = viewBoxY + adjustedViewBoxHeight / 2;
+    const translateX = viewBoxCenterX - viewBoxParams.centerX * scale;
+    const translateY = viewBoxCenterY - viewBoxParams.centerY * scale;
+    const dashedLineOverlayElements: React.ReactNode[] = [];
 
-    // viewBox 계산 (삽도 미리보기 모달의 viewBox와 동일하게 설정)
-    // 모달에서 교직(정면)의 경우: viewBoxX = -padding, viewBoxY = -padding
-    const baseViewBoxWidth = params.width;
-    const baseViewBoxHeight = params.height;
-    const padding = Math.max(baseViewBoxWidth, baseViewBoxHeight) * 0.1 || 20;
-    const adjustedViewBoxWidth = baseViewBoxWidth + padding * 2;
-    const adjustedViewBoxHeight = baseViewBoxHeight + padding * 2;
-    // 모달의 viewBox 시작점 (viewBoxX, viewBoxY)
-    const modalViewBoxX = -padding;
-    const modalViewBoxY = -padding;
-
-    // 교직(정면) viewBox에 맞게 스케일링 및 중앙 정렬 (모달에서 단면 형상 렌더링과 완전히 동일한 계산)
-    // 형상이 viewBox 중앙에 위치하도록 계산
-    const scaleX = adjustedViewBoxWidth / sectionWidth;
-    const scaleY = adjustedViewBoxHeight / sectionHeight;
-    const scale = Math.min(scaleX, scaleY) * 0.9; // 90%로 약간 여유 공간
-
-    // 형상의 중심점 계산 (flipY가 적용된 좌표 기준)
-    const sectionCenterX = (minX + maxX) / 2;
-    const sectionCenterY = (minY + maxY) / 2;
-    const originalMinX = Math.min(...absolutePoints.map(p => p.x));
-    const originalMaxX = Math.max(...absolutePoints.map(p => p.x));
-    
-    // viewBox의 중심점 계산
-    // viewBox는 viewBox={`${viewBoxX} ${viewBoxY} ${adjustedViewBoxWidth} ${adjustedViewBoxHeight}`}
-    // viewBoxX = -padding, viewBoxY = -padding
-    // viewBox의 중심점은: (viewBoxX + adjustedViewBoxWidth / 2, viewBoxY + adjustedViewBoxHeight / 2)
-    const viewBoxCenterX = modalViewBoxX + adjustedViewBoxWidth / 2;
-    const viewBoxCenterY = modalViewBoxY + adjustedViewBoxHeight / 2;
-    
-    // 형상의 중심점을 viewBox의 중심점에 맞추기 위한 translate 계산
-    // scale 적용 후 형상의 중심점: (sectionCenterX * scale, sectionCenterY * scale)
-    // 이 중심점이 viewBox의 중심점에 위치하도록:
-    //   translateX = viewBoxCenterX - sectionCenterX * scale
-    //   translateY = viewBoxCenterY - sectionCenterY * scale
-    const translateX = viewBoxCenterX - sectionCenterX * scale;
-    const translateY = viewBoxCenterY - sectionCenterY * scale;
-
-    // 기준점 표시 (단면 치수 입력 테이블의 첫 번째 점, 크고 눈에 띄게)
-    // 기준점은 단면 형상 좌표계에서의 첫 번째 점(absolutePoints[0])이므로, 변환된 위치에 표시
-    // 모달에서 단면 형상은 <g transform={`translate(${translateX}, ${translateY}) scale(${scale})`}>로 렌더링됨
-    // 모달의 viewBox는 viewBox={`${modalViewBoxX} ${modalViewBoxY} ${adjustedViewBoxWidth} ${adjustedViewBoxHeight}`}`로 설정됨
-    // SVG transform의 적용 순서: translate가 먼저, scale이 나중에 적용됨
-    // 
-    // pathData의 첫 번째 점: M ${firstPoint.x} ${flipY(firstPoint.y)}
-    // pathData는 이미 flipY가 적용된 좌표를 사용하므로, transform 적용 시:
-    //   X: (translateX + originX) * scale
-    //   Y: (translateY + flipY(originY)) * scale
-    // 
-    // 하지만 translateY는 이미 flipY가 적용된 좌표(flippedPoints)로 계산된 minY를 기반으로 하므로,
-    // 기준점의 Y 좌표는 flipY(originY)를 사용해야 합니다.
-    const flippedOriginX = originX;
-    const flippedOriginY = flipY(originY);
-    // SVG transform 적용: translate 먼저, scale 나중 (viewBox 좌표계)
-    // translateX, translateY는 이미 flipY가 적용된 좌표(flippedPoints) 기반으로 계산됨
-    const transformedOriginX = (translateX + flippedOriginX) * scale;
-    const transformedOriginY = (translateY + flippedOriginY) * scale;
-    
-    // 디버깅: 기준점 좌표 확인
-    console.log('기준점 계산:', {
-      'absolutePoints[0] (원본)': absolutePoints[0],
-      'pathData 첫 번째 점 (M 명령)': `${absolutePoints[0].x} ${flipY(absolutePoints[0].y)}`,
-      originX,
-      originY,
-      'flippedOriginX': flippedOriginX,
-      'flippedOriginY': flippedOriginY,
-      'flipY(originY)': flipY(originY),
-      'translateX, translateY': `${translateX}, ${translateY}`,
-      'translateY 계산 기반 (minY, flipped)': minY,
-      scale,
-      '기준점 SVG 좌표 (변환 후, scale 먼저 적용)': `${flippedOriginX * scale + translateX}, ${flippedOriginY * scale + translateY}`,
-      transformedOriginX,
-      transformedOriginY,
-      'minX, minY (flipped)': `${minX}, ${minY}`,
-      'maxX, maxY (flipped)': `${maxX}, ${maxY}`,
-      '모달 path 첫 번째 점 (M 명령) 실제 SVG 좌표 (SVG transform 적용, scale 먼저)': `${originX * scale + translateX}, ${flipY(originY) * scale + translateY}`,
-      '차이 (Y 방향)': `${(flipY(originY) * scale + translateY) - transformedOriginY}`
-    });
-    
-    // 받침 중심위치 및 앵커 렌더링: 기준점(단면 치수 입력 테이블의 첫 번째 점)을 기준으로 받침 제원 테이블의 "X" 열(offsetX) 값만큼 떨어진 위치
     const supportAndAnchorElements = customPoints.map((point, index) => {
       // 기준점(첫 번째 점) 기준으로 offsetX만큼 떨어진 위치 (받침 중심위치)
       // 기준점은 단면 형상 좌표계에서 (originX, originY)이므로, 받침 중심위치는 기준점 + offsetX
       // originY는 flipY 적용 전 원본 Y 좌표이므로, 받침 중심위치의 Y도 originY를 사용
-      const supportX = originX + point.offsetX;
-      const supportY = originY; // Y는 기준점의 Y 좌표 (원본, flipY 적용 전)
+      const isFrontSupport = index < params.frontRowCount;
+      const baseOriginX = isFrontSupport ? frontOriginX : backOriginX;
+      const baseOriginY = isFrontSupport ? frontOriginY : backOriginY;
+      const supportX = baseOriginX + point.offsetX;
+      const supportY = baseOriginY; // Y는 해당 단면 기준점의 Y 좌표 (원본, flipY 적용 전)
 
       const elements: React.ReactNode[] = [];
-      const isFrontSupport = index < params.frontRowCount;
+      const overlaySortedElements: React.ReactNode[] = [];
+      const dashedLineElements: React.ReactNode[] = [];
       const isDimensionVisible = isFrontSupport
         ? isVerticalFrontFrontDimensionVisible
         : isVerticalFrontBackDimensionVisible;
 
       // 받침 중심위치 점 (크게 표시하여 육안으로 확인 가능하도록)
       // 기준점 기준으로 받침 중심위치 계산
-      const supportCircleX = supportX;
-      const supportCircleY = supportY;
-      elements.push(
-        <circle
-          key={`vertical-front-support-${index}`}
-          cx={supportCircleX}
-          cy={supportCircleY}
-          r="15"
-          fill="red"
-          stroke="darkred"
-          strokeWidth="3"
-          opacity={0.9}
-        />
-      );
 
       // 앵커 위치 계산 및 렌더링
       const anchorRowCountVertical = Number(point.anchorRowCountVertical) || 0;
@@ -3323,6 +3335,11 @@ const calculateArcCenter = (
             stroke={SECTION_STROKE_COLOR}
             strokeWidth={MAIN_LINE_STROKE_WIDTH}
             opacity={1}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+            shapeRendering="crispEdges"
+            transform="translate(0.5 0.5)"
           />
         );
       }
@@ -3341,18 +3358,20 @@ const calculateArcCenter = (
           const anchorY = supportY;
 
           // 앵커 위치 점 (크게 표시하여 육안으로 확인 가능하도록)
-          elements.push(
-            <circle
-              key={`vertical-front-anchor-${index}-${i}`}
-              cx={anchorX}
-              cy={anchorY}
-              r="12"
-              fill={ANCHOR_FILL_COLOR}
-              stroke="darkred"
-              strokeWidth="2"
-              opacity={0.9}
-            />
-          );
+        elements.push(
+          <circle
+            key={`vertical-front-anchor-${index}-${i}`}
+            cx={anchorX}
+            cy={anchorY}
+            r={anchorOuterRadius}
+            fill={ANCHOR_FILL_COLOR}
+            stroke={ANCHOR_STROKE_COLOR}
+            strokeWidth={anchorRingStrokeWidth}
+            fillOpacity={1}
+            strokeOpacity={1}
+            vectorEffect="non-scaling-stroke"
+          />
+        );
 
           // 앵커 위치에서 -Y(아래) 방향으로 300mm의 빨간색 선
           // 단면 형상 좌표계에서 아래는 +Y 방향이지만, flipY가 적용되면 반대가 됨
@@ -3375,8 +3394,8 @@ const calculateArcCenter = (
         }
 
         // 빨간색 점선 그리기
-        // 첫 번째 전열 받침 또는 첫 번째 후열 받침: 교직방향 마지막 열의 앵커 중심 위치에서 1.5의 기울기를 갖는 선을 -X, -Y 방향으로 형상의 외곽선과 만나는 위치까지 그린다.
-        // 마지막 전열 받침 또는 마지막 후열 받침: 교직방향 첫번째 열의 앵커 중심 위치에서 1.5의 기울기를 갖는 선을 +X, -Y 방향으로 형상의 외곽선과 만나는 위치까지 그린다.
+        // 첫 번째 전열 받침 또는 첫 번째 후열 받침: 교직방향 마지막 열의 앵커 중심 위치에서 1.5의 기울기를 -X, -Y 방향으로 형상의 외곽선과 만나는 위치까지 그린다.
+        // 마지막 전열 받침 또는 마지막 후열 받침: 교직방향 첫번째 열의 앵커 중심 위치에서 1.5의 기울기를 +X, -Y 방향으로 형상의 외곽선과 만나는 위치까지 그린다.
         // sectionData가 있어야 absolutePoints를 사용할 수 있음
         if (sectionData && sectionData.absolutePoints) {
           const absolutePoints = sectionData.absolutePoints;
@@ -3458,14 +3477,12 @@ const calculateArcCenter = (
               slope: 1.5 * directionY / directionX,
               firstFewPoints: absolutePoints.slice(0, 3)
             });
-            
             // 기울기 1.5의 선의 방정식: y = targetAnchorY + slope * (x - targetAnchorX)
             // (-X, -Y) 방향: dx < 0, dy < 0이므로 dy/dx > 0, slope = 1.5 (양수)
             // (+X, -Y) 방향: dx > 0, dy < 0이므로 dy/dx < 0, slope = -1.5 (음수)
             // 따라서 slope = 1.5 * directionY / directionX
             const slope = 1.5 * directionY / directionX;
             const intercept = targetAnchorY - slope * targetAnchorX;
-            
             console.log(`교차점 계산: 총 ${absolutePoints.length}개 선분 순회 시작`);
             
             for (let j = 0; j < absolutePoints.length; j++) {
@@ -3577,7 +3594,6 @@ const calculateArcCenter = (
                       while (angle >= 2 * Math.PI) angle -= 2 * Math.PI;
                       return angle;
                     };
-                    
                     const normStart = normalizeAngle(startAngle);
                     const normEnd = normalizeAngle(endAngle);
                     const normCandidate = normalizeAngle(candidateAngle);
@@ -3654,6 +3670,8 @@ const calculateArcCenter = (
                             console.log(`Arc 선분 ${j}에서 교차점 찾았지만 거리 조건 불만족:`, { 
                               x: candidate.x, 
                               y: candidate.y, 
+                              deltaX, 
+                              deltaY, 
                               distance, 
                               minDistance 
                             });
@@ -3907,7 +3925,6 @@ const calculateArcCenter = (
                 }
               }
             }
-            
             // 디버깅: 교차점 계산 완료 후 상태 확인
             console.log('교차점 계산 완료:', {
               intersectionX,
@@ -3920,11 +3937,9 @@ const calculateArcCenter = (
               targetAnchorX,
               targetAnchorY
             });
-            
             // 빨간색 점선 그리기 (교차점이 있으면 교차점까지, 없으면 ViewBox 외곽까지)
             let lineEndX: number;
             let lineEndY: number;
-            
             // 교차점이 실제로 설정되었는지 확인 (null이 아니고, 거리가 0이 아닌 경우)
             const hasValidIntersection = foundIntersection &&
                                         intersectionX !== null && 
@@ -3942,7 +3957,6 @@ const calculateArcCenter = (
               check3: minDistance !== Infinity,
               check4: minDistance > 1e-10
             });
-            
             if (hasValidIntersection) {
               // 교차점이 있는 경우
               lineEndX = intersectionX!;
@@ -4089,15 +4103,15 @@ const calculateArcCenter = (
                 x2={lineEndX}
                 y2={lineEndY}
                 stroke={ANCHOR_STROKE_COLOR}
-                strokeWidth="2"
+                strokeWidth={ANCHOR_DASHED_STROKE_WIDTH}
                 strokeDasharray="5,5"
                 strokeOpacity={1}
+                vectorEffect="non-scaling-stroke"
               />
             );
-
             if (hasValidIntersection) {
-              const dimensionOffsetLeft = 100;
-              const dimensionOffsetRight = 200;
+              const dimensionOffsetLeft = 150;
+              const dimensionOffsetRight = 150;
               const dimensionLineX = directionX === -1
                 ? originalMinX - dimensionOffsetLeft
                 : originalMaxX + dimensionOffsetRight;
@@ -4106,7 +4120,7 @@ const calculateArcCenter = (
               const dimensionYTop = Math.min(dimensionYStart, dimensionYEnd);
               const dimensionYBottom = Math.max(dimensionYStart, dimensionYEnd);
               const dimensionDistance = Math.abs(dimensionYEnd - dimensionYStart);
-              const textOffset = 100;
+              const textOffset = 100 / scale;
               const textX = directionX === -1
                 ? dimensionLineX - textOffset
                 : dimensionLineX + textOffset;
@@ -4123,6 +4137,7 @@ const calculateArcCenter = (
                   stroke={SECTION_STROKE_COLOR}
                   strokeWidth="1"
                   strokeOpacity={0.5}
+                  shapeRendering="crispEdges"
                 />
               );
 
@@ -4136,6 +4151,7 @@ const calculateArcCenter = (
                   stroke={SECTION_STROKE_COLOR}
                   strokeWidth="1"
                   strokeOpacity={0.5}
+                  shapeRendering="crispEdges"
                 />
               );
 
@@ -4147,10 +4163,11 @@ const calculateArcCenter = (
                   x2={dimensionLineX}
                   y2={dimensionYBottom}
                   stroke={SECTION_STROKE_COLOR}
-                  strokeWidth="2"
+                  strokeWidth={ANCHOR_DASHED_STROKE_WIDTH}
                   strokeOpacity={1}
                   markerStart="url(#arrowhead-start)"
                   markerEnd="url(#arrowhead-end)"
+                  shapeRendering="crispEdges"
                 />
               );
 
@@ -4164,6 +4181,7 @@ const calculateArcCenter = (
                   stroke={SECTION_STROKE_COLOR}
                   strokeWidth="2"
                   strokeOpacity={1}
+                  shapeRendering="crispEdges"
                 />
               );
 
@@ -4177,11 +4195,11 @@ const calculateArcCenter = (
                   stroke={SECTION_STROKE_COLOR}
                   strokeWidth="2"
                   strokeOpacity={1}
+                  shapeRendering="crispEdges"
                 />
               );
 
-              const baselineFontSize = 100;
-              const adjustedFontSize = baselineFontSize;
+              const adjustedFontSize = SECTION_PREVIEW_DIMENSION_TEXT_FONT_SIZE_PX;
               const adjustedTextY = textY;
 
               elements.push(
@@ -4209,9 +4227,10 @@ const calculateArcCenter = (
                   x2={lineEndX}
                   y2={lineEndY}
                   stroke={ANCHOR_STROKE_COLOR}
-                  strokeWidth="2"
+                  strokeWidth={ANCHOR_DASHED_STROKE_WIDTH}
                   strokeDasharray="5,5"
                   strokeOpacity={1}
+                  vectorEffect="non-scaling-stroke"
                 />
               );
             }
@@ -4228,7 +4247,21 @@ const calculateArcCenter = (
       //   X: 단면 형상 좌표 X * scale + translateX
       //   Y: flipY(단면 형상 좌표 Y) * scale + translateY
       // modalViewBoxX, modalViewBoxY를 빼지 않음 (viewBox 좌표계이므로)
-      const transformedElements = elements.map((element) => {
+      elements.forEach((element) => {
+        if (
+          React.isValidElement(element) &&
+          element.type === 'line' &&
+          element.props &&
+          element.props.stroke === ANCHOR_STROKE_COLOR &&
+          element.props.strokeDasharray === '5,5'
+        ) {
+          dashedLineElements.push(element);
+        } else {
+          overlaySortedElements.push(element);
+        }
+      });
+
+      const transformElement = (element: React.ReactNode) => {
         if (React.isValidElement(element)) {
           const props = element.props as any;
           if (props.cx !== undefined && props.cy !== undefined) {
@@ -4281,117 +4314,26 @@ const calculateArcCenter = (
             const baseFontSize = props.fontSize !== undefined
               ? parseFloat(props.fontSize as string)
               : 100;
-            const adjustedFontSize = baseFontSize;
+            const adjustedFontSize = baseFontSize / scale;
 
             return React.cloneElement(element, {
               ...props,
               x: transformedX,
               y: transformedY,
-              fontSize: adjustedFontSize,
+              fontSize: `${adjustedFontSize}px`,
               transform: adjustedTransform,
               key: element.key
             });
           } else if (props.x !== undefined && props.y !== undefined && props.width !== undefined && props.height !== undefined) {
-            // rect 요소인 경우
-            // x, y는 단면 형상 좌표계의 원본 좌표 (상단 좌측 모서리)
-            // width, height는 크기
-            // rect의 하단 중앙점이 받침 중심 위치와 일치하도록 y 좌표가 이미 설정되어 있음
             const x = props.x;
-            // y는 원본 좌표계에서 y = supportY - height로 설정되어 있으나,
-            // 변환 후 y 좌표는 supportY를 직접 사용하여 계산함
             const width = props.width;
             const height = props.height;
-            // 모달의 단면 형상 렌더링과 동일한 변환 적용 (SVG transform 순서: scale 먼저, translate 나중)
-            // 
-            // rect의 하단 중앙점이 받침 중심 위치와 일치하도록 하려면:
-            // 원본 좌표계에서: rect의 하단 = y + height = supportY
-            // 따라서 y = supportY - height (이미 올바르게 설정됨)
-            // 
-            // 변환 후 rect의 위치:
-            // - rect의 상단 좌측 모서리: (x * scale + translateX, flipY(y) * scale + translateY)
-            // - SVG rect에서 y는 상단 좌표이므로, 하단은 y + height
-            // - 변환 후 rect의 하단: flipY(y) * scale + translateY + height * scale
-            // 
-            // rect의 하단 중앙점: ((x + width/2) * scale + translateX, flipY(y) * scale + translateY + height * scale)
-            // 
-            // 받침 중심 위치: (supportX * scale + translateX, flipY(supportY) * scale + translateY)
-            // 
-            // rect의 하단 중앙점이 받침 중심 위치와 일치하려면:
-            // (x + width/2) * scale + translateX = supportX * scale + translateX
-            // -> x + width/2 = supportX (이미 올바르게 설정됨: x = supportX - width/2)
-            // 
-            // flipY(y) * scale + translateY + height * scale = flipY(supportY) * scale + translateY
-            // -> flipY(y) + height = flipY(supportY)
-            // -> flipY(y) = flipY(supportY) - height
-            // -> centerY * 2 - y = centerY * 2 - supportY - height
-            // -> -y = -supportY - height
-            // -> y = supportY + height
-            // 
-            // 하지만 원본 좌표계에서 rect의 하단이 supportY와 일치해야 하므로:
-            // y + height = supportY -> y = supportY - height
-            // 
-            // 이 두 조건이 충돌하므로, flipY 적용 후의 계산을 다시 확인해야 함
-            // 
-            // 실제로는: flipY(y) = flipY(supportY - height) = centerY * 2 - (supportY - height)
-            //           = centerY * 2 - supportY + height = flipY(supportY) + height
-            // 
-            // 따라서: flipY(y) * scale + translateY + height * scale
-            //       = (flipY(supportY) + height) * scale + translateY + height * scale
-            //       = flipY(supportY) * scale + translateY + 2 * height * scale
-            // 
-            // 이것은 받침 중심 위치와 일치하지 않음!
-            // 
-            // 올바른 방법: rect의 하단이 supportY와 일치하도록 하려면, flipY 적용 후에도 하단이 flipY(supportY)와 일치해야 함
-            // 따라서: flipY(y) + height * scale = flipY(supportY) * scale
-            // -> flipY(y) = flipY(supportY) * scale - height * scale
-            // 하지만 이것은 scale이 적용되기 전의 계산이므로 복잡함
-            // 
-            // 더 간단한 방법: rect의 하단 중앙점을 직접 계산하여 변환
-            // 원본 좌표계에서 rect의 하단 중앙점: (x + width/2, y + height) = (supportX, supportY)
-            // 변환 후: (supportX * scale + translateX, flipY(supportY) * scale + translateY)
-            // 
-            // rect의 y는 상단이므로, 하단이 supportY와 일치하려면:
-            // y + height = supportY -> y = supportY - height (이미 올바르게 설정됨)
-            // 
-            // 변환 후 rect의 상단: flipY(y) * scale + translateY
-            // 변환 후 rect의 하단: flipY(y) * scale + translateY + height * scale
-            // 
-            // 하지만 flipY(y) = flipY(supportY - height) = flipY(supportY) + height
-            // 따라서: flipY(y) * scale + translateY + height * scale
-            //       = (flipY(supportY) + height) * scale + translateY + height * scale
-            //       = flipY(supportY) * scale + translateY + 2 * height * scale
-            // 
-            // 이것은 받침 중심 위치보다 2 * height * scale만큼 아래에 있음!
-            // 
-            // 올바른 해결책: rect의 y를 조정하여 하단이 supportY와 일치하도록 함
-            // 원본 좌표계에서: y + height = supportY
-            // 변환 후: flipY(y) * scale + translateY + height * scale = flipY(supportY) * scale + translateY
-            // -> flipY(y) + height = flipY(supportY)
-            // -> flipY(y) = flipY(supportY) - height
-            // -> centerY * 2 - y = centerY * 2 - supportY - height
-            // -> y = supportY + height
-            // 
-            // 하지만 이것은 원본 좌표계에서 y + height = supportY + 2*height가 되어버림
-            // 
-            // 실제 문제: SVG rect의 y는 상단이고, height는 아래로 늘어남
-            // flipY가 적용되면 Y축이 반전되므로, rect의 하단 계산도 반전되어야 함
-            // 
-            // rect의 하단 중앙점이 받침 중심 위치와 일치하도록 y 좌표 조정
-            // 원본 좌표계에서: rect의 하단 = y + height = supportY (이미 올바르게 설정됨)
-            // 변환 후 받침 중심 위치: flipY(supportY) * scale + translateY
-            // 
-            // rect의 하단이 받침 중심 위치와 일치하도록 하려면:
-            // 변환 후 rect의 하단 = flipY(supportY) * scale + translateY
-            // rect의 하단 = transformedY + transformedHeight
-            // 따라서: transformedY + transformedHeight = flipY(supportY) * scale + translateY
-            // -> transformedY = flipY(supportY) * scale + translateY - transformedHeight
+            const supportCenterY = supportY;
             const transformedX = x * scale + translateX;
-            // width와 height도 scale 적용
             const transformedWidth = width * scale;
             const transformedHeight = height * scale;
-            // rect의 하단이 받침 중심 위치와 일치하도록 y 좌표 조정
-            const transformedY = flipY(supportY) * scale + translateY - transformedHeight;
-            
+            const transformedY = flipY(supportCenterY) * scale + translateY - transformedHeight;
+
             return React.cloneElement(element, {
               ...props,
               x: transformedX,
@@ -4402,12 +4344,21 @@ const calculateArcCenter = (
             });
           }
         }
+
         return element;
-      });
-      
+      };
+
+      const transformedOverlay = overlaySortedElements.map(transformElement);
+      const transformedDashed = dashedLineElements.map(transformElement);
+      if (transformedDashed.length > 0) {
+        dashedLineOverlayElements.push(
+          <g key={`dashed-lines-${index}`}>{transformedDashed}</g>
+        );
+      }
+
       return (
         <g key={`vertical-front-support-group-${index}`}>
-          {transformedElements}
+          {transformedOverlay}
         </g>
       );
     });
@@ -4415,6 +4366,7 @@ const calculateArcCenter = (
     return (
       <g>
         {supportAndAnchorElements}
+        {dashedLineOverlayElements}
       </g>
     );
   }, [
@@ -4479,10 +4431,9 @@ const calculateArcCenter = (
     isVerticalFrontBackDimensionVisible,
     viewOptionVersion
   ]);
-
   // 단면 뷰 렌더링 (코핑 형상 미리보기용)
   const sectionViewContent = useMemo(() => {
-    const sectionData = sectionPathData;
+    const sectionData = sectionPathData.active;
     if (!sectionData) {
       return (
         <div className="text-gray-400 text-center">
@@ -4491,62 +4442,92 @@ const calculateArcCenter = (
       );
     }
 
-    const { pathData, absolutePoints, flipY, viewBox } = sectionData;
+    const renderSectionOutline = (data: SectionPathEntry, key: string) => {
+      const { pathData, absolutePoints, flipY, viewBox } = data;
+      return (
+        <svg
+          key={`section-view-${key}`}
+          viewBox={viewBox}
+          preserveAspectRatio="xMidYMid meet"
+          style={{ position: 'absolute', top: '1rem', left: '1rem', right: '1rem', bottom: '1rem', width: 'calc(100% - 2rem)', height: 'calc(100% - 2rem)' }}
+        >
+          {/* 그리드 배경 */}
+          <defs>
+            <pattern
+              id={`section-grid-${key}`}
+              width="20"
+              height="20"
+              patternUnits="userSpaceOnUse"
+            >
+              <path
+                d="M 20 0 L 0 0 0 20"
+                fill="none"
+                stroke="#e5e7eb"
+                strokeWidth="0.5"
+              />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill={`url(#section-grid-${key})`} />
 
-    return (
-      <svg
-        viewBox={viewBox}
-        preserveAspectRatio="xMidYMid meet"
-        style={{ position: 'absolute', top: '1rem', left: '1rem', right: '1rem', bottom: '1rem', width: 'calc(100% - 2rem)', height: 'calc(100% - 2rem)' }}
-      >
-        {/* 그리드 배경 */}
-        <defs>
-          <pattern
-            id="section-grid"
-            width="20"
-            height="20"
-            patternUnits="userSpaceOnUse"
-          >
+          {/* 단면 폴리곤 (Y축 뒤집기 적용) */}
+          {pathData && (
             <path
-              d="M 20 0 L 0 0 0 20"
+              d={pathData}
               fill="none"
-              stroke="#e5e7eb"
-              strokeWidth="0.5"
-            />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#section-grid)" />
-
-        {/* 단면 폴리곤 (Y축 뒤집기 적용) */}
-        {pathData && (
-          <path
-            d={pathData}
-            fill="none"
-            stroke={SECTION_STROKE_COLOR}
-            strokeWidth="3"
-            strokeOpacity={1}
-            vectorEffect="non-scaling-stroke"
-          />
-        )}
-
-        {/* 점들 (Y축 뒤집기 적용) */}
-        {absolutePoints.map((point, index) => (
-          <g key={`section-point-${index}`}>
-            <circle
-              cx={point.x}
-              cy={flipY(point.y)}
-              r="3"
-              fill={SECTION_STROKE_COLOR}
               stroke={SECTION_STROKE_COLOR}
-              strokeWidth="1"
+              strokeWidth="3"
+              strokeOpacity={1}
               vectorEffect="non-scaling-stroke"
             />
-          </g>
-        ))}
-      </svg>
-    );
-  }, [sectionPathData]);
+          )}
 
+          {/* 점들 (Y축 뒤집기 적용) */}
+          {absolutePoints.map((point, index) => (
+            <g key={`section-point-${key}-${index}`}>
+              <circle
+                cx={point.x}
+                cy={flipY(point.y)}
+                r="3"
+                fill={SECTION_STROKE_COLOR}
+                stroke={SECTION_STROKE_COLOR}
+                strokeWidth="1"
+                vectorEffect="non-scaling-stroke"
+              />
+            </g>
+          ))}
+        </svg>
+      );
+    };
+
+    if (params.hasStep) {
+      const front = sectionPathData.front;
+      const back = sectionPathData.back;
+      const sections: React.ReactNode[] = [];
+
+      if (front) {
+        sections.push(renderSectionOutline(front, 'front'));
+      }
+      if (back) {
+        sections.push(renderSectionOutline(back, 'back'));
+      }
+      if (sections.length > 0) {
+        return (
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0
+            }}
+          >
+            {sections}
+          </div>
+        );
+      }
+    }
+    return renderSectionOutline(sectionData, 'single');
+  }, [params.hasStep, sectionPathData]);
   return (
     <PageLayout title="">
       <style>{numericInputGlobalStyle}</style>
@@ -5072,7 +5053,6 @@ const calculateArcCenter = (
             </div>
           </div>
         </div>
-
         {/* 삽도 미리보기 모달 */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={() => setIsModalOpen(false)}>
@@ -5215,7 +5195,7 @@ const calculateArcCenter = (
                     adjustedViewBoxWidth = params.width + rightPadding;
                     viewBoxY = -topPadding;
                   } else if (sectionViewType === 'flyout-front' || sectionViewType === 'flyout-back') {
-                    const padding = FLYOUT_DIMENSION_VIEWBOX_PADDING;
+                    const padding = FLYOUT_DIMENSION_VIEWBOX_PADDING + FLYOUT_EXTRA_MARGIN;
                     viewBoxX = -padding;
                     viewBoxY = -padding;
                     adjustedViewBoxWidth = params.width + padding * 2;
@@ -5238,6 +5218,15 @@ const calculateArcCenter = (
                   }
                   
                   const isValid = adjustedViewBoxWidth > 0 && adjustedViewBoxHeight > 0;
+                  const maxViewBoxDimension = Math.max(adjustedViewBoxWidth, adjustedViewBoxHeight);
+                  const adjustedMarkerScale =
+                    sectionViewType === 'axial-front' ? Math.max(params.height, params.width) : maxViewBoxDimension;
+                  const arrowMarkerSize = Math.max(adjustedMarkerScale * ARROW_MARKER_BASE_RATIO, ARROW_MARKER_MIN_SIZE);
+                  const arrowMarkerHalf = arrowMarkerSize * MARKER_HALF_RATIO;
+                  const arrowMarkerStartRefX = arrowMarkerSize * MARKER_REF_START_RATIO;
+                  const arrowMarkerEndRefX = arrowMarkerSize * MARKER_REF_END_RATIO;
+                  const arrowheadStartPoints = `${arrowMarkerSize} 0, 0 ${arrowMarkerHalf}, ${arrowMarkerSize} ${arrowMarkerSize}`;
+                  const arrowheadEndPoints = `0 0, ${arrowMarkerSize} ${arrowMarkerHalf}, 0 ${arrowMarkerSize}`;
 
                   return isValid ? (
                     <div className="flex flex-row gap-6 min-h-full w-full items-stretch">
@@ -5470,22 +5459,22 @@ const calculateArcCenter = (
                         <section>
                           <h4 className="text-sm font-semibold text-gray-800 mb-3">앵커 간섭</h4>
                           <div className="space-y-3 text-sm text-gray-700">
-                            <div className="flex items-center gap-3">
-                              <span className="font-medium whitespace-nowrap">교축</span>
+                            <div className="flex flex-col gap-1">
+                              <span className="font-medium text-gray-800">교축</span>
                               <input
                                 type="text"
                                 readOnly
                                 value={flyoutInterferenceStatus.axial}
-                                className="flex-1 px-2 py-2 border border-gray-300 rounded bg-gray-100 text-gray-800 focus:outline-none"
+                                className="w-full px-2 py-2 border border-gray-300 rounded bg-gray-100 text-gray-800 focus:outline-none"
                               />
                             </div>
-                            <div className="flex items-center gap-3">
-                              <span className="font-medium whitespace-nowrap">교직</span>
+                            <div className="flex flex-col gap-1">
+                              <span className="font-medium text-gray-800">교직</span>
                               <input
                                 type="text"
                                 readOnly
                                 value={flyoutInterferenceStatus.vertical}
-                                className="flex-1 px-2 py-2 border border-gray-300 rounded bg-gray-100 text-gray-800 focus:outline-none"
+                                className="w-full px-2 py-2 border border-gray-300 rounded bg-gray-100 text-gray-800 focus:outline-none"
                               />
                             </div>
                           </div>
@@ -5528,55 +5517,25 @@ const calculateArcCenter = (
                           {/* 화살표 마커 정의 */}
                           <marker
                             id="arrowhead-start"
-                            markerWidth="30"
-                            markerHeight="30"
-                            refX="3"
-                            refY="15"
+                            markerUnits="userSpaceOnUse"
                             orient="auto"
+                            markerWidth={arrowMarkerSize}
+                            markerHeight={arrowMarkerSize}
+                            refX={arrowMarkerStartRefX}
+                            refY={arrowMarkerHalf}
                           >
-                            <polygon
-                              points="30 0, 0 15, 30 30"
-                              fill={SECTION_STROKE_COLOR}
-                            />
+                            <polygon points={arrowheadStartPoints} fill={SECTION_STROKE_COLOR} />
                           </marker>
                           <marker
                             id="arrowhead-end"
-                            markerWidth="30"
-                            markerHeight="30"
-                            refX="27"
-                            refY="15"
+                            markerUnits="userSpaceOnUse"
                             orient="auto"
+                            markerWidth={arrowMarkerSize}
+                            markerHeight={arrowMarkerSize}
+                            refX={arrowMarkerEndRefX}
+                            refY={arrowMarkerHalf}
                           >
-                            <polygon
-                              points="0 0, 30 15, 0 30"
-                              fill={SECTION_STROKE_COLOR}
-                            />
-                          </marker>
-                          <marker
-                            id="arrowhead-start-flyout"
-                            markerWidth="10"
-                            markerHeight="10"
-                            refX="1"
-                            refY="5"
-                            orient="auto"
-                          >
-                            <polygon
-                              points="10 0, 0 5, 10 10"
-                              fill={SECTION_STROKE_COLOR}
-                            />
-                          </marker>
-                          <marker
-                            id="arrowhead-end-flyout"
-                            markerWidth="10"
-                            markerHeight="10"
-                            refX="9"
-                            refY="5"
-                            orient="auto"
-                          >
-                            <polygon
-                              points="0 0, 10 5, 0 10"
-                              fill={SECTION_STROKE_COLOR}
-                            />
+                            <polygon points={arrowheadEndPoints} fill={SECTION_STROKE_COLOR} />
                           </marker>
                         </defs>
                         <rect width="100%" height="100%" fill="url(#grid)" />
@@ -5611,7 +5570,6 @@ const calculateArcCenter = (
                     vectorEffect="non-scaling-stroke"
                   />
                 )}
-
                         {/* 정면 뷰용 삽도 경로 */}
                         {isFrontView && (
                           <>
@@ -5679,93 +5637,88 @@ const calculateArcCenter = (
                             ) : (
                               // 교직(정면): 단면 형상 적용
                               (() => {
-                                const sectionData = sectionPathData;
-                                if (!sectionData || !sectionData.pathData) {
-                                  // 단면 데이터가 없으면 기본 직사각형
+                                const renderFallback = () => (
+                                  <rect
+                                    x="0"
+                                    y="0"
+                                    width={params.width}
+                                    height={viewBoxHeight}
+                                    fill="none"
+                                    stroke={SECTION_STROKE_COLOR}
+                                    strokeWidth={MAIN_LINE_STROKE_WIDTH}
+                                    strokeOpacity={1}
+                                    vectorEffect="non-scaling-stroke"
+                                  />
+                                );
+
+                                const renderSectionShape = (
+                                  data: SectionPathEntry | null,
+                                  key: string,
+                                  sharedViewBoxParams?: SectionViewBoxParams
+                                ) => {
+                                  if (!data || !data.pathData) {
+                                    return null;
+                                  }
+
+                                  const viewBoxParams = sharedViewBoxParams ?? data.viewBoxParams;
+
+                                  const scaleX = adjustedViewBoxWidth / viewBoxParams.width;
+                                  const scaleY = adjustedViewBoxHeight / viewBoxParams.height;
+                                  const scale = Math.min(scaleX, scaleY) * 0.9;
+
+                                  const viewBoxCenterX = viewBoxX + adjustedViewBoxWidth / 2;
+                                  const viewBoxCenterY = viewBoxY + adjustedViewBoxHeight / 2;
+                                  const translateX = viewBoxCenterX - viewBoxParams.centerX * scale;
+                                  const translateY = viewBoxCenterY - viewBoxParams.centerY * scale;
+
                                   return (
-                                    <rect
-                                      x="0"
-                                      y="0"
-                                      width={params.width}
-                                      height={viewBoxHeight}
-                                      fill="none"
-                                      stroke={SECTION_STROKE_COLOR}
-                                      strokeWidth={MAIN_LINE_STROKE_WIDTH}
-                                      strokeOpacity={1}
-                                      vectorEffect="non-scaling-stroke"
-                                    />
+                                    <g
+                                      key={`vertical-front-section-${key}`}
+                                      transform={`translate(${translateX}, ${translateY}) scale(${scale})`}
+                                    >
+                                      <path
+                                        d={data.pathData}
+                                        fill="white"
+                                        stroke={SECTION_STROKE_COLOR}
+                                        strokeWidth={MAIN_LINE_STROKE_WIDTH}
+                                        strokeOpacity={1}
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        vectorEffect="non-scaling-stroke"
+                                      />
+                                    </g>
                                   );
+                                };
+
+                                if (params.hasStep) {
+                                  const renderedSections: React.ReactNode[] = [];
+                                  const frontSection = sectionPathData.front;
+                                  const backSection = sectionPathData.back;
+                                  const sharedParams =
+                                    frontSection?.viewBoxParams ??
+                                    backSection?.viewBoxParams;
+
+                                  const frontElement = renderSectionShape(frontSection, 'front', sharedParams);
+                                  if (frontElement) {
+                                    renderedSections.push(frontElement);
+                                  }
+                                  const backElement = renderSectionShape(backSection, 'back', sharedParams);
+                                  if (backElement) {
+                                    renderedSections.push(backElement);
+                                  }
+
+                                  if (renderedSections.length > 0) {
+                                    return <>{renderedSections}</>;
+                                  }
                                 }
 
-                                // 단면 형상의 경계 계산 (pathData는 이미 flipY가 적용된 상태)
-                                // pathData의 경계를 추출하기 위해 absolutePoints를 사용하되, flipY 변환 고려
-                                const { absolutePoints, flipY } = sectionData;
-                                
-                                // flipY가 적용된 좌표로 경계 계산
-                                const flippedPoints = absolutePoints.map(p => ({ x: p.x, y: flipY(p.y) }));
-                                const minX = Math.min(...flippedPoints.map(p => p.x));
-                                const maxX = Math.max(...flippedPoints.map(p => p.x));
-                                const minY = Math.min(...flippedPoints.map(p => p.y));
-                                const maxY = Math.max(...flippedPoints.map(p => p.y));
-                                const sectionWidth = maxX - minX || 1;
-                                const sectionHeight = maxY - minY || 1;
+                                const activeSection = sectionPathData.active;
+                                const activeElement = renderSectionShape(activeSection, 'single');
+                                if (activeElement) {
+                                  return activeElement;
+                                }
 
-                                // 교직(정면) viewBox에 맞게 스케일링 및 중앙 정렬
-                                // 형상이 viewBox 중앙에 위치하도록 계산
-                                const scaleX = adjustedViewBoxWidth / sectionWidth;
-                                const scaleY = adjustedViewBoxHeight / sectionHeight;
-                                const scale = Math.min(scaleX, scaleY) * 0.9; // 90%로 약간 여유 공간
-
-                                // 형상의 중심점 계산 (flipY가 적용된 좌표 기준)
-                                const sectionCenterX = (minX + maxX) / 2;
-                                const sectionCenterY = (minY + maxY) / 2;
-                                
-                                // viewBox의 중심점 계산
-                                // viewBox는 viewBox={`${viewBoxX} ${viewBoxY} ${adjustedViewBoxWidth} ${adjustedViewBoxHeight}`}
-                                // viewBoxX = -padding, viewBoxY = -padding
-                                // viewBox의 중심점은: (viewBoxX + adjustedViewBoxWidth / 2, viewBoxY + adjustedViewBoxHeight / 2)
-                                const viewBoxCenterX = viewBoxX + adjustedViewBoxWidth / 2;
-                                const viewBoxCenterY = viewBoxY + adjustedViewBoxHeight / 2;
-                                
-                                // 형상의 중심점을 viewBox의 중심점에 맞추기 위한 translate 계산
-                                // scale 적용 후 형상의 중심점: (sectionCenterX * scale, sectionCenterY * scale)
-                                // 이 중심점이 viewBox의 중심점에 위치하도록:
-                                //   translateX = viewBoxCenterX - sectionCenterX * scale
-                                //   translateY = viewBoxCenterY - sectionCenterY * scale
-                                const translateX = viewBoxCenterX - sectionCenterX * scale;
-                                const translateY = viewBoxCenterY - sectionCenterY * scale;
-
-                                // 교직(정면): 단면 형상을 닫힌 path로 렌더링하고 내부를 흰색으로 채움
-                                // sectionData.pathData는 이미 Z로 닫힌 형태
-                                const closedPathData = sectionData.pathData;
-                                
-                                // SVG transform의 적용 순서: 오른쪽에서 왼쪽으로 (scale이 먼저, translate가 나중)
-                                // 즉, transform="translate(tx, ty) scale(s)"는:
-                                //   1. 먼저 scale 적용: (x, y) -> (x * s, y * s)
-                                //   2. 그 다음 translate 적용: (x * s, y * s) -> (x * s + tx, y * s + ty)
-                                // 따라서 실제 좌표는: (x * scale + translateX, y * scale + translateY)
-                                // 
-                                // 하지만 우리가 계산한 translateX, translateY는 이미 scale을 고려한 값이므로,
-                                // 실제로는: (x * scale + translateX, y * scale + translateY)
-                                // 
-                                // pathData의 첫 번째 점: M ${firstPoint.x} ${flipY(firstPoint.y)}
-                                // 실제 SVG 좌표: (originX * scale + translateX, flipY(originY) * scale + translateY)
-                                return (
-                                  <g 
-                                    transform={`translate(${translateX}, ${translateY}) scale(${scale})`}
-                                  >
-                                    <path
-                                      d={closedPathData}
-                                      fill="white"
-                                      stroke={SECTION_STROKE_COLOR}
-                                      strokeWidth={MAIN_LINE_STROKE_WIDTH}
-                                      strokeOpacity={1}
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      vectorEffect="non-scaling-stroke"
-                                    />
-                                  </g>
-                                );
+                                return renderFallback();
                               })()
                             )}
                           </>
@@ -5791,28 +5744,6 @@ const calculateArcCenter = (
                         {sectionViewType === 'vertical-plan' && verticalPlanAdditionalHorizontalElements}
                         {sectionViewType === 'vertical-plan' && verticalPlanAdditionalVerticalElements}
 
-                        {/* 치수선 예시 (평면 뷰만) */}
-                        {!isFrontView && sectionViewType !== 'flyout-front' && sectionViewType !== 'flyout-back' && (
-                          <>
-                            <line
-                              x1="0"
-                              y1={params.height + 20}
-                              x2={params.width}
-                              y2={params.height + 20}
-                              stroke="#666"
-                              strokeWidth="1"
-                            />
-                            <text
-                              x={params.width / 2}
-                              y={params.height + 35}
-                              textAnchor="middle"
-                              fontSize="12"
-                              fill="#666"
-                            >
-                              {params.width}mm
-                            </text>
-                          </>
-                        )}
                       </svg>
                       </div>
                     </div>
@@ -5829,7 +5760,6 @@ const calculateArcCenter = (
             </div>
           </div>
         )}
-
         {/* 단면 치수 입력 모달 */}
         {isSectionDimensionModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={() => setIsSectionDimensionModalOpen(false)}>
@@ -6280,7 +6210,6 @@ const calculateArcCenter = (
                   </div>
                 )}
               </div>
-
               {/* 모달 푸터 */}
               <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
                 <button
@@ -6305,4 +6234,3 @@ const calculateArcCenter = (
 };
 
 export default SectionView;
-
