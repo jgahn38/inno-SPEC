@@ -155,7 +155,7 @@ const DEFAULT_PARAMS: SectionParams = {
   stepValue: 0
 };
 
-function SectionView(): React.ReactElement {
+export default function SectionView(): React.ReactElement {
   // localStorage에서 상태 복원 또는 기본값 사용
   const loadFromStorage = <T,>(key: string, defaultValue: T): T => {
     try {
@@ -232,6 +232,8 @@ const [isVerticalPlanFrontDimensionVisible, setIsVerticalPlanFrontDimensionVisib
 const [isVerticalPlanBackDimensionVisible, setIsVerticalPlanBackDimensionVisible] = useState<boolean>(true);
 const [isVerticalFrontFrontDimensionVisible, setIsVerticalFrontFrontDimensionVisible] = useState<boolean>(true);
 const [isVerticalFrontBackDimensionVisible, setIsVerticalFrontBackDimensionVisible] = useState<boolean>(true);
+const [isVerticalFrontFrontSectionVisible, setIsVerticalFrontFrontSectionVisible] = useState<boolean>(true);
+const [isVerticalFrontBackSectionVisible, setIsVerticalFrontBackSectionVisible] = useState<boolean>(true);
 const [selectedFlyoutSupportIndex, setSelectedFlyoutSupportIndex] = useState<number>(0);
 
   const {
@@ -2869,6 +2871,8 @@ type SectionPathEntry = {
   flipY: (y: number) => number;
   viewBox: string;
   viewBoxParams: SectionViewBoxParams;
+  originalViewBoxParams?: SectionViewBoxParams; // 원본 viewBoxParams (단차가 있을 때 사용)
+  originalOriginY?: number; // 원본 기준점 Y 좌표 (받침 직사각형과 앵커 위치 계산용)
 };
 type SectionPathCollection = {
   active: SectionPathEntry | null;
@@ -3095,7 +3099,8 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
         absolutePoints,
         flipY,
         viewBox: `${viewBoxParams.x} ${viewBoxParams.y} ${viewBoxParams.width} ${viewBoxParams.height}`,
-        viewBoxParams
+        viewBoxParams,
+        originalOriginY: absolutePoints.length > 0 ? absolutePoints[0].y : undefined
       };
     };
 
@@ -3103,14 +3108,18 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
       entry: SectionPathEntry,
       overrideViewBoxParams: SectionViewBoxParams
     ): SectionPathEntry => {
-      const flipY = (y: number) => overrideViewBoxParams.centerY * 2 - y;
-      const pathData = buildPathData(entry.absolutePoints, flipY);
+      // pathData와 flipY는 원본 viewBoxParams를 사용하여 생성되었으므로,
+      // 이를 유지하고 viewBoxParams만 교체해야 함
+      // flipY를 재계산하면 전열 단면의 상단 선이 잘못된 위치에 그려질 수 있음
+      // 원본 viewBoxParams를 originalViewBoxParams로 저장하여 renderSectionShape에서 사용
       return {
-        pathData,
+        pathData: entry.pathData, // 원본 pathData 유지
         absolutePoints: entry.absolutePoints,
-        flipY,
+        flipY: entry.flipY, // 원본 flipY 유지
         viewBox: `${overrideViewBoxParams.x} ${overrideViewBoxParams.y} ${overrideViewBoxParams.width} ${overrideViewBoxParams.height}`,
-        viewBoxParams: overrideViewBoxParams
+        viewBoxParams: overrideViewBoxParams,
+        originalViewBoxParams: entry.viewBoxParams, // 원본 viewBoxParams 저장
+        originalOriginY: entry.originalOriginY // 원본 기준점 Y 좌표 유지
       };
     };
 
@@ -3120,10 +3129,48 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
 
       let frontData = frontDataOriginal;
       let backData = backDataOriginal;
+      
+      // 전열 단면의 기준점 Y 좌표를 후열 단면의 기준점 Y 좌표와 맞추기
+      // absolutePoints를 생성한 후, 전열 단면의 모든 점의 Y 좌표에 offset을 적용
+      if (frontDataOriginal && backDataOriginal && 
+          frontDataOriginal.absolutePoints.length > 0 && 
+          backDataOriginal.absolutePoints.length > 0) {
+        const frontOriginY = frontDataOriginal.absolutePoints[0].y;
+        const backOriginY = backDataOriginal.absolutePoints[0].y;
+        const yOffset = backOriginY - frontOriginY;
+        
+        // 전열 단면의 모든 점의 Y 좌표에 offset 적용
+        const adjustedAbsolutePoints = frontDataOriginal.absolutePoints.map(point => ({
+          ...point,
+          y: point.y + yOffset
+        }));
+        
+        // 조정된 absolutePoints로 bounds 재계산
+        const adjustedBounds = calculateBounds(adjustedAbsolutePoints);
+        const adjustedViewBoxParams = buildViewBoxParams(adjustedBounds);
+        
+        // 조정된 absolutePoints로 pathData 재생성
+        const adjustedFlipY = (y: number) => adjustedViewBoxParams.centerY * 2 - y;
+        const adjustedPathData = buildPathData(adjustedAbsolutePoints, adjustedFlipY);
+        
+        // 조정된 데이터로 frontData 재생성
+        // pathData는 조정된 absolutePoints로 생성되었지만,
+        // originalViewBoxParams는 원본 viewBoxParams를 유지하여
+        // renderSectionShape에서 offsetY 계산 시 올바른 위치에 그려지도록 함
+        frontData = {
+          pathData: adjustedPathData,
+          absolutePoints: adjustedAbsolutePoints,
+          flipY: adjustedFlipY,
+          viewBox: `${adjustedViewBoxParams.x} ${adjustedViewBoxParams.y} ${adjustedViewBoxParams.width} ${adjustedViewBoxParams.height}`,
+          viewBoxParams: adjustedViewBoxParams,
+          originalViewBoxParams: frontDataOriginal.viewBoxParams, // 원본 viewBoxParams 유지
+          originalOriginY: frontOriginY // 원본 기준점 Y 좌표 저장 (받침 직사각형과 앵커 위치 계산용)
+        };
+      }
 
       const combinedPoints: Array<{ x: number; y: number }> = [];
-      if (frontDataOriginal) {
-        combinedPoints.push(...frontDataOriginal.absolutePoints.map(point => ({ x: point.x, y: point.y })));
+      if (frontData) {
+        combinedPoints.push(...frontData.absolutePoints.map(point => ({ x: point.x, y: point.y })));
       }
       if (backDataOriginal) {
         combinedPoints.push(...backDataOriginal.absolutePoints.map(point => ({ x: point.x, y: point.y })));
@@ -3132,8 +3179,8 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
       if (combinedPoints.length > 0) {
         const combinedBounds = calculateBounds(combinedPoints);
         const combinedViewBoxParams = buildViewBoxParams(combinedBounds);
-        if (frontDataOriginal) {
-          frontData = rebuildSectionPathEntry(frontDataOriginal, combinedViewBoxParams);
+        if (frontData) {
+          frontData = rebuildSectionPathEntry(frontData, combinedViewBoxParams);
         }
         if (backDataOriginal) {
           backData = rebuildSectionPathEntry(backDataOriginal, combinedViewBoxParams);
@@ -3273,7 +3320,8 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
     const frontOriginPoint = sectionPathData.front?.absolutePoints?.[0];
     const backOriginPoint = sectionPathData.back?.absolutePoints?.[0];
     const frontOriginX = frontOriginPoint?.x ?? originX;
-    const frontOriginY = frontOriginPoint?.y ?? originY;
+    // 받침 직사각형과 앵커 위치 계산에는 원본 기준점 Y 좌표 사용
+    const frontOriginY = sectionPathData.front?.originalOriginY ?? frontOriginPoint?.y ?? originY;
     const backOriginX = backOriginPoint?.x ?? originX;
     const backOriginY = backOriginPoint?.y ?? originY;
     const originalXs = absolutePoints.map(p => p.x);
@@ -3311,10 +3359,38 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
       // 기준점은 단면 형상 좌표계에서 (originX, originY)이므로, 받침 중심위치는 기준점 + offsetX
       // originY는 flipY 적용 전 원본 Y 좌표이므로, 받침 중심위치의 Y도 originY를 사용
       const isFrontSupport = index < params.frontRowCount;
+      
+      // 단면 보기 토글에 따라 받침 필터링 (테스트용)
+      if (isFrontSupport && !isVerticalFrontFrontSectionVisible) {
+        return null;
+      }
+      if (!isFrontSupport && !isVerticalFrontBackSectionVisible) {
+        return null;
+      }
       const baseOriginX = isFrontSupport ? frontOriginX : backOriginX;
       const baseOriginY = isFrontSupport ? frontOriginY : backOriginY;
       const supportX = baseOriginX + point.offsetX;
-      const supportY = baseOriginY; // Y는 해당 단면 기준점의 Y 좌표 (원본, flipY 적용 전)
+      // 후열 받침의 경우: 받침 중심 Y를 후열 단면의 상단 Y로 설정하여 직사각형의 하단이 단면의 상단과 일치하도록
+      // 단면은 renderSectionShape에서 offsetY를 적용받으므로, 받침도 동일한 offsetY를 적용해야 함
+      let supportY: number;
+      if (!isFrontSupport) {
+        const backSection = sectionPathData.back ?? sectionData;
+        if (backSection?.absolutePoints && backSection.absolutePoints.length > 0 && 
+            backSection?.viewBoxParams && backSection?.originalViewBoxParams) {
+          // 단면의 실제 상단 Y는 absolutePoints의 최대 Y 값
+          // flipY가 적용되면 좌표계가 뒤집히므로, 원본 좌표계에서 최대 Y가 화면에서 상단이 됨
+          const backSectionTopY = Math.max(...backSection.absolutePoints.map(p => p.y));
+          
+          // 단면의 실제 상단 Y (원본 좌표계) = backSectionTopY
+          // offsetY는 단면의 하단을 맞추기 위한 것이므로, 상단에는 적용하지 않음
+          // 교축(정면)과 동일하게 단면의 상단 Y를 기준으로 받침 직사각형을 배치
+          supportY = backSectionTopY;
+        } else {
+          supportY = baseOriginY; // fallback: 기준점 Y 사용
+        }
+      } else {
+        supportY = baseOriginY; // 전열 받침: 기준점 Y 사용
+      }
 
       const elements: React.ReactNode[] = [];
       const overlaySortedElements: React.ReactNode[] = [];
@@ -3333,26 +3409,24 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
       // 받침 중심 위치를 기준으로 직사각형 그리기
       // 직사각형의 가로 길이 = 앵커 간격(교직) * 1.5
       // 직사각형의 세로 길이 = 100
-      // 직사각형의 하단 중앙점이 받침 중심위치와 일치하도록 배치
+      // 후열 받침의 경우: 직사각형의 하단이 후열 단면의 상단과 일치하도록 배치
+      // 전열 받침의 경우: 직사각형의 하단 중앙점이 받침 중심위치와 일치하도록 배치
       if (anchorGapVertical > 0) {
         const rectWidth = anchorGapVertical * 1.5; // 가로 길이 = 앵커 간격(교직) * 1.5
         const rectHeight = 100; // 세로 길이 = 100
         
-        // 직사각형의 하단 중앙점이 받침 중심위치와 일치하도록 배치
+        let rectY: number;
+        
+        // 직사각형의 하단이 받침 중심위치(supportY)와 일치하도록 배치
         // SVG rect의 y는 상단 모서리의 Y 좌표이므로:
         // 원본 좌표계에서 직사각형의 하단 Y 좌표 = rectY + rectHeight
         // 이 하단 Y 좌표가 supportY와 일치해야 함: rectY + rectHeight = supportY
         // 따라서 rectY = supportY - rectHeight
-        // 
-        // 하지만 flipY가 적용되므로, 실제 화면에서 직사각형의 하단 중앙점이 받침 중심 위치와 일치하도록 하려면:
-        // - 원본 좌표계에서: rectY = supportY - rectHeight
-        //   -> 직사각형의 하단 = rectY + rectHeight = supportY (받침 중심 위치)
-        // - flipY 적용 후: 직사각형의 하단은 flipY(supportY) 위치에 표시됨
-        // 
-        // 받침 중심 위치도 flipY가 적용되어 표시되므로, 직사각형의 하단도 flipY가 적용된 위치에 표시되어야 함
-        // 따라서 rectY = supportY - rectHeight로 설정하면 올바름
+        // 후열 받침의 경우: supportY가 이미 후열 단면의 상단 Y로 설정되어 있으므로,
+        // 직사각형의 하단이 자동으로 단면의 상단과 일치함
+        rectY = supportY - rectHeight;
+        
         const rectX = supportX - rectWidth / 2; // 직사각형의 X 좌표 (중앙 정렬)
-        const rectY = supportY - rectHeight; // 직사각형의 상단 Y 좌표 (원본 좌표계)
         
         elements.push(
           <rect
@@ -3454,7 +3528,22 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
             
             const targetOffset = (targetAnchorIndex - (anchorRowCountVertical - 1) / 2) * anchorGapVertical;
             const targetAnchorX = supportX + targetOffset;
+            // 점선의 시작점은 실제 앵커 중심점과 일치해야 함
+            // 앵커 중심점은 supportY를 사용하므로, targetAnchorY도 supportY를 사용
             const targetAnchorY = supportY;
+            
+            // 전열 받침의 경우: 전열 단면의 absolutePoints가 조정되었으므로,
+            // 교차점 계산 시 조정된 좌표계를 사용해야 함
+            // 교차점 계산을 위한 조정된 좌표계의 targetAnchorY 계산
+            let adjustedTargetAnchorY = targetAnchorY;
+            if (isFrontSupport && targetSectionData.absolutePoints.length > 0 && targetSectionData.originalOriginY !== undefined) {
+              // 원본 기준점 Y와 조정된 기준점 Y의 차이를 계산
+              const originalOriginY = targetSectionData.originalOriginY;
+              const adjustedOriginY = targetSectionData.absolutePoints[0].y;
+              const yOffset = adjustedOriginY - originalOriginY;
+              // 교차점 계산을 위해 조정된 좌표계로 변환
+              adjustedTargetAnchorY = targetAnchorY + yOffset;
+            }
             
             // 기울기 1.5: dy/dx = 1.5의 절댓값
             // 방향: 첫 번째 받침 -> -X, -Y / 마지막 받침 -> +X, -Y
@@ -3496,6 +3585,7 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
               targetAnchorIndex,
               targetAnchorX,
               targetAnchorY,
+              adjustedTargetAnchorY,
               directionX,
               directionY,
               absolutePointsLength: absolutePoints.length,
@@ -3507,17 +3597,18 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
             console.log('교차점 계산 시작:', {
               targetAnchorX,
               targetAnchorY,
+              adjustedTargetAnchorY,
               directionX,
               directionY,
               slope: 1.5 * directionY / directionX,
               firstFewPoints: absolutePoints.slice(0, 3)
             });
-            // 기울기 1.5의 선의 방정식: y = targetAnchorY + slope * (x - targetAnchorX)
+            // 기울기 1.5의 선의 방정식: y = adjustedTargetAnchorY + slope * (x - targetAnchorX)
             // (-X, -Y) 방향: dx < 0, dy < 0이므로 dy/dx > 0, slope = 1.5 (양수)
             // (+X, -Y) 방향: dx > 0, dy < 0이므로 dy/dx < 0, slope = -1.5 (음수)
             // 따라서 slope = 1.5 * directionY / directionX
             const slope = 1.5 * directionY / directionX;
-            const intercept = targetAnchorY - slope * targetAnchorX;
+            const intercept = adjustedTargetAnchorY - slope * targetAnchorX;
             console.log(`교차점 계산: 총 ${absolutePoints.length}개 선분 순회 시작`);
             
             for (let j = 0; j < absolutePoints.length; j++) {
@@ -3762,7 +3853,8 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
                 if (Math.abs(dx1) < 1e-10) {
                   const x = p1.x;
                   const slope = 1.5 * directionY / directionX;
-                  const y = targetAnchorY + slope * (x - targetAnchorX);
+                  // 교차점 계산은 조정된 좌표계를 사용해야 함
+                  const y = adjustedTargetAnchorY + slope * (x - targetAnchorX);
                   
                   // 선분 위에 있는지 확인 (매개변수 t 사용)
                   const dy1 = p2.y - p1.y;
@@ -3804,8 +3896,9 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
                   
                   if (isOnSegment) {
                     // 방향 체크: 앵커에서 교차점까지의 방향이 올바른지 확인
+                    // 교차점 계산은 조정된 좌표계를 사용하므로, adjustedTargetAnchorY를 사용
                     const deltaX = x - targetAnchorX;
-                    const deltaY = y - targetAnchorY;
+                    const deltaY = y - adjustedTargetAnchorY;
                     
                     // directionY가 -1이면 deltaY가 음수여야 함 (Y가 감소하는 방향, 원본 좌표계에서 위쪽)
                     // directionY가 +1이면 deltaY가 양수여야 함 (Y가 증가하는 방향, 원본 좌표계에서 아래쪽)
@@ -3849,8 +3942,9 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
                   const intercept1 = p1.y - slope1 * p1.x;
                   
                   // 기울기 1.5의 선의 방정식
+                  // 교차점 계산은 조정된 좌표계를 사용해야 함
                   const slope2 = 1.5 * directionY / directionX;
-                  const intercept2 = targetAnchorY - slope2 * targetAnchorX;
+                  const intercept2 = adjustedTargetAnchorY - slope2 * targetAnchorX;
                   
                   // 교차점 계산
                   if (Math.abs(slope1 - slope2) < 1e-10) {
@@ -3908,8 +4002,9 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
                   }
                   
                   // 방향 체크: 앵커에서 교차점까지의 방향이 올바른지 확인
+                  // 교차점 계산은 조정된 좌표계를 사용하므로, adjustedTargetAnchorY를 사용
                   const deltaX = x - targetAnchorX;
-                  const deltaY = y - targetAnchorY;
+                  const deltaY = y - adjustedTargetAnchorY;
                   
                   // directionY가 -1이면 deltaY가 음수여야 함 (Y가 감소하는 방향, 원본 좌표계에서 위쪽)
                   // directionY가 +1이면 deltaY가 양수여야 함 (Y가 증가하는 방향, 원본 좌표계에서 아래쪽)
@@ -3994,16 +4089,40 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
             });
             if (hasValidIntersection) {
               // 교차점이 있는 경우
-              lineEndX = intersectionX!;
-              lineEndY = intersectionY!;
+              // 전열 받침의 경우: 교차점이 조정된 좌표계에 있으므로, 원본 좌표계로 변환
+              // 기울기가 1.5로 유지되도록 변환
+              let finalIntersectionX = intersectionX!;
+              let finalIntersectionY = intersectionY!;
+              if (isFrontSupport && targetSectionData.absolutePoints.length > 0 && targetSectionData.originalOriginY !== undefined) {
+                // 교차점을 원본 좌표계로 변환
+                // 기울기가 1.5로 유지되도록 변환
+                // 조정된 좌표계에서: (intersectionY - adjustedTargetAnchorY) / (intersectionX - targetAnchorX) = 1.5 * directionY / directionX
+                // 원본 좌표계에서: (finalIntersectionY - targetAnchorY) / (finalIntersectionX - targetAnchorX) = 1.5 * directionY / directionX
+                // finalIntersectionX = intersectionX이므로:
+                // finalIntersectionY - targetAnchorY = 1.5 * directionY / directionX * (intersectionX - targetAnchorX)
+                const slope = 1.5 * directionY / directionX;
+                finalIntersectionY = targetAnchorY + slope * (intersectionX! - targetAnchorX);
+              }
+              lineEndX = finalIntersectionX;
+              lineEndY = finalIntersectionY;
+              
+              // 기울기 검증: 기울기가 1.5인지 확인
+              const calculatedSlope = (finalIntersectionY - targetAnchorY) / (finalIntersectionX - targetAnchorX);
+              const expectedSlope = 1.5 * directionY / directionX;
               console.log('교차점 발견 (유효):', {
                 intersectionX,
                 intersectionY,
+                finalIntersectionX,
+                finalIntersectionY,
                 targetAnchorX,
                 targetAnchorY,
+                adjustedTargetAnchorY,
                 distance: minDistance,
-                deltaX: intersectionX! - targetAnchorX,
-                deltaY: intersectionY! - targetAnchorY
+                deltaX: finalIntersectionX - targetAnchorX,
+                deltaY: finalIntersectionY - targetAnchorY,
+                calculatedSlope,
+                expectedSlope,
+                slopeDiff: Math.abs(calculatedSlope - expectedSlope)
               });
             } else {
               // 교차점을 찾지 못한 경우 ViewBox 외곽까지 선을 연장
@@ -4296,17 +4415,52 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
         }
       });
 
-      const transformElement = (element: React.ReactNode) => {
+      const transformElement = (element: React.ReactNode, elementIndex?: number) => {
         if (React.isValidElement(element)) {
           const props = element.props as any;
+          
+          // 후열 받침인지 확인
+          const isBackSupport = elementIndex !== undefined && elementIndex >= params.frontRowCount;
+          
+          // 후열 받침의 경우 단면과 동일한 transform 사용
+          let elementTranslateX = translateX;
+          let elementTranslateY = translateY;
+          let elementScale = scale;
+          
+          if (isBackSupport) {
+            const backSection = sectionPathData.back ?? sectionData;
+            if (backSection?.viewBoxParams && backSection?.originalViewBoxParams) {
+              const originalViewBoxParams = backSection.originalViewBoxParams;
+              const viewBoxParams = backSection.viewBoxParams;
+              
+              // 단면과 동일한 offsetY 계산
+              const originalBottomY = originalViewBoxParams.y + originalViewBoxParams.height;
+              const combinedBottomY = viewBoxParams.y + viewBoxParams.height;
+              const offsetY = combinedBottomY - originalBottomY;
+              
+              // 단면과 동일한 offsetX 계산
+              const offsetX = originalViewBoxParams.x - viewBoxParams.x;
+              
+              // 단면과 동일한 combinedCenter 계산
+              const originalCenterX = originalViewBoxParams.centerX;
+              const originalCenterY = originalViewBoxParams.centerY;
+              const combinedCenterX = originalCenterX + offsetX;
+              const combinedCenterY = originalCenterY + offsetY;
+              
+              // 단면과 동일한 transform 사용
+              elementTranslateX = viewBoxCenterX - combinedCenterX * scale;
+              elementTranslateY = viewBoxCenterY - combinedCenterY * scale;
+            }
+          }
+          
           if (props.cx !== undefined && props.cy !== undefined) {
             // circle 요소인 경우
             // cx, cy는 단면 형상 좌표계의 원본 좌표
             const x = props.cx;
             const y = props.cy;
             // 모달의 단면 형상 렌더링과 동일한 변환 적용 (SVG transform 순서: scale 먼저, translate 나중)
-            const transformedX = x * scale + translateX;
-            const transformedY = flipY(y) * scale + translateY;
+            const transformedX = x * elementScale + elementTranslateX;
+            const transformedY = flipY(y) * elementScale + elementTranslateY;
             
             return React.cloneElement(element, {
               ...props,
@@ -4322,10 +4476,10 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
             const x2 = props.x2;
             const y2 = props.y2;
             // 모달의 단면 형상 렌더링과 동일한 변환 적용 (SVG transform 순서: scale 먼저, translate 나중)
-            const transformedX1 = x1 * scale + translateX;
-            const transformedY1 = flipY(y1) * scale + translateY;
-            const transformedX2 = x2 * scale + translateX;
-            const transformedY2 = flipY(y2) * scale + translateY;
+            const transformedX1 = x1 * elementScale + elementTranslateX;
+            const transformedY1 = flipY(y1) * elementScale + elementTranslateY;
+            const transformedX2 = x2 * elementScale + elementTranslateX;
+            const transformedY2 = flipY(y2) * elementScale + elementTranslateY;
             
             return React.cloneElement(element, {
               ...props,
@@ -4338,8 +4492,8 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
           } else if (element.type === 'text' && props.x !== undefined && props.y !== undefined) {
             const rawX = Array.isArray(props.x) ? props.x[0] : props.x;
             const rawY = Array.isArray(props.y) ? props.y[0] : props.y;
-            const transformedX = rawX * scale + translateX;
-            const transformedY = flipY(rawY) * scale + translateY;
+            const transformedX = rawX * elementScale + elementTranslateX;
+            const transformedY = flipY(rawY) * elementScale + elementTranslateY;
 
             const transformString = typeof props.transform === 'string' ? props.transform : '';
             const rotateMatch = transformString.match(/rotate\((-?\d+(?:\.\d+)?)(?:\s+(-?\d+(?:\.\d+)?))?(?:\s+(-?\d+(?:\.\d+)?))?\)/);
@@ -4349,7 +4503,7 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
             const baseFontSize = props.fontSize !== undefined
               ? parseFloat(props.fontSize as string)
               : 100;
-            const adjustedFontSize = baseFontSize / scale;
+            const adjustedFontSize = baseFontSize / elementScale;
 
             return React.cloneElement(element, {
               ...props,
@@ -4363,11 +4517,39 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
             const x = props.x;
             const width = props.width;
             const height = props.height;
-            const supportCenterY = supportY;
-            const transformedX = x * scale + translateX;
-            const transformedWidth = width * scale;
-            const transformedHeight = height * scale;
-            const transformedY = flipY(supportCenterY) * scale + translateY - transformedHeight;
+            const transformedX = x * elementScale + elementTranslateX;
+            const transformedWidth = width * elementScale;
+            const transformedHeight = height * elementScale;
+            
+            // 후열 받침의 경우: 단면의 실제 상단 Y를 화면 좌표계에서 직접 계산
+            let transformedY: number;
+            if (isBackSupport) {
+              const backSection = sectionPathData.back ?? sectionData;
+              if (backSection?.absolutePoints && backSection.absolutePoints.length > 0 && 
+                  backSection?.viewBoxParams && backSection?.originalViewBoxParams) {
+                // 단면의 실제 상단 Y (원본 좌표계)
+                // flipY가 적용되면 좌표계가 뒤집히므로, 원본 좌표계에서 최대 Y가 화면에서 상단이 됨
+                const backSectionTopY = Math.max(...backSection.absolutePoints.map(p => p.y));
+                
+                // 단면의 상단 Y (원본 좌표계) = backSectionTopY
+                // pathData를 생성할 때 사용한 flipY 함수를 직접 사용 (backSection.flipY)
+                // 단면의 상단 Y (pathData, flipY 적용 후) = backSection.flipY(backSectionTopY)
+                // 단면의 상단 Y (화면 좌표계) = elementTranslateY + backSection.flipY(backSectionTopY) * elementScale
+                // 받침 직사각형의 하단 Y (화면 좌표계) = transformedY + transformedHeight
+                // 일치하려면: transformedY + transformedHeight = elementTranslateY + backSection.flipY(backSectionTopY) * elementScale
+                // 따라서: transformedY = elementTranslateY + backSection.flipY(backSectionTopY) * elementScale - transformedHeight
+                const backSectionTopYScreen = elementTranslateY + backSection.flipY(backSectionTopY) * elementScale;
+                transformedY = backSectionTopYScreen - transformedHeight;
+              } else {
+                // fallback: 기존 로직 사용
+                const supportCenterY = supportY;
+                transformedY = flipY(supportCenterY) * elementScale + elementTranslateY - transformedHeight;
+              }
+            } else {
+              // 전열 받침: 기존 로직 사용
+              const supportCenterY = supportY;
+              transformedY = flipY(supportCenterY) * elementScale + elementTranslateY - transformedHeight;
+            }
 
             return React.cloneElement(element, {
               ...props,
@@ -4383,8 +4565,8 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
         return element;
       };
 
-      const transformedOverlay = overlaySortedElements.map(transformElement);
-      const transformedDashed = dashedLineElements.map(transformElement);
+      const transformedOverlay = overlaySortedElements.map((element) => transformElement(element, index));
+      const transformedDashed = dashedLineElements.map((element) => transformElement(element, index));
       if (transformedDashed.length > 0) {
         dashedLineOverlayElements.push(
           <g key={`dashed-lines-${index}`}>{transformedDashed}</g>
@@ -4419,6 +4601,8 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
     isAxialFrontBackDimensionVisible,
     isVerticalPlanFrontDimensionVisible,
     isVerticalPlanBackDimensionVisible,
+    isVerticalFrontFrontSectionVisible,
+    isVerticalFrontBackSectionVisible,
     viewOptionVersion
   ]);
 
@@ -5362,35 +5546,66 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
                                 </section>
                               )}
                               {sectionViewType === 'vertical-front' && (
-                                <section>
-                                  <h4 className="text-sm font-semibold text-gray-800 mb-3">치수선 보기</h4>
-                                  <div className="space-y-2">
-                                    <label className="flex items-center gap-2 text-sm text-gray-700">
-                                      <input
-                                        type="checkbox"
-                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                        checked={isVerticalFrontFrontDimensionVisible}
-                                        onChange={(event) => {
-                                          setIsVerticalFrontFrontDimensionVisible(event.target.checked);
-                                          setViewOptionVersion(prev => prev + 1);
-                                        }}
-                                      />
-                                      전열
-                                    </label>
-                                    <label className="flex items-center gap-2 text-sm text-gray-700">
-                                      <input
-                                        type="checkbox"
-                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                        checked={isVerticalFrontBackDimensionVisible}
-                                        onChange={(event) => {
-                                          setIsVerticalFrontBackDimensionVisible(event.target.checked);
-                                          setViewOptionVersion(prev => prev + 1);
-                                        }}
-                                      />
-                                      후열
-                                    </label>
-                                  </div>
-                                </section>
+                                <>
+                                  <section>
+                                    <h4 className="text-sm font-semibold text-gray-800 mb-3">치수선 보기</h4>
+                                    <div className="space-y-2">
+                                      <label className="flex items-center gap-2 text-sm text-gray-700">
+                                        <input
+                                          type="checkbox"
+                                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                          checked={isVerticalFrontFrontDimensionVisible}
+                                          onChange={(event) => {
+                                            setIsVerticalFrontFrontDimensionVisible(event.target.checked);
+                                            setViewOptionVersion(prev => prev + 1);
+                                          }}
+                                        />
+                                        전열
+                                      </label>
+                                      <label className="flex items-center gap-2 text-sm text-gray-700">
+                                        <input
+                                          type="checkbox"
+                                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                          checked={isVerticalFrontBackDimensionVisible}
+                                          onChange={(event) => {
+                                            setIsVerticalFrontBackDimensionVisible(event.target.checked);
+                                            setViewOptionVersion(prev => prev + 1);
+                                          }}
+                                        />
+                                        후열
+                                      </label>
+                                    </div>
+                                  </section>
+                                  <section>
+                                    <h4 className="text-sm font-semibold text-gray-800 mb-3">단면 보기 (테스트용)</h4>
+                                    <div className="space-y-2">
+                                      <label className="flex items-center gap-2 text-sm text-gray-700">
+                                        <input
+                                          type="checkbox"
+                                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                          checked={isVerticalFrontFrontSectionVisible}
+                                          onChange={(event) => {
+                                            setIsVerticalFrontFrontSectionVisible(event.target.checked);
+                                            setViewOptionVersion(prev => prev + 1);
+                                          }}
+                                        />
+                                        전열 단면
+                                      </label>
+                                      <label className="flex items-center gap-2 text-sm text-gray-700">
+                                        <input
+                                          type="checkbox"
+                                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                          checked={isVerticalFrontBackSectionVisible}
+                                          onChange={(event) => {
+                                            setIsVerticalFrontBackSectionVisible(event.target.checked);
+                                            setViewOptionVersion(prev => prev + 1);
+                                          }}
+                                        />
+                                        후열 단면
+                                      </label>
+                                    </div>
+                                  </section>
+                                </>
                               )}
                               {sectionViewType === 'axial-plan' && (
                                 <section>
@@ -5720,6 +5935,11 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
                                   }
 
                                   const viewBoxParams = sharedViewBoxParams ?? data.viewBoxParams;
+                                  
+                                  // pathData는 원본 viewBoxParams를 사용하여 생성되었으므로,
+                                  // transform 계산 시에도 원본 viewBoxParams를 사용해야 함
+                                  // originalViewBoxParams가 있으면 사용하고, 없으면 viewBoxParams 사용
+                                  const originalViewBoxParams = data.originalViewBoxParams ?? data.viewBoxParams;
 
                                   const scaleX = adjustedViewBoxWidth / viewBoxParams.width;
                                   const scaleY = adjustedViewBoxHeight / viewBoxParams.height;
@@ -5727,17 +5947,56 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
 
                                   const viewBoxCenterX = viewBoxX + adjustedViewBoxWidth / 2;
                                   const viewBoxCenterY = viewBoxY + adjustedViewBoxHeight / 2;
-                                  const translateX = viewBoxCenterX - viewBoxParams.centerX * scale;
-                                  const translateY = viewBoxCenterY - viewBoxParams.centerY * scale;
+                                  
+                                  // 단차가 있을 때 전열과 후열 단면의 하단 선이 일치해야 하므로,
+                                  // 각 단면의 하단 Y 좌표를 기준으로 정렬
+                                  // 원본 좌표계에서 하단 Y 좌표: originalViewBoxParams.y + originalViewBoxParams.height
+                                  // combined 좌표계에서 하단 Y 좌표: viewBoxParams.y + viewBoxParams.height
+                                  // 하단 선이 일치하려면: (originalViewBoxParams.y + originalViewBoxParams.height) + offsetY = viewBoxParams.y + viewBoxParams.height
+                                  // 따라서: offsetY = (viewBoxParams.y + viewBoxParams.height) - (originalViewBoxParams.y + originalViewBoxParams.height)
+                                  const originalBottomY = originalViewBoxParams.y + originalViewBoxParams.height;
+                                  const combinedBottomY = viewBoxParams.y + viewBoxParams.height;
+                                  let offsetY = combinedBottomY - originalBottomY;
+                                  
+                                  // 전열 단면의 경우: pathData가 조정된 absolutePoints로 생성되었으므로,
+                                  // 기준점 Y 차이를 offsetY에서 빼야 함
+                                  // 위치 이동량이 2배로 적용되는 것을 방지하기 위해 1/2만 적용
+                                  if (key === 'front' && data.originalOriginY !== undefined && data.absolutePoints.length > 0) {
+                                    const adjustedOriginY = data.absolutePoints[0].y;
+                                    const originalOriginY = data.originalOriginY;
+                                    const originYOffset = adjustedOriginY - originalOriginY;
+                                    offsetY -= originYOffset / 2;
+                                  }
+                                  
+                                  // X 좌표는 그대로 offset 적용
+                                  const offsetX = originalViewBoxParams.x - viewBoxParams.x;
+                                  
+                                  // 원본 좌표계의 중심점을 combined 좌표계로 변환
+                                  const originalCenterX = originalViewBoxParams.centerX;
+                                  const originalCenterY = originalViewBoxParams.centerY;
+                                  const combinedCenterX = originalCenterX + offsetX;
+                                  const combinedCenterY = originalCenterY + offsetY;
+                                  
+                                  // transform 계산
+                                  const translateX = viewBoxCenterX - combinedCenterX * scale;
+                                  const translateY = viewBoxCenterY - combinedCenterY * scale;
 
                                   return (
                                     <g
                                       key={`vertical-front-section-${key}`}
                                       transform={`translate(${translateX}, ${translateY}) scale(${scale})`}
                                     >
+                                      {/* 단면 형상 (fill) - 먼저 렌더링 */}
                                       <path
                                         d={data.pathData}
                                         fill="white"
+                                        stroke="none"
+                                        vectorEffect="non-scaling-stroke"
+                                      />
+                                      {/* 외곽선 (stroke) - 나중에 렌더링하여 위에 표시 */}
+                                      <path
+                                        d={data.pathData}
+                                        fill="none"
                                         stroke={SECTION_STROKE_COLOR}
                                         strokeWidth={MAIN_LINE_STROKE_WIDTH}
                                         strokeOpacity={1}
@@ -5750,24 +6009,96 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
                                 };
 
                                 if (params.hasStep) {
-                                  const renderedSections: React.ReactNode[] = [];
                                   const frontSection = sectionPathData.front;
                                   const backSection = sectionPathData.back;
                                   const sharedParams =
                                     frontSection?.viewBoxParams ??
                                     backSection?.viewBoxParams;
 
-                                  const frontElement = renderSectionShape(frontSection, 'front', sharedParams);
-                                  if (frontElement) {
-                                    renderedSections.push(frontElement);
-                                  }
-                                  const backElement = renderSectionShape(backSection, 'back', sharedParams);
-                                  if (backElement) {
-                                    renderedSections.push(backElement);
+                                  // 모든 단면 형상(fill)을 먼저 렌더링하고, 그 다음 모든 외곽선(stroke)을 렌더링
+                                  // 이렇게 하면 모든 외곽선이 모든 단면 형상 위에 표시됨
+                                  const renderedFills: React.ReactNode[] = [];
+                                  const renderedStrokes: React.ReactNode[] = [];
+
+                                  // 후열 단면 형상
+                                  if (isVerticalFrontBackSectionVisible && backSection) {
+                                    const backFill = renderSectionShape(backSection, 'back', sharedParams);
+                                    if (backFill) {
+                                      // fill만 있는 path 추출
+                                      const fillPath = React.Children.toArray(backFill.props.children).find(
+                                        (child: any) => child?.props?.fill === 'white' && child?.props?.stroke === 'none'
+                                      );
+                                      if (fillPath) {
+                                        renderedFills.push(
+                                          <g key="back-fill" transform={backFill.props.transform}>
+                                            {fillPath}
+                                          </g>
+                                        );
+                                      }
+                                    }
                                   }
 
-                                  if (renderedSections.length > 0) {
-                                    return <>{renderedSections}</>;
+                                  // 전열 단면 형상
+                                  if (isVerticalFrontFrontSectionVisible && frontSection) {
+                                    const frontFill = renderSectionShape(frontSection, 'front', sharedParams);
+                                    if (frontFill) {
+                                      // fill만 있는 path 추출
+                                      const fillPath = React.Children.toArray(frontFill.props.children).find(
+                                        (child: any) => child?.props?.fill === 'white' && child?.props?.stroke === 'none'
+                                      );
+                                      if (fillPath) {
+                                        renderedFills.push(
+                                          <g key="front-fill" transform={frontFill.props.transform}>
+                                            {fillPath}
+                                          </g>
+                                        );
+                                      }
+                                    }
+                                  }
+
+                                  // 후열 단면 외곽선
+                                  if (isVerticalFrontBackSectionVisible && backSection) {
+                                    const backStroke = renderSectionShape(backSection, 'back', sharedParams);
+                                    if (backStroke) {
+                                      // stroke만 있는 path 추출
+                                      const strokePath = React.Children.toArray(backStroke.props.children).find(
+                                        (child: any) => child?.props?.fill === 'none' && child?.props?.stroke
+                                      );
+                                      if (strokePath) {
+                                        renderedStrokes.push(
+                                          <g key="back-stroke" transform={backStroke.props.transform}>
+                                            {strokePath}
+                                          </g>
+                                        );
+                                      }
+                                    }
+                                  }
+
+                                  // 전열 단면 외곽선
+                                  if (isVerticalFrontFrontSectionVisible && frontSection) {
+                                    const frontStroke = renderSectionShape(frontSection, 'front', sharedParams);
+                                    if (frontStroke) {
+                                      // stroke만 있는 path 추출
+                                      const strokePath = React.Children.toArray(frontStroke.props.children).find(
+                                        (child: any) => child?.props?.fill === 'none' && child?.props?.stroke
+                                      );
+                                      if (strokePath) {
+                                        renderedStrokes.push(
+                                          <g key="front-stroke" transform={frontStroke.props.transform}>
+                                            {strokePath}
+                                          </g>
+                                        );
+                                      }
+                                    }
+                                  }
+
+                                  if (renderedFills.length > 0 || renderedStrokes.length > 0) {
+                                    return (
+                                      <>
+                                        {renderedFills}
+                                        {renderedStrokes}
+                                      </>
+                                    );
                                   }
                                 }
 
@@ -6290,6 +6621,4 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
       </div>
     </PageLayout>
   );
-};
-
-export default SectionView;
+}
