@@ -92,9 +92,9 @@ const ANCHOR_INNER_STROKE_RATIO = 0.08;
 const ANCHOR_INNER_STROKE_MIN = 0.2;
 const ORIGIN_MARKER_RADIUS_RATIO = 0.07;
 const ORIGIN_MARKER_RADIUS_MIN = 2;
-const DIMENSION_TEXT_FONT_SIZE_PX = '140px';
-const SECTION_PREVIEW_DIMENSION_TEXT_FONT_SIZE_PX = '140px';
-const INTERFERENCE_DIMENSION_TEXT_FONT_SIZE_PX = '160px';
+const DIMENSION_TEXT_FONT_SIZE_PX = '200px';
+const SECTION_PREVIEW_DIMENSION_TEXT_FONT_SIZE_PX = '200px';
+const INTERFERENCE_DIMENSION_TEXT_FONT_SIZE_PX = '200px';
 const ARROW_MARKER_BASE_RATIO = 0.005;
 const ARROW_MARKER_MIN_SIZE = 40;
 const MARKER_HALF_RATIO = 0.5;
@@ -102,29 +102,31 @@ const MARKER_REF_START_RATIO = 0;
 const MARKER_REF_END_RATIO = 1;
 const VERTICAL_PLAN_DIMENSION_LINE_OFFSET_FRONT_X = 150;
 const VERTICAL_PLAN_DIMENSION_LINE_OFFSET_BACK_X = 300;
-const VERTICAL_PLAN_DIMENSION_TEXT_OFFSET_X = 80;
+const VERTICAL_PLAN_DIMENSION_TEXT_OFFSET_X = 100;
 const VERTICAL_PLAN_DIMENSION_EXTRA_MARGIN = 100;
 const VERTICAL_PLAN_HORIZONTAL_BOTTOM_OFFSET = 150;
-const VERTICAL_PLAN_HORIZONTAL_BOTTOM_TEXT_OFFSET = 80;
+const VERTICAL_PLAN_HORIZONTAL_BOTTOM_TEXT_OFFSET = 100;
 const VERTICAL_PLAN_HORIZONTAL_TOP_OFFSET = 150;
-const VERTICAL_PLAN_HORIZONTAL_TOP_TEXT_OFFSET = 80;
+const VERTICAL_PLAN_HORIZONTAL_TOP_TEXT_OFFSET = 100;
 const VERTICAL_PLAN_HORIZONTAL_EXTRA_MARGIN = 100;
 const VERTICAL_PLAN_VERTICAL_TEXT_OFFSET_X = 100;
 const INTERFERENCE_DIMENSION_TEXT_FONT_SIZE = 120;
 const INTERFERENCE_DIMENSION_OFFSET = 150;
 const PLAN_DIMENSION_LINE_OFFSET_FRONT = 150;
-const PLAN_DIMENSION_LINE_OFFSET_BACK = 300;
-const PLAN_DIMENSION_TEXT_OFFSET_FRONT = 80;
-const PLAN_DIMENSION_TEXT_OFFSET_BACK = 80;
+const PLAN_DIMENSION_LINE_OFFSET_BACK = 150;
+const PLAN_DIMENSION_TEXT_OFFSET_FRONT = 100;
+const PLAN_DIMENSION_TEXT_OFFSET_BACK = 100;
 const PLAN_DIMENSION_EXTRA_MARGIN = 100;
 const AXIAL_PLAN_HORIZONTAL_DIMENSION_TEXT_OFFSET_Y = 100;
 const AXIAL_PLAN_HORIZONTAL_DIMENSION_EXTRA_MARGIN = 100;
 const AXIAL_PLAN_VERTICAL_DIMENSION_LINE_OFFSET_X = 150;
-const AXIAL_PLAN_VERTICAL_DIMENSION_TEXT_OFFSET_X = 80;
+const AXIAL_PLAN_VERTICAL_DIMENSION_TEXT_OFFSET_X = 100;
 const AXIAL_PLAN_VERTICAL_DIMENSION_EXTRA_MARGIN = 100;
 const FLYOUT_DIMENSION_VIEWBOX_PADDING = 800;
 const FLYOUT_CONTENT_SCALE: number = 3;
 const FLYOUT_EXTRA_MARGIN = 300;
+const FLYOUT_HORIZONTAL_VIEWBOX_PADDING = 250;
+const FLYOUT_HORIZONTAL_EXTRA_MARGIN = 100;
 
 // localStorage 키 상수
 const STORAGE_KEYS = {
@@ -153,7 +155,7 @@ const DEFAULT_PARAMS: SectionParams = {
   stepValue: 0
 };
 
-const SectionView: React.FC = () => {
+function SectionView(): React.ReactElement {
   // localStorage에서 상태 복원 또는 기본값 사용
   const loadFromStorage = <T,>(key: string, defaultValue: T): T => {
     try {
@@ -1011,11 +1013,13 @@ useEffect(() => {
       }
 
         const horizontalYRaw = bottomY + INTERFERENCE_DIMENSION_OFFSET;
-      const verticalXRaw = rightX + INTERFERENCE_DIMENSION_OFFSET;
-      const maxHorizontalY = params.height + FLYOUT_DIMENSION_VIEWBOX_PADDING + FLYOUT_EXTRA_MARGIN - INTERFERENCE_DIMENSION_OFFSET;
-      const maxVerticalX = params.width + FLYOUT_DIMENSION_VIEWBOX_PADDING + FLYOUT_EXTRA_MARGIN - INTERFERENCE_DIMENSION_OFFSET;
-      const horizontalY = Math.min(horizontalYRaw, maxHorizontalY);
-      const verticalX = Math.min(verticalXRaw, maxVerticalX);
+        const verticalXRaw = rightX + INTERFERENCE_DIMENSION_OFFSET;
+        const flyoutVerticalPadding = FLYOUT_DIMENSION_VIEWBOX_PADDING + FLYOUT_EXTRA_MARGIN;
+        const flyoutHorizontalPadding = FLYOUT_HORIZONTAL_VIEWBOX_PADDING + FLYOUT_HORIZONTAL_EXTRA_MARGIN;
+        const maxHorizontalY = params.height + flyoutVerticalPadding - INTERFERENCE_DIMENSION_OFFSET;
+        const maxVerticalX = params.width + flyoutHorizontalPadding - INTERFERENCE_DIMENSION_OFFSET;
+        const horizontalY = Math.min(horizontalYRaw, maxHorizontalY);
+        const verticalX = Math.min(verticalXRaw, maxVerticalX);
         const widthLabel = Math.round(rect.originalWidth).toLocaleString();
         const heightLabel = Math.round(rect.originalHeight).toLocaleString();
 
@@ -1586,7 +1590,7 @@ useEffect(() => {
                     x2={dimension.lineX}
                     y2={lineY2}
                     stroke={SECTION_STROKE_COLOR}
-                    strokeWidth="2"
+                    strokeWidth="4"
                     strokeOpacity={1}
                     markerStart="url(#arrowhead-start)"
                     markerEnd="url(#arrowhead-end)"
@@ -1597,7 +1601,7 @@ useEffect(() => {
                     x2={dimension.lineX + tickHalf}
                     y2={lineY1}
                     stroke={SECTION_STROKE_COLOR}
-                    strokeWidth="2"
+                    strokeWidth="4"
                     strokeOpacity={1}
                   />
                   <line
@@ -2455,8 +2459,8 @@ useEffect(() => {
                       x2={dimensionLineX}
                       y2={dimensionY1}
                       stroke={SECTION_STROKE_COLOR}
-                      strokeWidth="1"
-                      strokeOpacity={0.5}
+                      strokeWidth="2"
+                      strokeOpacity={1}
                     />
                     <line
                       x1={referenceX2}
@@ -2464,8 +2468,8 @@ useEffect(() => {
                       x2={dimensionLineX}
                       y2={dimensionY2}
                       stroke={SECTION_STROKE_COLOR}
-                      strokeWidth="1"
-                      strokeOpacity={0.5}
+                      strokeWidth="2"
+                      strokeOpacity={1}
                     />
                     <line
                       x1={dimensionLineX}
@@ -3174,9 +3178,22 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
       
       const baseViewBoxWidth = params.width || 1000;
       const baseViewBoxHeight = params.height || 1000;
-      const padding = Math.max(baseViewBoxWidth, baseViewBoxHeight) * 0.1 || 20;
-      const adjustedViewBoxWidth = baseViewBoxWidth + padding * 2;
-      const adjustedViewBoxHeight = baseViewBoxHeight + padding * 2;
+      const dimensionPaddingBase = Math.max(
+        PLAN_DIMENSION_LINE_OFFSET_FRONT,
+        PLAN_DIMENSION_LINE_OFFSET_BACK
+      );
+      const textOffsetBase = Math.max(
+        PLAN_DIMENSION_TEXT_OFFSET_FRONT,
+        PLAN_DIMENSION_TEXT_OFFSET_BACK
+      );
+      const extraSideMargin = 150;
+      const rawSharedSidePadding =
+        dimensionPaddingBase + textOffsetBase + PLAN_DIMENSION_EXTRA_MARGIN + extraSideMargin;
+      const sidePaddingReduction = 400;
+      const sharedSidePadding = Math.max(rawSharedSidePadding - sidePaddingReduction, 0);
+      const verticalPadding = Math.max(baseViewBoxWidth, baseViewBoxHeight) * 0.1 || 20;
+      const adjustedViewBoxWidth = baseViewBoxWidth + sharedSidePadding * 2;
+      const adjustedViewBoxHeight = baseViewBoxHeight + verticalPadding * 2;
       
       const scaleX = adjustedViewBoxWidth / sectionWidth;
       const scaleY = adjustedViewBoxHeight / sectionHeight;
@@ -3184,9 +3201,8 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
       
       const offsetX = (adjustedViewBoxWidth - sectionWidth * scale) / 2;
       const offsetY = (adjustedViewBoxHeight - sectionHeight * scale) / 2;
-      
-      const translateX = offsetX - defaultMinX * scale;
-      const translateY = offsetY - defaultMinY * scale;
+      const translateX = offsetX;
+      const translateY = offsetY;
       
       // 기준점 표시만 반환
       const originX = 0;
@@ -3262,11 +3278,24 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
     const originalXs = absolutePoints.map(p => p.x);
     const originalMinX = originalXs.length > 0 ? Math.min(...originalXs) : 0;
     const originalMaxX = originalXs.length > 0 ? Math.max(...originalXs) : 0;
-    const padding = Math.max(params.width, params.height) * 0.1 || 20;
-    const adjustedViewBoxWidth = params.width + padding * 2;
-    const adjustedViewBoxHeight = params.height + padding * 2;
-    const viewBoxX = -padding;
-    const viewBoxY = -padding;
+    const dimensionPaddingBase = Math.max(
+      PLAN_DIMENSION_LINE_OFFSET_FRONT,
+      PLAN_DIMENSION_LINE_OFFSET_BACK
+    );
+    const textOffsetBase = Math.max(
+      PLAN_DIMENSION_TEXT_OFFSET_FRONT,
+      PLAN_DIMENSION_TEXT_OFFSET_BACK
+    );
+    const extraSideMargin = 150;
+    const rawSharedSidePadding =
+      dimensionPaddingBase + textOffsetBase + PLAN_DIMENSION_EXTRA_MARGIN + extraSideMargin;
+    const sidePaddingReduction = 400;
+    const sharedSidePadding = Math.max(rawSharedSidePadding - sidePaddingReduction, 0);
+    const verticalPadding = Math.max(params.width, params.height) * 0.1 || 20;
+    const adjustedViewBoxWidth = params.width + sharedSidePadding * 2;
+    const adjustedViewBoxHeight = params.height + verticalPadding * 2;
+    const viewBoxX = -sharedSidePadding;
+    const viewBoxY = -verticalPadding;
     const scaleX = adjustedViewBoxWidth / viewBoxParams.width;
     const scaleY = adjustedViewBoxHeight / viewBoxParams.height;
     const scale = Math.min(scaleX, scaleY) * 0.9;
@@ -3377,7 +3406,7 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
           // 단면 형상 좌표계에서 아래는 +Y 방향이지만, flipY가 적용되면 반대가 됨
           // 따라서 원본 좌표계에서 위쪽 방향(-Y)으로 선을 그리려면, 원본 좌표계에서 -Y 방향으로 선을 그려야 함
           // 즉, lineEndY = anchorY - 300 (원본 좌표계에서 위쪽 방향)
-          // flipY 적용 후에는 아래쪽 방향으로 표시됨
+          // flipY 적용 후에는 아래쪽 방향으로 표시
           const lineEndY = anchorY - 300; // 원본 좌표계에서 위쪽 방향 (-Y), flipY 적용 후 아래쪽으로 표시
           elements.push(
             <line
@@ -4120,7 +4149,7 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
               const dimensionYTop = Math.min(dimensionYStart, dimensionYEnd);
               const dimensionYBottom = Math.max(dimensionYStart, dimensionYEnd);
               const dimensionDistance = Math.abs(dimensionYEnd - dimensionYStart);
-              const textOffset = 100 / scale;
+              const textOffset = 130 / scale;
               const textX = directionX === -1
                 ? dimensionLineX - textOffset
                 : dimensionLineX + textOffset;
@@ -5158,11 +5187,24 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
                   
                   // 교직(정면)의 경우, 기준점 표시와 일치하도록 padding 추가
                   if (sectionViewType === 'vertical-front') {
-                    const padding = Math.max(params.width, params.height) * 0.1 || 20;
-                    adjustedViewBoxWidth = params.width + padding * 2;
-                    adjustedViewBoxHeight = params.height + padding * 2;
-                    viewBoxX = -padding;
-                    viewBoxY = -padding;
+                    const dimensionPaddingBase = Math.max(
+                      PLAN_DIMENSION_LINE_OFFSET_FRONT,
+                      PLAN_DIMENSION_LINE_OFFSET_BACK
+                    );
+                    const textOffsetBase = Math.max(
+                      PLAN_DIMENSION_TEXT_OFFSET_FRONT,
+                      PLAN_DIMENSION_TEXT_OFFSET_BACK
+                    );
+                    const extraSideMargin = 150;
+                    const rawSharedSidePadding =
+                      dimensionPaddingBase + textOffsetBase + PLAN_DIMENSION_EXTRA_MARGIN + extraSideMargin;
+                    const sidePaddingReduction = 400;
+                    const sharedSidePadding = Math.max(rawSharedSidePadding - sidePaddingReduction, 0);
+                    const verticalPadding = Math.max(params.width, params.height) * 0.1 || 20;
+                    adjustedViewBoxWidth = params.width + sharedSidePadding * 2;
+                    adjustedViewBoxHeight = params.height + verticalPadding * 2;
+                    viewBoxX = -sharedSidePadding;
+                    viewBoxY = -verticalPadding;
                   } else if (sectionViewType === 'axial-front') {
                     const padding = 400; // 위쪽 여유 공간 (앵커 선 300mm + 직사각형 50mm + 여유 50mm)
                     const bottomPadding = 400; // 아래쪽 여유 공간 (형상을 중앙에 배치하기 위해)
@@ -5171,16 +5213,23 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
                     const textOffset = 100; // 텍스트와 Dimension 선 사이의 간격
                     const textSize = 100; // 텍스트 크기
                     // 텍스트가 보이도록 충분한 여유 공간 추가 (텍스트 크기 + 텍스트 오프셋 + 여유 공간)
-                    const leftPadding = dimensionLineOffsetFront + textOffset + textSize + 100; // Dimension이 보이도록 왼쪽 여유 공간 추가 (전열)
-                    const rightPadding = dimensionLineOffsetBack + textOffset + textSize + 100; // Dimension이 보이도록 오른쪽 여유 공간 추가 (후열)
+                    const dimensionPaddingBase = Math.max(dimensionLineOffsetFront, dimensionLineOffsetBack);
+                    const extraSideMargin = 400; // 좌우 여백 추가 확보
+                    const sharedSidePadding = dimensionPaddingBase + textOffset + textSize + 100 + extraSideMargin; // 좌우 동일 여유 공간 확보
+                    const leftPadding = sharedSidePadding;
+                    const rightPadding = sharedSidePadding;
                     
                     viewBoxY = -padding; // viewBox 시작점을 위로 이동
                     adjustedViewBoxHeight = viewBoxHeight + padding + bottomPadding;
                     viewBoxX = -leftPadding; // viewBox 시작점을 왼쪽으로 이동
                     adjustedViewBoxWidth = params.height + leftPadding + rightPadding;
                   } else if (sectionViewType === 'vertical-plan') {
-                    const rightPadding =
-                      VERTICAL_PLAN_DIMENSION_LINE_OFFSET_BACK_X +
+                    const dimensionPaddingBase = Math.max(
+                      VERTICAL_PLAN_DIMENSION_LINE_OFFSET_FRONT_X,
+                      VERTICAL_PLAN_DIMENSION_LINE_OFFSET_BACK_X
+                    );
+                    const sidePadding =
+                      dimensionPaddingBase +
                       VERTICAL_PLAN_DIMENSION_TEXT_OFFSET_X +
                       VERTICAL_PLAN_DIMENSION_EXTRA_MARGIN;
                     const topPadding =
@@ -5192,14 +5241,16 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
                       VERTICAL_PLAN_HORIZONTAL_BOTTOM_TEXT_OFFSET +
                       VERTICAL_PLAN_HORIZONTAL_EXTRA_MARGIN;
                     adjustedViewBoxHeight = viewBoxHeight + topPadding + bottomPadding;
-                    adjustedViewBoxWidth = params.width + rightPadding;
+                    adjustedViewBoxWidth = params.width + sidePadding * 2;
                     viewBoxY = -topPadding;
+                    viewBoxX = -sidePadding;
                   } else if (sectionViewType === 'flyout-front' || sectionViewType === 'flyout-back') {
-                    const padding = FLYOUT_DIMENSION_VIEWBOX_PADDING + FLYOUT_EXTRA_MARGIN;
-                    viewBoxX = -padding;
-                    viewBoxY = -padding;
-                    adjustedViewBoxWidth = params.width + padding * 2;
-                    adjustedViewBoxHeight = viewBoxHeight + padding * 2;
+                    const horizontalPadding = FLYOUT_HORIZONTAL_VIEWBOX_PADDING + FLYOUT_HORIZONTAL_EXTRA_MARGIN;
+                    const verticalPadding = FLYOUT_DIMENSION_VIEWBOX_PADDING + FLYOUT_EXTRA_MARGIN;
+                    viewBoxX = -horizontalPadding;
+                    viewBoxY = -verticalPadding;
+                    adjustedViewBoxWidth = params.width + horizontalPadding * 2;
+                    adjustedViewBoxHeight = viewBoxHeight + verticalPadding * 2;
                   } else if (sectionViewType === 'axial-plan') {
                     const topPadding = Math.max(
                       PLAN_DIMENSION_LINE_OFFSET_BACK + PLAN_DIMENSION_TEXT_OFFSET_BACK + PLAN_DIMENSION_EXTRA_MARGIN,
