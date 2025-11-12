@@ -1399,8 +1399,9 @@ useEffect(() => {
               params.stepValue < params.height &&
               slope !== 0
             ) {
-              const stepY = params.stepValue;
-      if (Math.abs(stepY - anchorY) > 1e-6) {
+              // 단차 위치는 형상 하단부터의 값이므로, Y 좌표는 params.height - params.stepValue
+              const stepY = params.height - params.stepValue;
+              if (Math.abs(stepY - anchorY) > 1e-6) {
                 const xAtStep = anchorX + (stepY - anchorY) / slope;
                 if (xAtStep >= rectLeft && xAtStep <= rectRight) {
                   intersections.push({ x: xAtStep, y: stepY });
@@ -3426,8 +3427,13 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
         // 첫 번째 전열 받침 또는 첫 번째 후열 받침: 교직방향 마지막 열의 앵커 중심 위치에서 1.5의 기울기를 -X, -Y 방향으로 형상의 외곽선과 만나는 위치까지 그린다.
         // 마지막 전열 받침 또는 마지막 후열 받침: 교직방향 첫번째 열의 앵커 중심 위치에서 1.5의 기울기를 +X, -Y 방향으로 형상의 외곽선과 만나는 위치까지 그린다.
         // sectionData가 있어야 absolutePoints를 사용할 수 있음
-        if (sectionData && sectionData.absolutePoints) {
-          const absolutePoints = sectionData.absolutePoints;
+        // 전열 받침은 front 단면의 점을, 후열 받침은 back 단면의 점을 사용해야 함
+        const targetSectionData = isFrontSupport 
+          ? (sectionPathData.front ?? sectionData)
+          : (sectionPathData.back ?? sectionData);
+        
+        if (targetSectionData && targetSectionData.absolutePoints) {
+          const absolutePoints = targetSectionData.absolutePoints;
           
           const isFirstFront = index === 0;
           const isFirstBack = index === params.frontRowCount;
@@ -4782,12 +4788,13 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
                           />
 
                           {/* 단차 점선 (길이 방향 위치에서 폭 방향으로) */}
+                          {/* 단차 위치는 형상 하단부터의 값이므로, Y 좌표는 params.height - params.stepValue */}
                           {params.hasStep && params.stepValue > 0 && params.stepValue < params.height && (
                             <line
                               x1="0"
-                              y1={params.stepValue}
+                              y1={params.height - params.stepValue}
                               x2={params.width}
-                              y2={params.stepValue}
+                              y2={params.height - params.stepValue}
                               stroke={SECTION_STROKE_COLOR}
                               strokeWidth="2"
                               strokeDasharray="5,5"
@@ -5610,11 +5617,12 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
                   params.hasStep &&
                   params.stepValue > 0 &&
                   params.stepValue < params.height && (
+                  /* 단차 위치는 형상 하단부터의 값이므로, Y 좌표는 params.height - params.stepValue */
                   <line
                     x1={0}
-                    y1={params.stepValue}
+                    y1={params.height - params.stepValue}
                     x2={params.width}
-                    y2={params.stepValue}
+                    y2={params.height - params.stepValue}
                     stroke="#888"
                     strokeWidth={1}
                     strokeDasharray="8 4"
