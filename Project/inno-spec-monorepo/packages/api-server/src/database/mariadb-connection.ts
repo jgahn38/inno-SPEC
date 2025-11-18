@@ -271,6 +271,29 @@ class MariaDBConnection {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
       `);
 
+      // 필드 정의 테이블 생성
+      await connection.execute(`
+        CREATE TABLE IF NOT EXISTS field_definitions (
+          id VARCHAR(255) PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          display_name VARCHAR(255) NOT NULL,
+          description TEXT,
+          type VARCHAR(50) NOT NULL,
+          options JSON,
+          default_value JSON,
+          db_category VARCHAR(50),
+          order_index INT DEFAULT 0,
+          is_active BOOLEAN DEFAULT TRUE,
+          tenant_id VARCHAR(36) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_tenant_id (tenant_id),
+          INDEX idx_order_index (order_index),
+          INDEX idx_is_active (is_active),
+          UNIQUE KEY unique_name_tenant (name, tenant_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+      `);
+
       console.log('✅ Database tables created successfully');
     } finally {
       connection.release();

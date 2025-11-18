@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import compression from 'compression';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
+import fieldDefinitionsRouter from './routes/field-definitions.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -316,6 +317,9 @@ app.delete('/api/lnb/:id', (req, res) => {
     });
   }
 });
+
+// 필드 정의 관련 API (데이터베이스 사용)
+app.use('/api/field-definitions', fieldDefinitionsRouter);
 
 // 404 핸들러
 app.use('*', (req, res) => {

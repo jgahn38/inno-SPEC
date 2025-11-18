@@ -280,6 +280,7 @@ const FieldManager: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">필드명</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">표시명</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">타입</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">기본값</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">설명</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">사용 테이블</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-20"></th>
@@ -338,17 +339,27 @@ const FieldManager: React.FC = () => {
                           옵션: {field.options.join(', ')}
                         </div>
                       )}
-                      {field.type === 'db' && field.dbCategory && field.defaultValue && (
+                      {field.type === 'db' && field.dbCategory && (
                         <div className="text-xs text-gray-500 mt-1">
-                          DB: {availableDatabases.find(db => db.id === field.defaultValue)?.displayName || '알 수 없음'}
-                        </div>
-                      )}
-                      {field.defaultValue !== undefined && field.defaultValue !== '' && (
-                        <div className="text-xs text-blue-600 mt-1">
-                          기본값: {field.defaultValue}
+                          카테고리: {field.dbCategory}
                         </div>
                       )}
                     </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {field.defaultValue !== undefined && field.defaultValue !== '' && field.defaultValue !== null ? (
+                      field.type === 'db' && field.defaultValue ? (
+                        <div className="text-sm text-gray-900">
+                          {availableDatabases.find(db => db.id === field.defaultValue)?.displayName || field.defaultValue}
+                        </div>
+                      ) : field.type === 'boolean' ? (
+                        <div className="text-sm text-gray-900">{field.defaultValue ? '참' : '거짓'}</div>
+                      ) : (
+                        <div className="text-sm text-gray-900">{String(field.defaultValue)}</div>
+                      )
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
                   </td>
                   <td className="px-6 py-4">
                     <div className="text-sm text-gray-900 max-w-xs truncate">{field.description || '-'}</div>

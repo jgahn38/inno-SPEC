@@ -39,7 +39,7 @@ export class MariaDBTableSchemaService {
       const schemas = rows as any[];
       return schemas.map(row => ({
         ...row,
-        fields: row.fields ? JSON.parse(row.fields) : []
+        fields: row.fields ? (typeof row.fields === 'string' ? JSON.parse(row.fields) : row.fields) : []
       })) as TableSchema[];
     } finally {
       connection.release();
@@ -60,7 +60,7 @@ export class MariaDBTableSchemaService {
       const schema = schemas[0];
       return {
         ...schema,
-        fields: schema.fields ? JSON.parse(schema.fields) : []
+        fields: schema.fields ? (typeof schema.fields === 'string' ? JSON.parse(schema.fields) : schema.fields) : []
       } as TableSchema;
     } finally {
       connection.release();
@@ -81,7 +81,7 @@ export class MariaDBTableSchemaService {
       const schema = schemas[0];
       return {
         ...schema,
-        fields: schema.fields ? JSON.parse(schema.fields) : []
+        fields: schema.fields ? (typeof schema.fields === 'string' ? JSON.parse(schema.fields) : schema.fields) : []
       } as TableSchema;
     } finally {
       connection.release();

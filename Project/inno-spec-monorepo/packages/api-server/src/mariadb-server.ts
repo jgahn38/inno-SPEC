@@ -12,9 +12,13 @@ import { mariaDBDatabaseService } from './services/MariaDBDatabaseService';
 import { mariaDBTableSchemaService } from './services/MariaDBTableSchemaService';
 import { mariaDBVariableService } from './services/MariaDBVariableService';
 import { mariaDBProjectCategoryService } from './services/MariaDBProjectCategoryService';
+import fieldDefinitionsRouter from './routes/field-definitions.js';
 
 // 환경 변수 로드
 dotenv.config();
+
+// MariaDB 사용 명시
+process.env.USE_MARIADB = 'true';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -1104,6 +1108,9 @@ app.delete('/api/lnb/:id', async (req, res) => {
     });
   }
 });
+
+// 필드 정의 관련 API
+app.use('/api/field-definitions', fieldDefinitionsRouter);
 
 // 404 핸들러
 app.use('*', (req, res) => {

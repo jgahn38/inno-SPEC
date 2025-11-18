@@ -1,11 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TableSchema, TableField } from '@inno-spec/shared';
 import { PageLayout, Modal } from '@inno-spec/ui-lib';
-import { TableSchemaService } from '../TableSchemaService';
+import { useAPI } from '@inno-spec/core';
 import { Plus, Save, X, Search, GripVertical } from 'lucide-react';
 
 const TableManager: React.FC = () => {
-  const [schemas, setSchemas] = useState<TableSchema[]>([]);
+  const { 
+    fieldDefinitions, 
+    refreshFieldDefinitions,
+    tableSchemas,
+    refreshTableSchemas,
+    createTableSchema,
+    updateTableSchema,
+    deleteTableSchema,
+    loading: apiLoading
+  } = useAPI();
   const [fields, setFields] = useState<TableField[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
@@ -25,25 +34,19 @@ const TableManager: React.FC = () => {
   // 테이블 생성 시 필드 선택 상태
   const [selectedFieldIds, setSelectedFieldIds] = useState<string[]>([]);
 
-  const tableSchemaService = TableSchemaService.getInstance();
-
-  const loadSchemas = useCallback(() => {
-    const allSchemas = tableSchemaService.getAllSchemas();
-    setSchemas(allSchemas);
-  }, [tableSchemaService]);
-
-  const loadFields = useCallback(() => {
-    // 독립적으로 정의된 필드들을 로드
-    const allFields = tableSchemaService.getAllFields();
-    setFields(allFields);
-  }, [tableSchemaService]);
+  // 서버의 fieldDefinitions를 사용하도록 변경
+  useEffect(() => {
+    if (fieldDefinitions) {
+      setFields(fieldDefinitions);
+    }
+  }, [fieldDefinitions]);
 
   useEffect(() => {
-    loadSchemas();
-    loadFields();
-  }, [loadSchemas, loadFields]);
+    refreshFieldDefinitions();
+    refreshTableSchemas();
+  }, [refreshFieldDefinitions, refreshTableSchemas]);
 
-  const handleAddTable = () => {
+  const handleAddTable = async () => {
     if (!newTable.name || !newTable.displayName) {
       alert('테이블명과 표시명은 필수 입력 항목입니다.');
       return;
@@ -57,26 +60,26 @@ const TableManager: React.FC = () => {
     // 선택된 필드들을 가져와서 테이블 스키마 생성
     const selectedFields = fields.filter(field => selectedFieldIds.includes(field.id));
     
-    const tableSchema: TableSchema = {
-      ...newTable,
-      id: `table-${Date.now()}`,
+    const tableSchema: Omit<TableSchema, 'id' | 'createdAt' | 'updatedAt'> = {
       name: newTable.name!,
       displayName: newTable.displayName!,
       description: newTable.description || '',
-      fields: selectedFields,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    } as TableSchema;
+      fields: selectedFields
+    };
 
-    // 서비스를 통해 테이블 스키마 추가 및 저장
-    tableSchemaService.addSchema(tableSchema);
-    
-    // 로컬 상태 업데이트
-    setSchemas([...schemas, tableSchema]);
-    
-    // 폼 초기화 및 모달 닫기
-    resetTableForm();
-    setShowTableModal(false);
+    try {
+      const success = await createTableSchema(tableSchema);
+      if (success) {
+        // 폼 초기화 및 모달 닫기
+        resetTableForm();
+        setShowTableModal(false);
+      } else {
+        alert('테이블 추가에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('Error adding table:', error);
+      alert('테이블 추가 중 오류가 발생했습니다.');
+    }
   };
 
   const handleEditTable = (schema: TableSchema) => {
@@ -95,7 +98,7 @@ const TableManager: React.FC = () => {
     setShowTableModal(true);
   };
 
-  const handleUpdateTable = () => {
+  const handleUpdateTable = async () => {
     if (!editingSchema || !newTable.name || !newTable.displayName) {
       alert('테이블명과 표시명은 필수 입력 항목입니다.');
       return;
@@ -109,33 +112,40 @@ const TableManager: React.FC = () => {
     // 선택된 필드들을 가져와서 테이블 스키마 업데이트
     const selectedFields = fields.filter(field => selectedFieldIds.includes(field.id));
 
-    // 서비스를 통해 테이블 스키마 업데이트 및 저장
-    tableSchemaService.updateSchema(editingSchema.id, {
+    const updatedSchema: Partial<TableSchema> = {
       name: newTable.name!,
       displayName: newTable.displayName!,
       description: newTable.description || '',
       fields: selectedFields
-    });
+    };
 
-    // 로컬 상태 업데이트
-    const updatedSchemas = schemas.map(s => 
-      s.id === editingSchema.id ? { ...s, ...newTable, fields: selectedFields, updatedAt: new Date() } : s
-    );
-    setSchemas(updatedSchemas);
-    
-    // 폼 초기화 및 모달 닫기
-    resetTableForm();
-    setEditingSchema(null);
-    setShowTableModal(false);
+    try {
+      const success = await updateTableSchema(editingSchema.id, updatedSchema);
+      if (success) {
+        // 폼 초기화 및 모달 닫기
+        resetTableForm();
+        setEditingSchema(null);
+        setShowTableModal(false);
+      } else {
+        alert('테이블 수정에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('Error updating table:', error);
+      alert('테이블 수정 중 오류가 발생했습니다.');
+    }
   };
 
-  const handleDeleteTable = (schemaId: string) => {
+  const handleDeleteTable = async (schemaId: string) => {
     if (confirm('정말로 이 테이블을 삭제하시겠습니까?')) {
-      // 서비스를 통해 테이블 삭제 및 저장
-      tableSchemaService.deleteSchema(schemaId);
-      
-      // 로컬 상태 업데이트
-      setSchemas(schemas.filter(s => s.id !== schemaId));
+      try {
+        const success = await deleteTableSchema(schemaId);
+        if (!success) {
+          alert('테이블 삭제에 실패했습니다.');
+        }
+      } catch (error) {
+        console.error('Error deleting table:', error);
+        alert('테이블 삭제 중 오류가 발생했습니다.');
+      }
     }
   };
 
@@ -149,7 +159,7 @@ const TableManager: React.FC = () => {
     setSelectedFieldIds([]);
   };
 
-  const filteredSchemas = schemas.filter(schema => 
+  const filteredSchemas = (tableSchemas || []).filter(schema => 
     (searchTerm === '' || 
      schema.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
      schema.description?.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -209,25 +219,25 @@ const TableManager: React.FC = () => {
                   onDrop={(e) => {
                     e.preventDefault();
                     const draggedSchemaId = e.dataTransfer.getData('text/plain');
-                    const draggedIndex = schemas.findIndex(s => s.id === draggedSchemaId);
-                    const dropIndex = schemas.findIndex(s => s.id === schema.id);
+                    const draggedIndex = (tableSchemas || []).findIndex(s => s.id === draggedSchemaId);
+                    const dropIndex = (tableSchemas || []).findIndex(s => s.id === schema.id);
                     
                     if (draggedIndex !== -1 && draggedIndex !== dropIndex) {
-                      const newSchemas = [...schemas];
+                      const newSchemas = [...(tableSchemas || [])];
                       const [draggedItem] = newSchemas.splice(draggedIndex, 1);
                       newSchemas.splice(dropIndex, 0, draggedItem);
                       
-                      // 순서 속성 추가
+                      // 순서 속성 추가 및 업데이트
                       const updatedSchemas = newSchemas.map((schema, idx) => ({
                         ...schema,
                         order: idx
                       }));
                       
-                      setSchemas(updatedSchemas);
-                      
-                      // 서비스를 통해 각 스키마 업데이트
+                      // API를 통해 각 스키마 업데이트
                       updatedSchemas.forEach(schema => {
-                        tableSchemaService.updateSchema(schema.id, schema);
+                        updateTableSchema(schema.id, { order: schema.order }).catch(error => {
+                          console.error('Error updating table order:', error);
+                        });
                       });
                     }
                     setDraggedItem(null);
