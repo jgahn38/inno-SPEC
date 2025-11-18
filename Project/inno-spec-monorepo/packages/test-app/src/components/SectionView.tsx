@@ -1014,13 +1014,14 @@ useEffect(() => {
         return;
       }
 
-        const horizontalYRaw = bottomY + INTERFERENCE_DIMENSION_OFFSET;
+        // 가로방향 치수선을 점선 직사각형 아래로 배치
+        // 세로방향 치수선 이격거리와 동일하게 맞추기 위해 INTERFERENCE_DIMENSION_OFFSET만 사용
+        const horizontalYRaw = bottomY + INTERFERENCE_DIMENSION_OFFSET; // 세로방향과 동일한 이격거리
         const verticalXRaw = rightX + INTERFERENCE_DIMENSION_OFFSET;
-        const flyoutVerticalPadding = FLYOUT_DIMENSION_VIEWBOX_PADDING + FLYOUT_EXTRA_MARGIN;
         const flyoutHorizontalPadding = FLYOUT_HORIZONTAL_VIEWBOX_PADDING + FLYOUT_HORIZONTAL_EXTRA_MARGIN;
-        const maxHorizontalY = params.height + flyoutVerticalPadding - INTERFERENCE_DIMENSION_OFFSET;
+        // maxHorizontalY 제한을 제거하여 항상 직사각형 아래에 배치되도록 함
         const maxVerticalX = params.width + flyoutHorizontalPadding - INTERFERENCE_DIMENSION_OFFSET;
-        const horizontalY = Math.min(horizontalYRaw, maxHorizontalY);
+        const horizontalY = horizontalYRaw; // 제한 없이 항상 직사각형 아래에 배치
         const verticalX = Math.min(verticalXRaw, maxVerticalX);
         const widthLabel = Math.round(rect.originalWidth).toLocaleString();
         const heightLabel = Math.round(rect.originalHeight).toLocaleString();
@@ -1063,7 +1064,7 @@ useEffect(() => {
               x={(leftX + rightX) / 2}
               y={horizontalY + INTERFERENCE_DIMENSION_TEXT_FONT_SIZE * 0.25}
               fill={SECTION_STROKE_COLOR}
-              fontSize={INTERFERENCE_DIMENSION_TEXT_FONT_SIZE_PX}
+              fontSize="300px" // 프라이아웃 뷰에서 더 크게 표시
               fontWeight="bold"
               textAnchor="middle"
               dominantBaseline="hanging"
@@ -1112,7 +1113,7 @@ useEffect(() => {
               y={(topY + bottomY) / 2}
               transform={`rotate(-90, ${verticalX + INTERFERENCE_DIMENSION_TEXT_FONT_SIZE}, ${(topY + bottomY) / 2})`}
               fill={SECTION_STROKE_COLOR}
-              fontSize={INTERFERENCE_DIMENSION_TEXT_FONT_SIZE_PX}
+              fontSize="300px" // 프라이아웃 뷰에서 더 크게 표시
               fontWeight="bold"
               textAnchor="middle"
               dominantBaseline="central"
@@ -2075,7 +2076,8 @@ useEffect(() => {
       axialPlanDimensionElements,
       verticalPlanDimensionElements,
       verticalPlanAdditionalHorizontalElements,
-      verticalPlanAdditionalVerticalElements
+      verticalPlanAdditionalVerticalElements,
+      interferenceRectangles
     };
   }, [
     sectionViewType,
@@ -3319,11 +3321,14 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
     const originY = originPoint.y; // 절대 좌표 (flipY 적용 전, 원본 Y 좌표)
     const frontOriginPoint = sectionPathData.front?.absolutePoints?.[0];
     const backOriginPoint = sectionPathData.back?.absolutePoints?.[0];
-    const frontOriginX = frontOriginPoint?.x ?? originX;
-    // 받침 직사각형과 앵커 위치 계산에는 원본 기준점 Y 좌표 사용
-    const frontOriginY = sectionPathData.front?.originalOriginY ?? frontOriginPoint?.y ?? originY;
-    const backOriginX = backOriginPoint?.x ?? originX;
-    const backOriginY = backOriginPoint?.y ?? originY;
+    // 받침 직사각형과 앵커 위치 계산에는 absolutePoints[0].y를 직접 사용하여
+    // 점 1의 y 값이 0이 아닌 경우에도 올바른 위치에 배치되도록 함
+    // activeSectionTab에 따라 변경되지 않도록 항상 front와 back 데이터를 직접 참조
+    const frontOriginX = frontOriginPoint?.x ?? (sectionPathData.front?.absolutePoints?.[0]?.x ?? 0);
+    // absolutePoints[0].y를 직접 사용하여 조정된 좌표계와 일치시킴
+    const frontOriginY = frontOriginPoint?.y ?? (sectionPathData.front?.absolutePoints?.[0]?.y ?? 0);
+    const backOriginX = backOriginPoint?.x ?? (sectionPathData.back?.absolutePoints?.[0]?.x ?? 0);
+    const backOriginY = backOriginPoint?.y ?? (sectionPathData.back?.absolutePoints?.[0]?.y ?? 0);
     const originalXs = absolutePoints.map(p => p.x);
     const originalMinX = originalXs.length > 0 ? Math.min(...originalXs) : 0;
     const originalMaxX = originalXs.length > 0 ? Math.max(...originalXs) : 0;
@@ -3370,11 +3375,13 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
       const baseOriginX = isFrontSupport ? frontOriginX : backOriginX;
       const baseOriginY = isFrontSupport ? frontOriginY : backOriginY;
       const supportX = baseOriginX + point.offsetX;
-      // 후열 받침의 경우: 받침 중심 Y를 후열 단면의 상단 Y로 설정하여 직사각형의 하단이 단면의 상단과 일치하도록
+      // 후열 받침과 전열 받침 모두: 받침 중심 Y를 단면의 상단 Y로 설정하여 직사각형의 하단이 단면의 상단과 일치하도록
       // 단면은 renderSectionShape에서 offsetY를 적용받으므로, 받침도 동일한 offsetY를 적용해야 함
       let supportY: number;
       if (!isFrontSupport) {
-        const backSection = sectionPathData.back ?? sectionData;
+        // 후열 받침의 경우: 후열 단면의 상단 Y 사용
+        // sectionData(active)를 fallback으로 사용하지 않고, 반드시 sectionPathData.back만 사용
+        const backSection = sectionPathData.back;
         if (backSection?.absolutePoints && backSection.absolutePoints.length > 0 && 
             backSection?.viewBoxParams && backSection?.originalViewBoxParams) {
           // 단면의 실제 상단 Y는 absolutePoints의 최대 Y 값
@@ -3389,7 +3396,21 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
           supportY = baseOriginY; // fallback: 기준점 Y 사용
         }
       } else {
-        supportY = baseOriginY; // 전열 받침: 기준점 Y 사용
+        // 전열 받침의 경우: 전열 단면의 상단 Y와 기준점 Y의 중간값 사용
+        // sectionData(active)를 fallback으로 사용하지 않고, 반드시 sectionPathData.front만 사용
+        const frontSection = sectionPathData.front;
+        if (frontSection?.absolutePoints && frontSection.absolutePoints.length > 0 && 
+            frontSection?.viewBoxParams && frontSection?.originalViewBoxParams) {
+          // 단면의 실제 상단 Y는 absolutePoints의 최대 Y 값
+          // flipY가 적용되면 좌표계가 뒤집히므로, 원본 좌표계에서 최대 Y가 화면에서 상단이 됨
+          const frontSectionTopY = Math.max(...frontSection.absolutePoints.map(p => p.y));
+          
+          // 기준점 Y에서 상단 Y로의 이동량의 절반만 이동
+          // 올바른 위치 = baseOriginY + (frontSectionTopY - baseOriginY) / 2
+          supportY = (baseOriginY + frontSectionTopY) / 2;
+        } else {
+          supportY = baseOriginY; // fallback: 기준점 Y 사용
+        }
       }
 
       const elements: React.ReactNode[] = [];
@@ -3452,6 +3473,29 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
         // 앵커 위치 계산: 받침 중심위치를 기준으로 X 방향으로 배치
         // 앵커열 개수(교직)=2, 앵커 간격(교직)=600 → 받침 중심위치로부터 -X 방향으로 300, +X 방향으로 300
         // 앵커열 개수(교직)=3, 앵커 간격(교직)=600 → 받침 중심위치로부터 -X 방향으로 600, 받침 중심위치, +X 방향으로 600
+        // 앵커 중심점 Y 위치: 후열 받침의 경우 후열 단면 상단선과 일치하도록, 전열 받침의 경우 전열 단면 상단선과 일치하도록 설정
+        // 단면의 상단 Y를 직접 사용하여 점 1의 y 값이 0이 아닌 경우에도 올바른 위치에 배치
+        let anchorY: number;
+        if (!isFrontSupport) {
+          // 후열 받침의 경우: 후열 단면의 상단 Y 사용
+          const backSection = sectionPathData.back;
+          if (backSection?.absolutePoints && backSection.absolutePoints.length > 0) {
+            const backSectionTopY = Math.max(...backSection.absolutePoints.map(p => p.y));
+            anchorY = backSectionTopY;
+          } else {
+            anchorY = supportY; // fallback
+          }
+        } else {
+          // 전열 받침의 경우: 전열 단면의 상단 Y 사용
+          const frontSection = sectionPathData.front;
+          if (frontSection?.absolutePoints && frontSection.absolutePoints.length > 0) {
+            const frontSectionTopY = Math.max(...frontSection.absolutePoints.map(p => p.y));
+            anchorY = frontSectionTopY;
+          } else {
+            anchorY = supportY; // fallback
+          }
+        }
+        
         for (let i = 0; i < anchorRowCountVertical; i++) {
           // 앵커 위치: 받침 중심위치에서 시작하여 X 방향으로 배치
           // i=0: 첫 번째 앵커 (가장 왼쪽)
@@ -3459,7 +3503,6 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
           // 중앙 정렬을 위해 offset 계산
           const offset = (i - (anchorRowCountVertical - 1) / 2) * anchorGapVertical;
           const anchorX = supportX + offset;
-          const anchorY = supportY;
 
           // 앵커 위치 점 (크게 표시하여 육안으로 확인 가능하도록)
         elements.push(
@@ -3519,7 +3562,10 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
           // 마지막 전열 받침 또는 마지막 후열 받침
           const isLastSupport = isLastFront || isLastBack;
           
-          if (isDimensionVisible && (isFirstSupport || isLastSupport)) {
+          // 교직(정면) 뷰에서 첫 번째 전열 받침과 첫 번째 후열 받침의 점선과 치수선은 표시하지 않음
+          const shouldSkipFirstSupport = sectionViewType === 'vertical-front' && isFirstSupport;
+          
+          if (isDimensionVisible && (isFirstSupport || isLastSupport) && !shouldSkipFirstSupport) {
             // 첫 번째 전열/후열 받침: 마지막 열의 앵커
             // 마지막 전열/후열 받침: 첫 번째 열의 앵커
             const targetAnchorIndex = isFirstSupport
@@ -4421,8 +4467,9 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
           
           // 후열 받침인지 확인
           const isBackSupport = elementIndex !== undefined && elementIndex >= params.frontRowCount;
+          const isFrontSupport = elementIndex !== undefined && elementIndex < params.frontRowCount;
           
-          // 후열 받침의 경우 단면과 동일한 transform 사용
+          // 전열/후열 받침 모두 단면과 동일한 transform 사용
           let elementTranslateX = translateX;
           let elementTranslateY = translateY;
           let elementScale = scale;
@@ -4437,6 +4484,40 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
               const originalBottomY = originalViewBoxParams.y + originalViewBoxParams.height;
               const combinedBottomY = viewBoxParams.y + viewBoxParams.height;
               const offsetY = combinedBottomY - originalBottomY;
+              
+              // 단면과 동일한 offsetX 계산
+              const offsetX = originalViewBoxParams.x - viewBoxParams.x;
+              
+              // 단면과 동일한 combinedCenter 계산
+              const originalCenterX = originalViewBoxParams.centerX;
+              const originalCenterY = originalViewBoxParams.centerY;
+              const combinedCenterX = originalCenterX + offsetX;
+              const combinedCenterY = originalCenterY + offsetY;
+              
+              // 단면과 동일한 transform 사용
+              elementTranslateX = viewBoxCenterX - combinedCenterX * scale;
+              elementTranslateY = viewBoxCenterY - combinedCenterY * scale;
+            }
+          } else if (isFrontSupport) {
+            // 전열 받침의 경우도 단면과 동일한 transform 사용
+            const frontSection = sectionPathData.front ?? sectionData;
+            if (frontSection?.viewBoxParams && frontSection?.originalViewBoxParams) {
+              const originalViewBoxParams = frontSection.originalViewBoxParams;
+              const viewBoxParams = frontSection.viewBoxParams;
+              
+              // 단면과 동일한 offsetY 계산
+              const originalBottomY = originalViewBoxParams.y + originalViewBoxParams.height;
+              const combinedBottomY = viewBoxParams.y + viewBoxParams.height;
+              let offsetY = combinedBottomY - originalBottomY;
+              
+              // 전열 단면의 경우: pathData가 조정된 absolutePoints로 생성되었으므로,
+              // 기준점 Y 차이를 offsetY에서 빼야 함 (renderSectionShape와 동일한 로직)
+              if (frontSection.originalOriginY !== undefined && frontSection.absolutePoints.length > 0) {
+                const adjustedOriginY = frontSection.absolutePoints[0].y;
+                const originalOriginY = frontSection.originalOriginY;
+                const originYOffset = adjustedOriginY - originalOriginY;
+                offsetY -= originYOffset / 2;
+              }
               
               // 단면과 동일한 offsetX 계산
               const offsetX = originalViewBoxParams.x - viewBoxParams.x;
@@ -4521,7 +4602,7 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
             const transformedWidth = width * elementScale;
             const transformedHeight = height * elementScale;
             
-            // 후열 받침의 경우: 단면의 실제 상단 Y를 화면 좌표계에서 직접 계산
+            // 전열/후열 받침 모두: 단면의 실제 상단 Y를 화면 좌표계에서 직접 계산
             let transformedY: number;
             if (isBackSupport) {
               const backSection = sectionPathData.back ?? sectionData;
@@ -4545,8 +4626,27 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
                 const supportCenterY = supportY;
                 transformedY = flipY(supportCenterY) * elementScale + elementTranslateY - transformedHeight;
               }
+            } else if (isFrontSupport) {
+              // 전열 받침: 직사각형의 하단 중앙점이 받침 중심위치(supportY)와 일치하도록 배치
+              // supportY는 단면의 상단 Y와 기준점 Y의 중간값이므로,
+              // 단면과 동일한 transform을 적용하여 화면 좌표계로 변환
+              const frontSection = sectionPathData.front ?? sectionData;
+              if (frontSection?.viewBoxParams) {
+                // supportY를 단면과 동일한 transform으로 화면 좌표계로 변환
+                // 단면의 flipY 함수를 사용하여 변환
+                const supportYScreen = elementTranslateY + frontSection.flipY(supportY) * elementScale;
+                // 직사각형의 하단 중앙점이 supportYScreen과 일치하도록 배치
+                // 직사각형의 하단 Y = transformedY + transformedHeight
+                // 따라서: transformedY + transformedHeight = supportYScreen
+                // transformedY = supportYScreen - transformedHeight
+                transformedY = supportYScreen - transformedHeight;
+              } else {
+                // fallback: 기존 로직 사용
+                const supportCenterY = supportY;
+                transformedY = flipY(supportCenterY) * elementScale + elementTranslateY - transformedHeight;
+              }
             } else {
-              // 전열 받침: 기존 로직 사용
+              // fallback: 기존 로직 사용
               const supportCenterY = supportY;
               transformedY = flipY(supportCenterY) * elementScale + elementTranslateY - transformedHeight;
             }
@@ -4588,7 +4688,9 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
     );
   }, [
     sectionViewType,
-    sectionPathData,
+    sectionPathData.front,
+    sectionPathData.back,
+    sectionPathData.active,
     customPoints,
     params.width,
     params.height,
@@ -5436,12 +5538,115 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
                     viewBoxY = -topPadding;
                     viewBoxX = -sidePadding;
                   } else if (sectionViewType === 'flyout-front' || sectionViewType === 'flyout-back') {
-                    const horizontalPadding = FLYOUT_HORIZONTAL_VIEWBOX_PADDING + FLYOUT_HORIZONTAL_EXTRA_MARGIN;
-                    const verticalPadding = FLYOUT_DIMENSION_VIEWBOX_PADDING + FLYOUT_EXTRA_MARGIN;
-                    viewBoxX = -horizontalPadding;
-                    viewBoxY = -verticalPadding;
-                    adjustedViewBoxWidth = params.width + horizontalPadding * 2;
-                    adjustedViewBoxHeight = viewBoxHeight + verticalPadding * 2;
+                    // 간섭 직사각형과 치수선이 viewBox를 벗어나지 않도록 동적으로 padding 계산
+                    // 초기값을 Infinity로 설정하여 실제 경계를 정확히 계산
+                    let minX = Infinity;
+                    let maxX = -Infinity;
+                    let minY = Infinity;
+                    let maxY = -Infinity;
+                    
+                    // 간섭 직사각형의 경계 계산 (확대 후)
+                    const flyoutInterferenceRectangles = (renderedAnchors && 'interferenceRectangles' in renderedAnchors) 
+                      ? (renderedAnchors as any).interferenceRectangles as Array<{ cx: number; cy: number; width: number; height: number }> || []
+                      : [];
+                    if (flyoutInterferenceRectangles.length > 0) {
+                      flyoutInterferenceRectangles.forEach((rect: { cx: number; cy: number; width: number; height: number }) => {
+                        const leftX = rect.cx - rect.width / 2;
+                        const rightX = rect.cx + rect.width / 2;
+                        const topY = rect.cy - rect.height / 2;
+                        const bottomY = rect.cy + rect.height / 2;
+                        minX = Math.min(minX, leftX);
+                        maxX = Math.max(maxX, rightX);
+                        minY = Math.min(minY, topY);
+                        maxY = Math.max(maxY, bottomY);
+                      });
+                      
+                      // 치수선의 위치 고려
+                      // 수평 치수선: bottomY + INTERFERENCE_DIMENSION_OFFSET (세로방향과 동일한 이격거리)
+                      // 수직 치수선: rightX + INTERFERENCE_DIMENSION_OFFSET 위치에 그려짐
+                      // 치수선 텍스트는 더 오른쪽/아래쪽에 그려질 수 있음
+                      const horizontalDimensionYRaw = maxY + INTERFERENCE_DIMENSION_OFFSET; // 세로방향과 동일한 이격거리
+                      const verticalDimensionX = maxX + INTERFERENCE_DIMENSION_OFFSET;
+                      
+                      // 실제로 치수선이 그려지는 위치는 제한될 수 있지만, viewBox 계산에서는 제한 없이 계산
+                      // 실제로는 horizontalY = Math.min(horizontalYRaw, maxHorizontalY)로 제한되지만,
+                      // viewBox를 충분히 크게 만들어야 하므로 제한 없이 계산
+                      const horizontalDimensionY = horizontalDimensionYRaw;
+                      
+                      // 텍스트 위치도 고려 (수직 치수선 텍스트는 verticalDimensionX + INTERFERENCE_DIMENSION_TEXT_FONT_SIZE 위치)
+                      const verticalTextX = verticalDimensionX + INTERFERENCE_DIMENSION_TEXT_FONT_SIZE;
+                      
+                      // 수평 치수선 텍스트는 horizontalDimensionY + INTERFERENCE_DIMENSION_TEXT_FONT_SIZE * 0.25 위치 (상단)
+                      // dominantBaseline="hanging"이므로 텍스트가 아래로 확장됨
+                      // 텍스트의 실제 높이를 고려하여 하단까지 계산
+                      // 실제 폰트 크기는 200px이지만, INTERFERENCE_DIMENSION_TEXT_FONT_SIZE는 120입니다
+                      // 실제 텍스트 높이를 정확히 계산하기 위해 200을 사용
+                      const actualFontSize = 200; // INTERFERENCE_DIMENSION_TEXT_FONT_SIZE_PX = '200px'
+                      const horizontalTextYTop = horizontalDimensionY + actualFontSize * 0.25;
+                      // 텍스트 높이는 실제 폰트 크기(200)를 사용하고, 여유를 위해 1.3배를 적용
+                      const horizontalTextYBottom = horizontalTextYTop + actualFontSize * 1.3;
+                      
+                      // 최종 경계 업데이트
+                      maxX = Math.max(maxX, verticalTextX);
+                      maxY = Math.max(maxY, horizontalTextYBottom);
+                      
+                      // minX, minY는 간섭 직사각형의 왼쪽과 위쪽 경계를 유지
+                      // 만약 간섭 직사각형이 없으면 기본값 사용
+                      if (minX === Infinity) minX = 0;
+                      if (minY === Infinity) minY = 0;
+                      if (maxX === -Infinity) maxX = params.width;
+                      if (maxY === -Infinity) maxY = viewBoxHeight;
+                    } else {
+                      // 간섭 직사각형이 없으면 기본값 사용
+                      minX = 0;
+                      maxX = params.width;
+                      minY = 0;
+                      maxY = viewBoxHeight;
+                    }
+                    
+                    // 실제 콘텐츠의 폭과 높이 계산
+                    const contentWidth = maxX - minX;
+                    const contentHeight = maxY - minY;
+                    
+                    // 폭과 높이 중 더 큰 값을 사용하여 정사각형 viewBox 만들기
+                    // 형상이 크게 보이도록 contentSize를 줄임
+                    const rawContentSize = Math.max(contentWidth, contentHeight, params.width, viewBoxHeight);
+                    const contentSize = rawContentSize * 0.85; // 15% 줄여서 형상을 더 크게 보이게 함
+                    
+                    // 여유 공간 추가 (텍스트 렌더링 오차 및 안전 마진)
+                    const safetyMargin = 10;
+                    const extraSpace = 20; // 여유 공간 (20mm) - 형상이 크게 보이도록 최소한으로 설정
+                    
+                    // 상하좌우 동일한 padding 적용
+                    // 콘텐츠가 음수 좌표에 있을 수 있으므로 이를 고려
+                    const requiredLeftPadding = Math.max(0, -minX) + safetyMargin + extraSpace;
+                    const requiredRightPadding = Math.max(0, maxX - params.width) + safetyMargin + extraSpace;
+                    const requiredTopPadding = Math.max(0, -minY) + safetyMargin + extraSpace;
+                    const requiredBottomPadding = Math.max(0, maxY - viewBoxHeight) + safetyMargin + extraSpace;
+                    
+                    // 모든 방향에서 필요한 padding 중 최대값을 사용하여 동일한 padding 적용
+                    // 기본 padding 값은 최소한으로만 사용
+                    const basePadding = 20; // 최소 기본 padding - 더 줄임
+                    const uniformPadding = Math.max(
+                      requiredLeftPadding,
+                      requiredRightPadding,
+                      requiredTopPadding,
+                      requiredBottomPadding,
+                      basePadding
+                    );
+                    
+                    // viewBox 크기를 정사각형으로 설정 (콘텐츠 크기 + padding * 2)
+                    // 형상이 더 크게 보이도록 viewBox 크기를 추가로 줄임
+                    const viewBoxSize = (contentSize + uniformPadding * 2) * 0.8; // 20% 더 줄임
+                    
+                    // viewBox 시작 위치 계산 (콘텐츠를 중앙에 배치)
+                    const contentCenterX = (minX + maxX) / 2;
+                    const contentCenterY = (minY + maxY) / 2;
+                    viewBoxX = contentCenterX - viewBoxSize / 2;
+                    viewBoxY = contentCenterY - viewBoxSize / 2;
+                    
+                    adjustedViewBoxWidth = viewBoxSize;
+                    adjustedViewBoxHeight = viewBoxSize;
                   } else if (sectionViewType === 'axial-plan') {
                     const topPadding = Math.max(
                       PLAN_DIMENSION_LINE_OFFSET_BACK + PLAN_DIMENSION_TEXT_OFFSET_BACK + PLAN_DIMENSION_EXTRA_MARGIN,
@@ -5463,7 +5668,11 @@ const sectionPathData = useMemo<SectionPathCollection>(() => {
                   const maxViewBoxDimension = Math.max(adjustedViewBoxWidth, adjustedViewBoxHeight);
                   const adjustedMarkerScale =
                     sectionViewType === 'axial-front' ? Math.max(params.height, params.width) : maxViewBoxDimension;
-                  const arrowMarkerSize = Math.max(adjustedMarkerScale * ARROW_MARKER_BASE_RATIO, ARROW_MARKER_MIN_SIZE);
+                  // 프라이아웃 뷰에서 화살표 크기를 더 크게 표시
+                  const baseArrowMarkerSize = Math.max(adjustedMarkerScale * ARROW_MARKER_BASE_RATIO, ARROW_MARKER_MIN_SIZE);
+                  const arrowMarkerSize = (sectionViewType === 'flyout-front' || sectionViewType === 'flyout-back')
+                    ? baseArrowMarkerSize * 2 // 프라이아웃 뷰에서 2배 크게
+                    : baseArrowMarkerSize;
                   const arrowMarkerHalf = arrowMarkerSize * MARKER_HALF_RATIO;
                   const arrowMarkerStartRefX = arrowMarkerSize * MARKER_REF_START_RATIO;
                   const arrowMarkerEndRefX = arrowMarkerSize * MARKER_REF_END_RATIO;
