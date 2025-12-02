@@ -26,6 +26,19 @@ export const testLNBConfig: LNBConfig[] = [
     children: [],
     createdAt: new Date(),
     updatedAt: new Date()
+  },
+  {
+    id: 'test-ifc-generator',
+    name: 'test-ifc-generator',
+    displayName: 'IFC Generator',
+    description: '사용자 입력값 또는 midas Civil mct 파일 데이터를 IFC 데이터로 변환',
+    icon: 'FileCode',
+    order: 3,
+    isActive: true,
+    type: 'independent',
+    children: [],
+    createdAt: new Date(),
+    updatedAt: new Date()
   }
 ];
 

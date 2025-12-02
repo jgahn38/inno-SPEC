@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xlink="http://www.w3.org/1999/xlink" baseProfile="full" height="3000mm" version="1.1" viewBox="0 0 10000 3000" width="10000mm">
+  <defs>
+    <pattern height="20" id="coping-grid" patternUnits="userSpaceOnUse" width="20">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e5e7eb" stroke-width="0.5"/>
+    </pattern>
+  </defs>
+  <rect fill="url(#coping-grid)" height="3000mm" width="10000mm" x="0" y="0"/>
+  <rect fill="none" height="3000mm" stroke="#000000" stroke-width="3" width="10000mm" x="0" y="0"/>
+</svg>

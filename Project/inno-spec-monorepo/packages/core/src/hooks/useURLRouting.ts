@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useTenant } from '@inno-spec/core';
 
 export interface ScreenRoute {
-  type: 'projects' | 'dashboard' | 'screens' | 'user-screen' | 'lnb-menu' | 'settings' | 'illustration' | 'project-settings' | 'no-screen' | 'tables' | 'sync' | 'functions' | 'modeler' | 'viewer' | 'admin-db' | 'admin-project-category' | 'admin-field-definition' | 'admin-table-definition' | 'admin-variable-definition' | 'admin-function-definition' | 'admin-lnb-config' | 'admin-screen-config' | 'test-dashboard' | 'test-section';
+  type: 'projects' | 'dashboard' | 'screens' | 'user-screen' | 'lnb-menu' | 'settings' | 'illustration' | 'project-settings' | 'no-screen' | 'tables' | 'sync' | 'functions' | 'modeler' | 'viewer' | 'admin-db' | 'admin-project-category' | 'admin-field-definition' | 'admin-table-definition' | 'admin-variable-definition' | 'admin-function-definition' | 'admin-lnb-config' | 'admin-screen-config' | 'test-dashboard' | 'test-section' | 'test-ifc-generator';
   module?: 'project' | 'designer' | 'modeler' | 'viewer' | 'admin' | 'test';
   tenantId?: string;
   screenId?: string;
@@ -97,6 +97,8 @@ export const useURLRouting = () => {
                 return { type: 'test-dashboard', module: 'test', tenantId };
               case 'section':
                 return { type: 'test-section', module: 'test', tenantId };
+              case 'ifc-generator':
+                return { type: 'test-ifc-generator', module: 'test', tenantId };
               default:
                 return { type: 'test-dashboard', module: 'test', tenantId };
             }
@@ -335,6 +337,9 @@ export const useURLRouting = () => {
             break;
           case 'test-section':
             navigate(buildURL('/section'));
+            break;
+          case 'test-ifc-generator':
+            navigate(buildURL('/ifc-generator'));
             break;
           case 'dashboard':
             // DESIGNER 모듈의 기본 화면은 LNB 순서 기반으로 결정

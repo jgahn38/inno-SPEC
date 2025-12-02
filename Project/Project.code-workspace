@@ -1,0 +1,29 @@
+{
+	"folders": [
+		{
+			"name": "inno-spec-monorepo",
+			"path": "./inno-spec-monorepo"
+		},
+		{
+			"name": "desktop-app",
+			"path": "./desktop-app"
+		}
+	],
+	"settings": {
+		"typescript.preferences.includePackageJsonAutoImports": "on",
+		"typescript.suggest.autoImports": true,
+		"typescript.updateImportsOnFileMove.enabled": "always",
+		"editor.formatOnSave": true,
+		"editor.codeActionsOnSave": {
+			"source.fixAll.eslint": "explicit"
+		},
+		"nxConsole.generateAiAgentRules": true,
+		"python.defaultInterpreterPath": "${workspaceFolder}/desktop-app/anchor-drawing-app/venv/Scripts/python.exe",
+		"files.exclude": {
+			"**/node_modules": true,
+			"**/dist": true,
+			"**/.nx": true
+		}
+	}
+}
+

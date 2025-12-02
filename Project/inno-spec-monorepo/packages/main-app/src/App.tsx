@@ -4,7 +4,7 @@ import { Header, AppType, LoginView, Sidebar } from '@inno-spec/ui-lib';
 import { TableManager, FieldManager, DatabaseManager, FunctionManager, VariableManager, ScreenManager, LnbManager, ProjectCategoryManager, screenService } from '@inno-spec/admin-app';
 import { ProjectDashboard, ProjectList as ProjectAppList } from '@inno-spec/project-app';
 import { ScreenRuntimeView } from '@inno-spec/designer-app';
-import { SectionView } from '@inno-spec/test-app';
+import { SectionView, IFCGenerator } from '@inno-spec/test-app';
 import { Project, Bridge, LNBConfig } from '@inno-spec/shared';
 import { TenantProvider, useTenant } from '@inno-spec/core';
 import { APIProvider, useAPI } from '@inno-spec/core';
@@ -176,6 +176,19 @@ const testLNBConfig: LNBConfig[] = [
     description: '2D 삽도 생성 테스트',
     icon: 'Ruler',
     order: 1,
+    isActive: true,
+    type: 'independent',
+    children: [],
+    createdAt: new Date(),
+    updatedAt: new Date()
+  },
+  {
+    id: 'test-ifc-generator',
+    name: 'test-ifc-generator',
+    displayName: 'IFC Generator',
+    description: '사용자 입력값 또는 midas Civil mct 파일 데이터를 IFC 데이터로 변환',
+    icon: 'FileCode',
+    order: 2,
     isActive: true,
     type: 'independent',
     children: [],
@@ -441,6 +454,9 @@ function AppContent() {
     switch (menuId) {
       case 'test-section':
         navigateToScreen({ type: 'test-section', module: 'test' });
+        break;
+      case 'test-ifc-generator':
+        navigateToScreen({ type: 'test-ifc-generator', module: 'test' });
         break;
       default:
         navigateToScreen({ type: 'test-section', module: 'test' });
@@ -858,6 +874,25 @@ function AppContent() {
               />
               <div className="flex-1 overflow-y-auto">
                 <SectionView />
+              </div>
+            </div>
+          } />
+          <Route path="/:tenantId/test/ifc-generator" element={
+            <div className="flex h-full">
+              <Sidebar
+                activeMenu={activeTestMenu}
+                onMenuSelect={handleTestMenuClick}
+                selectedProject={null}
+                selectedBridge={null}
+                projects={[]}
+                onProjectChange={() => {}}
+                onBridgeChange={() => {}}
+                lnbConfigs={testLNBConfig}
+                showProjectSelector={false}
+                ignoreCategoryFilter={true}
+              />
+              <div className="flex-1 overflow-y-auto">
+                <IFCGenerator />
               </div>
             </div>
           } />
